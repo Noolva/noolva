@@ -1,0 +1,46 @@
+# Environment Variables Setup
+
+## VITE_API_URL Configuration
+
+The `VITE_API_URL` environment variable controls how the frontend connects to the API.
+
+### Where to Set It
+
+Create a `.env` file in the `admin/` directory (same level as `package.json`):
+
+```bash
+cd admin
+touch .env
+```
+
+Then add one of the following:
+
+### Option 1: Direct Connection (Default)
+```
+VITE_API_URL=http://localhost:9001
+```
+- Connects directly to the API server on port 9001
+- Requires CORS to be configured on the API server
+- This is the default if VITE_API_URL is not set
+
+### Option 2: Use Vite Proxy (Recommended for Development)
+```
+VITE_API_URL=
+```
+- Uses the Vite proxy configured in `vite.config.js`
+- Proxies requests from `http://localhost:3000` to `http://localhost:9001`
+- Avoids CORS issues
+- Proxy routes: `/auth`, `/app`, `/integrations`, `/menus`
+
+### Option 3: Production/Remote API
+```
+VITE_API_URL=https://api.yourdomain.com
+```
+- For production or remote API servers
+
+## Notes
+
+- Environment variables must start with `VITE_` to be exposed to the frontend
+- The `.env` file should NOT be committed to git (add it to `.gitignore`)
+- After changing `.env`, restart the dev server: `npm run dev`
+- Default behavior: If `VITE_API_URL` is not set, it defaults to `http://localhost:9001`

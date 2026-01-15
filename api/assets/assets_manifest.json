@@ -1,0 +1,21 @@
+{
+  "version": "1.0.0",
+  "created_at": "2025-01-01T00:00:00Z",
+  "description": "Asset manifest for initial setup. Assets listed here will be uploaded to S3 during setup.",
+  "assets": [
+    {
+      "file_name": "dashboards_app_icon.png",
+      "original_name": "dashboards_app_icon.png",
+      "mime_type": "image/png",
+      "is_public": true,
+      "description": "dashboards app icon"
+    },
+    {
+      "file_name": "users_app_icon.png",
+      "original_name": "users_app_icon.png",
+      "mime_type": "image/png",
+      "is_public": true,
+      "description": "users app icon"
+    }
+  ]
+}

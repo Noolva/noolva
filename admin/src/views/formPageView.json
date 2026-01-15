@@ -1,0 +1,133 @@
+{
+    "view_uuid": "345klklasdjflaksjdfasdf3234",
+    "view_title": "Add New Customer",
+    "rows": [
+        {
+            "id": "row1",
+            "type": "row",
+            "input_values": {
+                "gutter": 24
+            },
+            "children": [
+                {
+                    "id": "row1-col1",
+                    "type": "column",
+                    "input_values": {
+                        "span": 12
+                    },
+                    "children": [
+                        {
+                            "id": "label1",
+                            "type": "label",
+                            "input_values": {
+                                "default_value": "Add New Customer"
+                            }
+                        }
+                    ]
+                },
+                {
+                    "id": "row1-col2",
+                    "type": "column",
+                    "input_values": {
+                        "span": 12
+                    },
+                    "children": [
+                        {
+                            "id": "text1",
+                            "type": "text",
+                            "input_values": {
+                                "name": "phone",
+                                "label": "Phone Number",
+                                "place_holder": "Enter phone number",
+                                "validation_type": "phone",
+                                "default_value": ""
+                            }
+                        }
+                    ]
+                }
+            ]
+        },
+        {
+            "id": "row2",
+            "type": "row",
+            "input_values": {
+                "gutter": 24
+            },
+            "children": [
+                {
+                    "id": "row2-col1",
+                    "type": "column",
+                    "input_values": {
+                        "span": 24
+                    },
+                    "children": [
+                        {
+                            "id": "form1",
+                            "type": "form",
+                            "input_values": {
+                                "layout": "horizontal"
+                            },
+                            "children": [
+                                {
+                                    "id": "text2",
+                                    "type": "text",
+                                    "input_values": {
+                                        "name": "email",
+                                        "label": "Email Address",
+                                        "place_holder": "Enter your email",
+                                        "validation_type": "email",
+                                        "default_value": ""
+                                    }
+                                },
+                                {
+                                    "id": "text3",
+                                    "uuid": "uuid-text3",
+                                    "type": "text",
+                                    "input_values": {
+                                        "name": "number",
+                                        "label": "Age",
+                                        "place_holder": "Enter age",
+                                        "validation_type": "number",
+                                        "default_value": ""
+                                    }
+                                },
+                                {
+                                    "id": "button1",
+                                    "type": "button",
+                                    "input_values": {
+                                        "label": "Submit"
+                                    }
+                                }
+                            ]
+                        }
+                    ]
+                }
+            ]
+        },
+        {
+            "id": "row3",
+            "type": "row",
+            "input_values": {
+                "gutter": 24
+            },
+            "children": [
+                {
+                    "id": "row3-col1",
+                    "type": "column",
+                    "input_values": {
+                        "span": 12
+                    },
+                    "children": [
+                        {
+                            "id": "table1",
+                            "type": "table",
+                            "input_values": {
+                                "columns": []
+                            }
+                        }
+                    ]
+                }
+            ]
+        }
+    ]
+}

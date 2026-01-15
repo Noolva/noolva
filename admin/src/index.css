@@ -1,0 +1,254 @@
+body {
+  margin: 0;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial;
+  background-color: var(--bg-color, #fff);
+  color: var(--text-color, #000);
+}
+
+body[data-theme="dark"] {
+  --bg-color: #000;
+  --text-color: #fff;
+}
+
+body[data-theme="light"] {
+  --bg-color: #fff;
+  --text-color: #000;
+}
+
+/* This will reflect your dynamic primary color */
+.app-header {
+  display: flex;
+  align-items: center;
+  padding: 0 20px;
+  justify-content: space-between;
+  background: var(--primary-color, white);
+  /* 💡 updated */
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.1);
+}
+
+.app-logo .logo-icon {
+  font-size: 20px;
+  margin-right: 10px;
+}
+
+.search-input {
+  max-width: 300px;
+  margin: 0 20px;
+}
+
+.theme-toggle {
+  margin-right: 20px;
+}
+
+:root {
+  --custom-tab-border-color: #e0e0e0;
+  --custom-tab-background: #fafafa;
+}
+
+[data-theme='dark'] {
+  --custom-tab-border-color: #434343;
+  --custom-tab-background: #1f1f1f;
+}
+
+.custom-window-tabs .ant-tabs-nav {
+  margin-bottom: 2px !important;
+}
+
+.custom-window-tabs.ant-tabs-card .ant-tabs-tab {
+  margin: 0 !important;
+  padding: 2px 8px 0 2px !important;
+  border: 1px solid var(--custom-tab-border-color) !important;
+
+  border-radius: 4px 4px 0 0 !important;
+  background: var(--custom-tab-background) !important;
+}
+
+.custom-window-tabs .ant-tabs-tab-btn {
+  padding: 4px 4px !important;
+  font-size: 14px !important;
+}
+
+.custom-window-tabs .ant-tabs-tab-remove {
+  margin-left: 6px !important;
+  padding: 0 !important;
+}
+
+.custom-window-tabs .ant-tabs-nav-add {
+  margin: 0 4px !important;
+  padding: 4px !important;
+}
+
+/* Container for the two‐panel login (full viewport) */
+.login-container {
+  display: flex;
+  height: 100vh;
+  /* Use viewport height */
+  overflow: hidden;
+}
+
+/* Left panel: full height, background image, overlay */
+.login-left {
+  flex: 1;
+  position: relative;
+  background: url('https://source.unsplash.com/featured/1200x900/?corporate,abstract') no-repeat center center;
+  background-size: cover;
+  color: white;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100vh;
+  /* Ensure full viewport height */
+}
+
+/* Semi‐transparent dark overlay on left panel */
+.login-left-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.6);
+}
+
+/* Content container inside left panel */
+.login-left-content {
+  position: relative;
+  max-width: 360px;
+  padding: 40px;
+  z-index: 1;
+  text-align: left;
+}
+
+/* Brand logo (rectangle) */
+.login-brand {
+  display: block;
+  margin-bottom: 32px;
+  max-width: 200px;
+  height: auto;
+}
+
+/* Features list styling */
+.login-left-content h1 {
+  margin-bottom: 24px;
+  font-size: 28px;
+  font-weight: bold;
+}
+
+.login-features {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.login-features li {
+  margin-bottom: 12px;
+  font-size: 16px;
+  line-height: 1.4;
+  display: flex;
+  align-items: center;
+}
+
+.login-features li::before {
+  content: '✓';
+  display: inline-block;
+  margin-right: 8px;
+  color: #52c41a;
+  /* AntD success green */
+}
+
+/* Right panel: login card area (full viewport) */
+.login-right {
+  flex: 1;
+  background: #f0f2f5;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 40px;
+  overflow-y: auto;
+  height: 100vh;
+  /* Ensure full viewport height */
+}
+
+/* Card wrapper */
+.login-card {
+  width: 100%;
+  max-width: 400px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+  border-radius: 8px;
+  background: white;
+  padding: 24px;
+  display: flex;
+  flex-direction: column;
+}
+
+/* Smaller card heading */
+.login-card-title {
+  text-align: center;
+  margin-bottom: 24px;
+  font-size: 20px !important;
+  /* Reduced heading size */
+  font-weight: 600;
+}
+
+/* Account list inside card */
+.account-list {
+  margin-bottom: 24px;
+}
+
+.account-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 12px;
+  border-radius: 4px;
+  background: #fafafa;
+  margin-bottom: 8px;
+  cursor: pointer;
+}
+
+.account-item:hover {
+  background: #f5f5f5;
+}
+
+.account-info {
+  display: flex;
+  align-items: center;
+}
+
+.account-avatar {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: #d9d9d9;
+  margin-right: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: bold;
+  color: #ffffff;
+  text-transform: uppercase;
+  font-size: 14px;
+}
+
+/* “Add Account” form tweaks */
+.login-form .ant-form-item {
+  margin-bottom: 16px;
+}
+
+.social-btn {
+  width: 100%;
+  margin-bottom: 12px;
+}
+
+.social-btn i {
+  margin-right: 8px;
+}
+
+/* Link style for “Back to accounts” */
+.login-back-link {
+  cursor: pointer;
+  color: #1890ff;
+  display: block;
+  text-align: center;
+  margin-top: 16px;
+}

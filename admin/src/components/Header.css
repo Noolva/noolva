@@ -1,0 +1,51 @@
+.header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    height: 48px;
+    /* smaller header */
+    padding: 0 12px;
+    background: var(--primary-color, #1677ff);
+    color: white;
+}
+
+.header-left {
+    display: flex;
+    align-items: center;
+    gap: 24px;
+    /* Increased from 12px to 24px */
+}
+
+.header-middle {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    /* Add a new wrapper with gap between search and select */
+}
+
+.header-right {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.brand-name {
+    font-weight: bold;
+    font-size: 16px;
+}
+
+.search-bar {
+    border-radius: 4px;
+    border: none;
+    padding: 4px 8px;
+    min-width: 150px;
+}
+
+.icon {
+    font-size: 18px;
+    color: white;
+}
+
+.clickable {
+    cursor: pointer;
+}

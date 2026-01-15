@@ -1,0 +1,12 @@
+services:
+  nv-saas-web-app:
+    build:
+      context: .
+      dockerfile: Dockerfile.dev
+    ports:
+      - "3000:3000"
+    volumes:
+      - .:/app
+      - /app/node_modules  # Prevents overwrite from local mount
+    working_dir: /app
+    command: npm run dev

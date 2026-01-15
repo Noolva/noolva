@@ -1,0 +1,117 @@
+App = Logical grouping of modules
+modules=group of functionalites/features
+
+Apps > Modules > Features
+
+permissions:
+feature description,Feature,feature_title     permission_key      permission      menuTitle,(if there is no inputs, it is a direct menu),dependancy_table_columns
+new sales   sales.new           true
+            <module>.<feature>
+
+
+a feature is sales.new_sales=> it contains how much featurs are in a module,
+
+
+an user may be in multiple roles=> yes
+
+
+roles=> purly permission based groups
+user groups=>grouping for particular purpose example notification, organizing,
+teams=>sales team, marketing team
+
+
+apps
+app_id, module_ids, order_no,depends_on_apps
+
+CREATE TABLE apps (
+  app_id SERIAL PRIMARY KEY,
+  app_uuid UUID NOT NULL DEFAULT gen_random_uuid(),
+  app_name VARCHAR(100) NOT NULL,              
+  app_title VARCHAR(150), 
+  app_image_url TEXT,
+  app_description TEXT,
+  created_by INT,
+  created_at TIMESTAMP DEFAULT NOW()
+);
+CREATE TABLE app_dependencies (
+  id SERIAL PRIMARY KEY,
+  app_id INT REFERENCES apps(app_id) ON DELETE CASCADE,
+  depends_on_app_id INT REFERENCES apps(app_id) ON DELETE CASCADE
+);
+
+CREATE TABLE views (
+  view_id SERIAL PRIMARY KEY,
+  view_uuid UUID NOT NULL DEFAULT gen_random_uuid(),
+  view_code VARCHAR(100) UNIQUE NOT NULL,       -- e.g., 'customer_form'
+  view_title VARCHAR(150),
+  view_type 'system-view,custom-view'
+  is_allow_offline boolean, default false,
+  view_inputs array of text,
+  view_json json
+  modules_associated array of text
+  features_associated array of text
+  created_by INT,
+  created_by_uuid UUID,
+  idate TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  last_updated TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE menus (
+  menu_id SERIAL PRIMARY KEY,
+  menu_uuid UUID NOT NULL DEFAULT gen_random_uuid(),
+  menu_title VARCHAR(150) NOT NULL,
+  parent_id INT REFERENCES menus(menu_id) ON DELETE CASCADE, -- for submenus  make index
+  view_id INT REFERENCES views(view_id), make index and foreign key
+  icon VARCHAR(100),
+  route_path VARCHAR(150),  -- frontend route  
+  order_no INT DEFAULT 0 make index
+  created_by INT,
+  created_by_uuid UUID,
+  idate TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  last_updated TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+CREATE TABLE roles (
+  role_id SERIAL PRIMARY KEY,
+  role_name VARCHAR(100) UNIQUE NOT NULL,
+  description TEXT
+);
+CREATE TABLE role_permissions (
+  id SERIAL PRIMARY KEY,
+  role_id INT REFERENCES roles(role_id) ON DELETE CASCADE,
+  feature_id INT REFERENCES features(feature_id) ON DELETE CASCADE,
+  can_access BOOLEAN DEFAULT TRUE
+);
+CREATE TABLE user_roles (
+  id SERIAL PRIMARY KEY,
+  user_id INT REFERENCES users(user_id) ON DELETE CASCADE,
+  role_id INT REFERENCES roles(role_id) ON DELETE CASCADE
+);
+
+Organization
+  Companies
+  App Menus
+  Users
+  User Groups
+  Teams
+  Roles
+  Permissions
+App Studio
+    ->App Store
+    ->My Apps
+    ->modules
+    ->features
+    ->Api Endpoints(controllers)
+    ->Data Models
+    ->UI Views
+    ->Jobs/Actions
+    ->Integration Manager
+    ->Assets(fa icons,svg icons)
+    ->ui components
+
+
+    first need, apps,views, menus
+
+Queue
+==================
+React sends the file → FastAPI enqueues the task → responds with task_id.
+React periodically calls /upload-status/:task_id to check status.

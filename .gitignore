@@ -137,3 +137,120 @@ dist
 # Vite logs files
 vite.config.js.timestamp-*
 vite.config.ts.timestamp-*
+
+##############################
+# Python / FastAPI
+##############################
+__pycache__/
+*.py[cod]
+*$py.class
+
+# C extensions
+*.so
+
+# Virtual environments
+.venv/
+venv/
+ENV/
+env/
+api/app/noolva-venv/
+
+# Packaging / build
+build/
+dist/
+*.egg-info/
+.eggs/
+pip-wheel-metadata/
+
+# Tooling caches
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+.coverage.*
+htmlcov/
+.tox/
+.nox/
+
+# Jupyter
+.ipynb_checkpoints/
+
+##############################
+# Backend runtime / secrets
+##############################
+# Local env files (keep .env.example tracked)
+.env
+.env.*
+!.env.example
+
+# Local SQLite / dev DBs (if ever used)
+*.sqlite3
+*.db
+
+# App logs directory (you already have api/app/logs in tree)
+api/app/logs/
+
+##############################
+# Admin (Vite/React) specific
+##############################
+admin/dist/
+admin/.vite/
+
+##############################
+# OS / Editor
+##############################
+.DS_Store
+.AppleDouble
+.LSOverride
+Icon?
+._*
+
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+
+.idea/
+.vscode/
+*.swp
+*.swo
+
+##############################
+# Flutter / Dart (future)
+##############################
+# Dart / Flutter tooling
+.dart_tool/
+.flutter-plugins
+.flutter-plugins-dependencies
+.packages
+
+# Flutter build outputs
+build/
+
+# Android (Flutter)
+android/.gradle/
+android/local.properties
+android/key.properties
+**/android/**/GeneratedPluginRegistrant.java
+
+# iOS / macOS (Flutter)
+ios/Pods/
+ios/.symlinks/
+ios/Flutter/ephemeral/
+ios/Flutter/App.framework
+ios/Flutter/Flutter.framework
+ios/Flutter/Flutter.podspec
+ios/Flutter/Generated.xcconfig
+ios/Flutter/flutter_export_environment.sh
+ios/Runner/GeneratedPluginRegistrant.*
+
+macos/Pods/
+macos/.symlinks/
+macos/Flutter/ephemeral/
+
+# Xcode
+**/*.xcuserstate
+**/xcuserdata/
+DerivedData/
+
+# Symbols
+*.dSYM
