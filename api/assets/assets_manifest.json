@@ -16,6 +16,27 @@
       "mime_type": "image/png",
       "is_public": true,
       "description": "users app icon"
+    },
+    {
+      "file_name": "organization_app_icon.svg",
+      "original_name": "organization_app_icon.svg",
+      "mime_type": "image/svg+xml",
+      "is_public": true,
+      "description": "organization app icon"
+    },
+    {
+      "file_name": "app_studio_app_icon.svg",
+      "original_name": "app_studio_app_icon.svg",
+      "mime_type": "image/svg+xml",
+      "is_public": true,
+      "description": "app studio app icon"
+    },
+    {
+      "file_name": "settings_app_icon.svg",
+      "original_name": "settings_app_icon.svg",
+      "mime_type": "image/svg+xml",
+      "is_public": true,
+      "description": "settings app icon"
     }
   ]
 }

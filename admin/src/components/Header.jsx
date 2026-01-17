@@ -27,9 +27,10 @@ import { useTheme } from '../contexts/ThemeContext';
 import { useToken } from 'antd/es/theme/internal';
 import CookieBanner from './CookieBanner';
 import AccountSwitcher from './AccountSwitcher';
+import { SettingOutlined } from '@ant-design/icons';
 const { Header: AntHeader } = Layout;
 
-const Header = ({ onAppSelect }) => {
+const Header = ({ onAppSelect, onMenuSelect }) => {
     const [dropdownOpen, setDropdownOpen] = useState(false);
     const { Option } = Select;
     const NineDotIcon = ({ size = 24, color = 'white', onClick }) => (
@@ -112,8 +113,15 @@ const Header = ({ onAppSelect }) => {
                 }}
             >
                 {apps.map(app => {
-                    // Use app_image_url from database, or fallback to local path
-                    const iconUrl = app.app_image_url || `/app_icons/${app.app_name || app.app_id}.png`;
+                    // Use app_image_url from DB. If it's a relative "/assets/..." path, prefix API base URL.
+                    const apiBaseUrl = import.meta.env.VITE_API_URL || 'http://localhost:9001';
+                    const raw = app.app_image_url;
+                    const iconUrl =
+                        raw
+                            ? (raw.startsWith('http://') || raw.startsWith('https://')
+                                ? raw
+                                : `${apiBaseUrl}${raw}`)
+                            : `/app_icons/${app.app_name || app.app_id}.png`;
                     const appKey = app.app_id || app.app_uuid || app.app_name;
                     const appTitle = app.app_title || app.app_name || 'Untitled';
 
@@ -185,62 +193,10 @@ const Header = ({ onAppSelect }) => {
         },
     ];
 
-    const {
-        isDark,
-        toggleDark,
-        themeKey,
-        themes,
-        selectThemeByKey,
-        color
-    } = useTheme();
-
-    const colorThemes = Object.keys(themes); // Corrected
+    const { isDark, primary, secondary } = useTheme();
     const handleLanguageSelect = ({ key }) => {
         console.log('Selected language:', key);
         // Add your logic to change language here
-    };
-    const toggleTheme = (checked) => {
-        toggleDark(); // Properly toggle dark mode
-        document.body.setAttribute('data-theme', checked ? 'dark' : 'light');
-    };
-    useEffect(() => {
-        const root = document.body;
-        root.setAttribute('data-theme', isDark ? 'dark' : 'light');
-        root.style.setProperty('--primary-color', color.primary);
-        root.style.setProperty('--secondary-color', color.secondary);
-    }, [isDark, color]);
-    const colorDropdownItems = colorThemes.map((key) => ({
-        key,
-        label: (
-            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                <div
-                    style={{
-                        width: 16,
-                        height: 16,
-                        borderRadius: '50%',
-                        backgroundColor: themes[key].primary,
-                        border: '1px solid #ddd',
-                    }}
-                />
-                <div
-                    style={{
-                        width: 16,
-                        height: 16,
-                        borderRadius: '50%',
-                        backgroundColor: themes[key].secondary,
-                        border: '1px solid #ddd',
-                    }}
-                />
-                <span>{key.replace(/_/g, ' ')}</span> {/* ✅ Wrap string in a span */}
-            </div>
-        ),
-    }));
-
-
-
-    const handleColorSelect = ({ key }) => {
-
-        selectThemeByKey(key);
     };
 
     return (
@@ -254,7 +210,12 @@ const Header = ({ onAppSelect }) => {
 
                 <div className="header-middle">
                     <Dropdown
-                        overlay={AppGridMenuDropdown}
+                        popupRender={() => (
+                            <AppGridMenu
+                                onAppSelect={onAppSelect}
+                                closeDropdown={() => setDropdownOpen(false)}
+                            />
+                        )}
                         trigger={['click']}
                         placement="bottomLeft"
                         open={dropdownOpen}
@@ -269,7 +230,7 @@ const Header = ({ onAppSelect }) => {
                                 height: '100%', // aligns it with header height
                             }}
                         >
-                            <NineDotIcon size={25} color="white" />
+                            <NineDotIcon size={22} color="currentColor" />
                         </div>
                     </Dropdown>
 
@@ -298,23 +259,17 @@ const Header = ({ onAppSelect }) => {
                             </Option>
                         ))}
                     </Select>
-                    <Switch
-                        className="theme-switch"
-                        checked={isDark}
-                        onChange={toggleTheme}
-                        checkedChildren="🌙"
-                        unCheckedChildren="☀️"
-                    />
-
-                    <Dropdown menu={{ items: colorDropdownItems, onClick: handleColorSelect }} trigger={['click']}>
-                        <Space> <i className="fas fa-adjust" style={{ color: 'white' }}></i>
-                            {/*  <DownOutlined /> */}
-                        </Space>
-                    </Dropdown>
+                    <Space
+                        style={{ cursor: 'pointer' }}
+                        onClick={() => onMenuSelect?.('settings')}
+                        title="Settings"
+                    >
+                        <SettingOutlined className="icon" />
+                    </Space>
 
                     <Dropdown menu={{ items: languageItems, onClick: handleLanguageSelect }} trigger={['click']}>
                         <Space style={{ cursor: 'pointer' }}>
-                            <i className="fas fa-language" style={{ color: 'white' }}></i>
+                            <i className="fas fa-language" style={{ color: 'currentColor' }}></i>
                             {/*  <DownOutlined style={{ color: 'white' }} /> */}
                         </Space>
                     </Dropdown>

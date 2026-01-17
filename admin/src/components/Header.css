@@ -2,11 +2,12 @@
     display: flex;
     justify-content: space-between;
     align-items: center;
-    height: 48px;
+    height: 52px;
     /* smaller header */
     padding: 0 12px;
-    background: var(--primary-color, #1677ff);
-    color: white;
+    background: var(--surface-color, #ffffff);
+    color: var(--text-color, #101828);
+    border-bottom: 1px solid var(--border-color, #e4e7ec);
 }
 
 .header-left {
@@ -36,14 +37,14 @@
 
 .search-bar {
     border-radius: 4px;
-    border: none;
+    border: 1px solid var(--border-color, #e4e7ec);
     padding: 4px 8px;
     min-width: 150px;
 }
 
 .icon {
     font-size: 18px;
-    color: white;
+    color: var(--text-color, #101828);
 }
 
 .clickable {

@@ -725,27 +725,6 @@ def status():
             
     asyncio.run(get_stats())
 @cli.command()
-def products():
-    token = get_saved_token()
-    if not token:
-        typer.echo("Not logged in please login using : python cli.py login", err=True)
-        raise typer.Exit(code=1)
-
-    validator = auth.verify_jwt_token(["saas-admin", "saas-employees"])
-
-    try:
-        # Simulate FastAPI header injection
-        user_payload = validator(f"Bearer {token}")
-    except HTTPException as e:
-        typer.echo(f"Authentication failed: {e.detail}", err=True)
-        if e.status_code == 401:
-            typer.echo("Please login again: python cli.py login", err=True)
-        raise typer.Exit(code=1)
-
-    typer.echo(f"✔ Welcome {user_payload.get('username')}! Fetching products...")
-
-
-@cli.command()
 def version():
     """Show the current ERP version."""
     typer.echo(f"Noolva ERP version {VERSION}")

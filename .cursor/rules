@@ -1,0 +1,10 @@
+db-structure/noolvandb_schma.sql contains full schema new update make here also
+noolvandb_feed.sql contains all essential feeds or inbuilt saas or tenant data.
+new images for apps put in api/assets folder and note in assets_manifest.json also, make the entries in assets table also in noolvandb_feed
+whenever using a component implement it as VC component in admin/src/components, then use in the pages. keep reusable, rechangable,
+for new pages always use the components from existing vc component or implement if required.
+user interface and designing follow corporate style and uniform accross all pages.
+and for showing errors, always use ErrorModal.jsx
+whenever api restart or react npm install or restart let me know after your changes.
+connect db by , export PGPASSWORD="avkaran", psql -h 192.168.106.2 -p 5432 -U noolvan noolvandb
+

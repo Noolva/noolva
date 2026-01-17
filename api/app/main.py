@@ -1,5 +1,5 @@
 from fastapi import FastAPI, Request
-from routes import authentication, products
+from routes import authentication
 from fastapi.middleware.cors import CORSMiddleware
 import uvicorn
 from contextlib import asynccontextmanager
@@ -12,6 +12,8 @@ import logging
 from logging.handlers import RotatingFileHandler
 from utils.google_oauth import setup_google_oauth
 from middlewares.logging_middleware import LoggingMiddleware
+from fastapi.staticfiles import StaticFiles
+from pathlib import Path
 
 BRAND_NAME = 'Noolva API'
 
@@ -40,6 +42,38 @@ async def lifespan(app: FastAPI):
     logger.info("Application startup initiated")
     await PostgresDB.connect()
     logger.info("Database connected")
+    
+    # Log registered routes for debugging
+    routes = []
+    for route in app.routes:
+        try:
+            route_path = getattr(route, "path", None) or str(route)
+            route_methods = getattr(route, "methods", None)
+            if route_methods:
+                try:
+                    methods_list = list(route_methods) if route_methods else []
+                except (TypeError, AttributeError):
+                    methods_list = []
+            else:
+                methods_list = []
+            
+            route_info = {
+                "path": route_path,
+                "methods": methods_list,
+                "name": getattr(route, "name", None)
+            }
+            routes.append(route_info)
+        except Exception as e:
+            # Skip routes that can't be inspected (like Mount objects)
+            logger.debug(f"Could not inspect route: {type(route).__name__}, error: {e}")
+    
+    logger.info(f"Registered {len(routes)} routes")
+    app_menus_routes = [r for r in routes if "app-menus" in r.get("path", "")]
+    if app_menus_routes:
+        logger.info(f"App Menus routes registered: {[r.get('path', '') for r in app_menus_routes]}")
+    else:
+        logger.warning("No app-menus routes found in registered routes!")
+    
     yield
     # Shutdown
     logger.info("Application shutdown initiated")
@@ -107,17 +141,86 @@ app.add_middleware(
 # Add logging middleware (should be added last to log final response)
 app.add_middleware(LoggingMiddleware)
 
+# Static assets (api/assets/*) served at /assets/*
+ASSETS_DIR = Path(__file__).resolve().parent.parent / "assets"
+if ASSETS_DIR.exists():
+    app.mount("/assets", StaticFiles(directory=str(ASSETS_DIR)), name="assets")
+
 # Routes
 app.include_router(authentication.router, prefix="/auth", tags=["Authentication"])
-app.include_router(products.router, prefix="/app", tags=["Products"])
 
-# Import and include integrations router
-from routes import integrations
-app.include_router(integrations.router, tags=["Integrations"])
+# Import and include settings router
+from routes import settings
+app.include_router(settings.router, tags=["Settings"])
+
+# Import and include database router
+from routes import database
+app.include_router(database.router, tags=["Developer Console - Database"])
+
+# Import and include menus router (CRUD operations)
+try:
+    from routes import menus
+    app.include_router(menus.router, prefix="/app-menus", tags=["App Menus"])
+    logger.info("Menus router registered successfully at /app-menus")
+except Exception as e:
+    logger.error(f"Failed to register menus router: {e}")
+    raise
+
 
 @app.get("/")
 def home():
     return {"message": f"{BRAND_NAME} is running!"}
+
+# Catch-all route for unmatched API paths - return proper JSON 404
+# This prevents FastAPI from returning HTML 404 for frontend routes
+# IMPORTANT: This must be registered LAST, after all other routes
+# Note: This will only match if no other route matches (FastAPI matches more specific routes first)
+@app.api_route("/{path:path}", methods=["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"])
+async def catch_all(request: Request, path: str):
+    """
+    Catch-all handler for unmatched routes.
+    Returns JSON 404 for API-like requests, otherwise lets frontend handle routing.
+    This should only be reached if no specific route matched.
+    """
+    # For paths that look like API routes but weren't matched by any router
+    if path.startswith(("assets/", "auth/", "app/", "api/", "settings", "dev-console/")):
+        return JSONResponse(
+            status_code=404,
+            content={
+                "type": "NOT_FOUND",
+                "code": 1004,
+                "description": f"API endpoint not found: /{path}",
+                "solution": "Check the API documentation for available endpoints.",
+            }
+        )
+    
+    # For organization routes - check if it's exactly the base path or a sub-path
+    # If it's exactly "app-menus", "companies", etc., the router should have handled it
+    # If we're here, it means a specific endpoint wasn't found
+    base_paths = ["app-menus", "companies", "users", "user-groups", "teams", "roles", "permissions"]
+    for base_path in base_paths:
+        if path == base_path or path.startswith(f"{base_path}/"):
+            return JSONResponse(
+                status_code=404,
+                content={
+                    "type": "NOT_FOUND",
+                    "code": 1004,
+                    "description": f"API endpoint not found: /{path}",
+                    "solution": "Check the API documentation for available endpoints.",
+                }
+            )
+    
+    # For frontend routes (not starting with API prefixes), return 404 JSON
+    # The frontend should handle routing via React Router
+    return JSONResponse(
+        status_code=404,
+        content={
+            "type": "NOT_FOUND",
+            "code": 1004,
+            "description": f"Route not found: /{path}. This appears to be a frontend route.",
+            "solution": "Frontend routes should be handled by React Router. If this is an API call, use the correct API endpoint path.",
+        }
+    )
 
 if __name__ == "__main__":
     port = int(os.getenv("APPLICATION_PORT", "9001"))

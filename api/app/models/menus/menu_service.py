@@ -243,6 +243,7 @@ class MenuService:
             List of menu dictionaries (hierarchical structure)
         """
         # Build menu query with permissions
+        # Only fetch menus with parent_id IS NULL (direct children of app) and exclude group types
         if is_super_admin:
             menu_query = """
                 SELECT DISTINCT 
@@ -250,7 +251,9 @@ class MenuService:
                     m.icon, m.order_no, m.app_id, m.scope, m.type, m.view_id,
                     m.module_feature_id, m.is_builtin, m.is_hidden
                 FROM public.menus m
-                WHERE m.app_id = $1 AND m.is_hidden = FALSE
+                WHERE m.app_id = $1 
+                  AND m.is_hidden = FALSE
+                  AND (m.type = 'item' OR m.type IS NULL)
                 ORDER BY m.order_no, m.menu_title
             """
             menus = await PostgresDB.fetch(menu_query, app_id)
@@ -287,6 +290,7 @@ class MenuService:
                     WHERE 
                         m.app_id = $1
                         AND m.is_hidden = FALSE
+                        AND (m.type = 'item' OR m.type IS NULL)
                         {scope_filter}
                         AND (
                             m.is_builtin = TRUE OR
@@ -306,30 +310,16 @@ class MenuService:
                     FROM public.menus m
                     WHERE m.app_id = $1
                       AND m.is_hidden = FALSE
+                      AND (m.type = 'item' OR m.type IS NULL)
                       AND m.is_builtin = TRUE
                       {scope_filter}
                     ORDER BY m.order_no, m.menu_title
                 """
                 menus = await PostgresDB.fetch(menu_query, app_id)
         
-        # Build hierarchical menu structure
-        menu_dict = {menu["menu_id"]: dict(menu) for menu in menus}
-        root_menus = []
-        
-        for menu in menus:
-            menu_obj = dict(menu)
-            menu_obj["children"] = []
-            
-            if menu["parent_id"] is None:
-                root_menus.append(menu_obj)
-            else:
-                parent = menu_dict.get(menu["parent_id"])
-                if parent:
-                    if "children" not in parent:
-                        parent["children"] = []
-                    parent["children"].append(menu_obj)
-        
-        return root_menus
+        # Return flat list of menus (already filtered by SQL query)
+        # SQL query already ensures parent_id IS NULL and type != 'group'
+        return [dict(menu) for menu in menus]
     
     @staticmethod
     async def get_menu_by_id(menu_id: int, user_id: int, company_id: Optional[int] = None) -> Optional[Dict[str, Any]]:
