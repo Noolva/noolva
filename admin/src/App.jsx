@@ -9,6 +9,9 @@ import Login from './pages/Login';
 import Dashboard from './pages/Dashboard';
 import ListPage from './pages/ListPage';
 import AddForm from './pages/AddForm';
+import Settings from './pages/Settings';
+import Database from './pages/Database';
+import DbQuery from './pages/DbQuery';
 import { useAuth } from './contexts/AuthContext';
 import { ThemeProvider } from './contexts/ThemeContext';
 
@@ -41,18 +44,30 @@ const AppContent = () => {
     setTabs({ activeKey: newActiveKey, items: newItems });
   };
 
-  const renderContent = (key) => {
+  const renderContent = (key, menuData) => {
     switch (key) {
       case 'overview': return <Dashboard />;
       case 'stats': return <div>Stats Page</div>;
       case 'list': return <ListPage />;
       case 'add': return <AddForm />;
-      default: return <div>Unknown Page</div>;
+      case 'settings': return <Settings />;
+      case 'dev_console_database': return <Database />;
+      case 'dev_console_db_query': return <DbQuery />;
+      default: {
+        // Try to render based on menu title if available
+        if (menuData?.menu_title) {
+          const title = menuData.menu_title.toLowerCase().replace(/\s+/g, '_');
+          if (title === 'database') return <Database />;
+          if (title === 'db_query' || title === 'db query') return <DbQuery />;
+        }
+        return <div>Unknown Page: {key}</div>;
+      }
     }
   };
 
-  const handleSubmenuSelect = (key) => {
-    addTab(key, key.charAt(0).toUpperCase() + key.slice(1), renderContent(key));
+  const handleSubmenuSelect = (key, menuData) => {
+    const label = menuData?.menu_title || key.charAt(0).toUpperCase() + key.slice(1);
+    addTab(key, label, renderContent(key, menuData));
   };
 
   const handleAppSelect = (appKey, appData) => {

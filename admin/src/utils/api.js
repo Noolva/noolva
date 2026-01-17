@@ -275,9 +275,287 @@ export const api = {
         return response.data;
     },
 
-    // App Menus
-    getAppMenus: async (appId) => {
+    // Get menus for an app (for sidebar display)
+    getMenusForApp: async (appId) => {
         const response = await axiosInstance.get(`/auth/apps/${appId}/menus`);
+        return response.data;
+    },
+
+    // Settings
+    getSettings: async ({ keys, scope = "global", tenant_id = null } = {}) => {
+        const params = {};
+        if (keys) params.keys = Array.isArray(keys) ? keys.join(",") : keys;
+        if (scope) params.scope = scope;
+        if (tenant_id != null) params.tenant_id = tenant_id;
+        const response = await axiosInstance.get("/settings", { params });
+        return response.data;
+    },
+
+    updateSettings: async ({ settings, scope = "global", tenant_id = null }) => {
+        const response = await axiosInstance.put("/settings", {
+            settings,
+            scope,
+            tenant_id,
+        });
+        return response.data;
+    },
+
+    getSettingsDefinitions: async ({ scope = "global", tenant_id = null } = {}) => {
+        const params = { scope };
+        if (tenant_id != null) params.tenant_id = tenant_id;
+        const response = await axiosInstance.get("/settings/definitions", { params });
+        return response.data;
+    },
+
+    // Developer Console - Database
+    getDatabaseTables: async (search = null) => {
+        const params = search ? { search } : {};
+        const response = await axiosInstance.get("/dev-console/database/tables", { params });
+        return response.data;
+    },
+
+    getTableStructure: async (tableName) => {
+        const response = await axiosInstance.get(`/dev-console/database/tables/${tableName}/structure`);
+        return response.data;
+    },
+
+    getTableRecords: async (tableName, limit = 100, offset = 0) => {
+        const response = await axiosInstance.get(`/dev-console/database/tables/${tableName}/records`, {
+            params: { limit, offset }
+        });
+        return response.data;
+    },
+
+    updateTableSchema: async (tableName, changes) => {
+        const response = await axiosInstance.put(`/dev-console/database/tables/${tableName}/schema`, {
+            changes
+        });
+        return response.data;
+    },
+
+    // Developer Console - Database Query
+    executeQuery: async (query) => {
+        const response = await axiosInstance.post("/dev-console/database/execute-query", {
+            query,
+            limit: 1000
+        });
+        return response.data;
+    },
+
+    getQuerySuggestions: async (prefix = null) => {
+        const params = prefix ? { prefix } : {};
+        const response = await axiosInstance.get("/dev-console/database/suggestions", { params });
+        return response.data;
+    },
+
+    // Record operations
+    insertRecord: async (tableName, data) => {
+        const response = await axiosInstance.post("/dev-console/database/records", {
+            table_name: tableName,
+            data
+        });
+        return response.data;
+    },
+
+    updateRecord: async (tableName, recordId, updates) => {
+        const response = await axiosInstance.put("/dev-console/database/records", {
+            table_name: tableName,
+            record_id: recordId,
+            updates
+        });
+        return response.data;
+    },
+
+    deleteRecord: async (tableName, recordId) => {
+        const response = await axiosInstance.delete("/dev-console/database/records", {
+            params: {
+                table_name: tableName,
+                record_id: recordId
+            }
+        });
+        return response.data;
+    },
+
+    // Companies
+    getCompanies: async () => {
+        const response = await axiosInstance.get("/companies");
+        return response.data;
+    },
+
+    getCompany: async (companyId) => {
+        const response = await axiosInstance.get(`/companies/${companyId}`);
+        return response.data;
+    },
+
+    createCompany: async (data) => {
+        const response = await axiosInstance.post("/companies", data);
+        return response.data;
+    },
+
+    updateCompany: async (companyId, data) => {
+        const response = await axiosInstance.put(`/companies/${companyId}`, data);
+        return response.data;
+    },
+
+    deleteCompany: async (companyId) => {
+        const response = await axiosInstance.delete(`/companies/${companyId}`);
+        return response.data;
+    },
+
+    // App Menus
+    getAppMenus: async (appId = null) => {
+        const url = appId ? `/app-menus?app_id=${appId}` : "/app-menus";
+        const response = await axiosInstance.get(url);
+        return response.data;
+    },
+
+    getAppMenu: async (menuId) => {
+        const response = await axiosInstance.get(`/app-menus/${menuId}`);
+        return response.data;
+    },
+
+    createAppMenu: async (data) => {
+        const response = await axiosInstance.post("/app-menus", data);
+        return response.data;
+    },
+
+    updateAppMenu: async (menuId, data) => {
+        const response = await axiosInstance.put(`/app-menus/${menuId}`, data);
+        return response.data;
+    },
+
+    deleteAppMenu: async (menuId) => {
+        const response = await axiosInstance.delete(`/app-menus/${menuId}`);
+        return response.data;
+    },
+
+    // Users
+    getUsers: async () => {
+        const response = await axiosInstance.get("/users");
+        return response.data;
+    },
+
+    getUser: async (userId) => {
+        const response = await axiosInstance.get(`/users/${userId}`);
+        return response.data;
+    },
+
+    createUser: async (data) => {
+        const response = await axiosInstance.post("/users", data);
+        return response.data;
+    },
+
+    updateUser: async (userId, data) => {
+        const response = await axiosInstance.put(`/users/${userId}`, data);
+        return response.data;
+    },
+
+    deleteUser: async (userId) => {
+        const response = await axiosInstance.delete(`/users/${userId}`);
+        return response.data;
+    },
+
+    // User Groups
+    getUserGroups: async () => {
+        const response = await axiosInstance.get("/user-groups");
+        return response.data;
+    },
+
+    getUserGroup: async (groupId) => {
+        const response = await axiosInstance.get(`/user-groups/${groupId}`);
+        return response.data;
+    },
+
+    createUserGroup: async (data) => {
+        const response = await axiosInstance.post("/user-groups", data);
+        return response.data;
+    },
+
+    updateUserGroup: async (groupId, data) => {
+        const response = await axiosInstance.put(`/user-groups/${groupId}`, data);
+        return response.data;
+    },
+
+    deleteUserGroup: async (groupId) => {
+        const response = await axiosInstance.delete(`/user-groups/${groupId}`);
+        return response.data;
+    },
+
+    // Teams
+    getTeams: async () => {
+        const response = await axiosInstance.get("/teams");
+        return response.data;
+    },
+
+    getTeam: async (teamId) => {
+        const response = await axiosInstance.get(`/teams/${teamId}`);
+        return response.data;
+    },
+
+    createTeam: async (data) => {
+        const response = await axiosInstance.post("/teams", data);
+        return response.data;
+    },
+
+    updateTeam: async (teamId, data) => {
+        const response = await axiosInstance.put(`/teams/${teamId}`, data);
+        return response.data;
+    },
+
+    deleteTeam: async (teamId) => {
+        const response = await axiosInstance.delete(`/teams/${teamId}`);
+        return response.data;
+    },
+
+    // Roles
+    getRoles: async () => {
+        const response = await axiosInstance.get("/roles");
+        return response.data;
+    },
+
+    getRole: async (roleId) => {
+        const response = await axiosInstance.get(`/roles/${roleId}`);
+        return response.data;
+    },
+
+    createRole: async (data) => {
+        const response = await axiosInstance.post("/roles", data);
+        return response.data;
+    },
+
+    updateRole: async (roleId, data) => {
+        const response = await axiosInstance.put(`/roles/${roleId}`, data);
+        return response.data;
+    },
+
+    deleteRole: async (roleId) => {
+        const response = await axiosInstance.delete(`/roles/${roleId}`);
+        return response.data;
+    },
+
+    // Permissions
+    getPermissions: async () => {
+        const response = await axiosInstance.get("/permissions");
+        return response.data;
+    },
+
+    getPermission: async (permissionId) => {
+        const response = await axiosInstance.get(`/permissions/${permissionId}`);
+        return response.data;
+    },
+
+    createPermission: async (data) => {
+        const response = await axiosInstance.post("/permissions", data);
+        return response.data;
+    },
+
+    updatePermission: async (permissionId, data) => {
+        const response = await axiosInstance.put(`/permissions/${permissionId}`, data);
+        return response.data;
+    },
+
+    deletePermission: async (permissionId) => {
+        const response = await axiosInstance.delete(`/permissions/${permissionId}`);
         return response.data;
     },
 };

@@ -1,0 +1,23 @@
+colima start --profile syntaxoo --network-address
+psql -h localhost -p 5432 -U noolvan noolvan
+password : 
+
+external access
+psql -h 192.168.106.2 -p 5432 -U noolvan noolvandb
+
+restore-db,
+===========
+drop database noolvandb;
+create database noolvandb;
+alter database noolvandb owner to noolvan;
+\c noolvandb;
+CREATE EXTENSION IF NOT EXISTS pgcrypto;
+   CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
+   CREATE EXTENSION IF NOT EXISTS vector;
+
+
+S3 Bucket Name: avkaran
+AWS Region [us-east-1]:
+Bucket Prefix/Folder (optional, e.g., 'production', 'staging'. Press Enter to skip): websites/noolva
+Custom Endpoint URL (optional, press Enter to skip):
+CDN URL for public assets (optional, press Enter to skip): https://cdn.avkaran.com
