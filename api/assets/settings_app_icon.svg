@@ -1,0 +1,23 @@
+<svg width="256" height="256" viewBox="0 0 256 256" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="bg" x1="32" y1="32" x2="224" y2="224" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#10B981"/>
+      <stop offset="1" stop-color="#14B8A6"/>
+    </linearGradient>
+    <filter id="shadow" x="0" y="0" width="256" height="256" filterUnits="userSpaceOnUse" color-interpolation-filters="sRGB">
+      <feDropShadow dx="0" dy="10" stdDeviation="14" flood-color="#0B1220" flood-opacity="0.25"/>
+    </filter>
+  </defs>
+
+  <g filter="url(#shadow)">
+    <rect x="32" y="32" width="192" height="192" rx="48" fill="url(#bg)"/>
+  </g>
+
+  <!-- Gear -->
+  <g fill="#FFFFFF" opacity="0.95">
+    <path d="M128 82c4.6 0 9 1 13 2.8l7.8-6.2 12.4 12.4-6.2 7.8c1.8 4 2.8 8.4 2.8 13s-1 9-2.8 13l6.2 7.8-12.4 12.4-7.8-6.2c-4 1.8-8.4 2.8-13 2.8s-9-1-13-2.8l-7.8 6.2-12.4-12.4 6.2-7.8c-1.8-4-2.8-8.4-2.8-13s1-9 2.8-13l-6.2-7.8 12.4-12.4 7.8 6.2c4-1.8 8.4-2.8 13-2.8Z"/>
+    <circle cx="128" cy="128" r="22" fill="#0B1220" opacity="0.16"/>
+    <circle cx="128" cy="128" r="16" fill="#FFFFFF"/>
+  </g>
+</svg>
+

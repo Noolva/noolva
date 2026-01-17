@@ -92,6 +92,10 @@ ON CONFLICT (type_code) DO NOTHING;
 -- ==========================================
 -- 3. Settings
 -- ==========================================
+-- Ensure settings supports per-field config for dynamic UI (dropdown options, ranges, etc.)
+ALTER TABLE public.settings
+ADD COLUMN IF NOT EXISTS field_config_json JSONB DEFAULT '{}'::jsonb;
+
 -- Global System Settings
 DO $$
 DECLARE
@@ -100,23 +104,204 @@ DECLARE
     ft_number INT;
     ft_bool INT;
     ft_image INT;
+    ft_single_choice INT;
 BEGIN
     SELECT field_type_id INTO ft_text FROM public.field_types WHERE type_code = 'text';
     SELECT field_type_id INTO ft_color FROM public.field_types WHERE type_code = 'color';
     SELECT field_type_id INTO ft_number FROM public.field_types WHERE type_code = 'number';
     SELECT field_type_id INTO ft_bool FROM public.field_types WHERE type_code = 'boolean';
     SELECT field_type_id INTO ft_image FROM public.field_types WHERE type_code = 'image';
+    SELECT field_type_id INTO ft_single_choice FROM public.field_types WHERE type_code = 'single_choice';
 
     -- 1. General Settings
-    INSERT INTO public.settings (group_name, setting_key, setting_name, description, field_type_id, default_value, value, scope, is_built_in)
+    INSERT INTO public.settings (group_name, setting_key, setting_name, description, field_type_id, default_value, value, scope, is_built_in, field_config_json)
     VALUES
-    ('General', 'app_name', 'Application Name', 'The visible name of the SaaS platform', ft_text, '"Noolva SaaS"', '"Noolva SaaS"', 'global', true),
-    ('Branding', 'brand_color', 'Primary Brand Color', 'Main accent color', ft_color, '"#007bff"', '"#007bff"', 'global', true),
+    ('General', 'app_name', 'Application Name', 'The visible name of the SaaS platform', ft_text, '"Noolva SaaS"', '"Noolva SaaS"', 'global', true, '{}'::jsonb),
+    ('Branding', 'brand_color', 'Primary Brand Color', 'Main accent color', ft_color, '"#007bff"', '"#007bff"', 'global', true, '{}'::jsonb),
+    
+    -- 1.1 Theme Settings
+    ('Theme', 'theme', 'Theme', 'Selected theme key', ft_single_choice, '"default"', '"default"', 'global', true,
+        '{"options":[{"label":"Default Corporate","value":"default"},{"label":"Slate Corporate","value":"slate"}]}'::jsonb
+    ),
+    ('Theme', 'theme_color_primary', 'Theme Primary Color', 'Primary theme color', ft_color, '"#1890ff"', '"#1890ff"', 'global', true,
+        '{"presets":[{"label":"Blue / Green","primary":"#1890ff","secondary":"#52c41a"},{"label":"Purple / Orange","primary":"#722ed1","secondary":"#fa8c16"},{"label":"Teal / Gold","primary":"#13c2c2","secondary":"#faad14"},{"label":"Pink / Gray","primary":"#eb2f96","secondary":"#8c8c8c"}]}'::jsonb
+    ),
+    ('Theme', 'theme_color_secondary', 'Theme Secondary Color', 'Secondary theme color', ft_color, '"#52c41a"', '"#52c41a"', 'global', true, '{}'::jsonb),
+    ('Theme', 'theme_mode', 'Theme Mode', 'light or dark', ft_single_choice, '"light"', '"light"', 'global', true,
+        '{"options":[{"label":"Light","value":"light"},{"label":"Dark","value":"dark"}]}'::jsonb
+    ),
+    ('Theme', 'font_size_base', 'Base Font Size', 'Global base font size (px)', ft_number, '14', '14', 'global', true,
+        '{"min":12,"max":18,"step":1}'::jsonb
+    ),
+    ('Theme', 'font_size_small', 'Small Font Size', 'Small font size (px)', ft_number, '12', '12', 'global', true,
+        '{"min":10,"max":16,"step":1}'::jsonb
+    ),
+    ('Theme', 'font_size_large', 'Large Font Size', 'Large font size (px)', ft_number, '16', '16', 'global', true,
+        '{"min":14,"max":22,"step":1}'::jsonb
+    ),
     
     -- 2. Security
-    ('Security', 'password_min_length', 'Minimum Password Length', 'Enforced complexity', ft_number, '8', '8', 'global', true),
-    ('Security', 'enable_2fa', 'Enable 2FA', 'Allow users to enable Two-Factor Auth', ft_bool, 'false', 'false', 'global', true)
+    ('Security', 'password_min_length', 'Minimum Password Length', 'Enforced complexity', ft_number, '8', '8', 'global', true, '{"min":6,"max":64,"step":1}'::jsonb),
+    ('Security', 'enable_2fa', 'Enable 2FA', 'Allow users to enable Two-Factor Auth', ft_bool, 'false', 'false', 'global', true, '{}'::jsonb)
     ON CONFLICT DO NOTHING;
+END $$;
+
+-- ==========================================
+-- 3.1 Apps & Menus (Seed)
+-- ==========================================
+-- Apps (top-level): Dashboards, Organization, App Studio, Settings
+DO $$
+DECLARE
+    system_user_id INT;
+    dashboards_app_id INT;
+    organization_app_id INT;
+    appstudio_app_id INT;
+    settings_app_id INT;
+    dev_console_app_id INT;
+BEGIN
+    SELECT user_id INTO system_user_id FROM public.users WHERE user_type = 'system' LIMIT 1;
+
+    -- Apps (global scope by leaving tenant_id/company_id NULL)
+    INSERT INTO public.apps (app_name, app_title, app_description, app_image_url, tenant_id, company_id, is_saas_default, is_builtin, is_active, order_no, created_by)
+    VALUES ('dashboards', 'Dashboards', 'Dashboards and analytics', '/assets/dashboards_app_icon.png', NULL, NULL, TRUE, TRUE, TRUE, 10, system_user_id)
+    ON CONFLICT ON CONSTRAINT unique_app_per_tenant_scope
+    DO UPDATE SET app_title = EXCLUDED.app_title, last_updated = CURRENT_TIMESTAMP
+    RETURNING app_id INTO dashboards_app_id;
+
+    IF dashboards_app_id IS NULL THEN
+        SELECT app_id INTO dashboards_app_id FROM public.apps WHERE app_name='dashboards' AND tenant_id IS NULL AND company_id IS NULL LIMIT 1;
+    END IF;
+
+    INSERT INTO public.apps (app_name, app_title, app_description, app_image_url, tenant_id, company_id, is_saas_default, is_builtin, is_active, order_no, created_by)
+    VALUES ('organization', 'Organization', 'Company, users, roles and permissions', '/assets/organization_app_icon.svg', NULL, NULL, TRUE, TRUE, TRUE, 20, system_user_id)
+    ON CONFLICT ON CONSTRAINT unique_app_per_tenant_scope
+    DO UPDATE SET app_title = EXCLUDED.app_title, last_updated = CURRENT_TIMESTAMP
+    RETURNING app_id INTO organization_app_id;
+
+    IF organization_app_id IS NULL THEN
+        SELECT app_id INTO organization_app_id FROM public.apps WHERE app_name='organization' AND tenant_id IS NULL AND company_id IS NULL LIMIT 1;
+    END IF;
+
+    INSERT INTO public.apps (app_name, app_title, app_description, app_image_url, tenant_id, company_id, is_saas_default, is_builtin, is_active, order_no, created_by)
+    VALUES ('app_studio', 'App Studio', 'Low-code studio (models, views, menus, APIs)', '/assets/app_studio_app_icon.svg', NULL, NULL, TRUE, TRUE, TRUE, 30, system_user_id)
+    ON CONFLICT ON CONSTRAINT unique_app_per_tenant_scope
+    DO UPDATE SET app_title = EXCLUDED.app_title, last_updated = CURRENT_TIMESTAMP
+    RETURNING app_id INTO appstudio_app_id;
+
+    IF appstudio_app_id IS NULL THEN
+        SELECT app_id INTO appstudio_app_id FROM public.apps WHERE app_name='app_studio' AND tenant_id IS NULL AND company_id IS NULL LIMIT 1;
+    END IF;
+
+    INSERT INTO public.apps (app_name, app_title, app_description, app_image_url, tenant_id, company_id, is_saas_default, is_builtin, is_active, order_no, created_by)
+    VALUES ('settings', 'Settings', 'Platform settings', '/assets/settings_app_icon.svg', NULL, NULL, TRUE, TRUE, TRUE, 40, system_user_id)
+    ON CONFLICT ON CONSTRAINT unique_app_per_tenant_scope
+    DO UPDATE SET app_title = EXCLUDED.app_title, last_updated = CURRENT_TIMESTAMP
+    RETURNING app_id INTO settings_app_id;
+
+    IF settings_app_id IS NULL THEN
+        SELECT app_id INTO settings_app_id FROM public.apps WHERE app_name='settings' AND tenant_id IS NULL AND company_id IS NULL LIMIT 1;
+    END IF;
+
+    -- Developer Console app
+    INSERT INTO public.apps (app_name, app_title, app_description, app_image_url, tenant_id, company_id, is_saas_default, is_builtin, is_active, order_no, created_by)
+    VALUES ('developer_console', 'Developer Console', 'Database administration and query tools', '/assets/developer_console_app_icon.svg', NULL, NULL, TRUE, TRUE, TRUE, 50, system_user_id)
+    ON CONFLICT ON CONSTRAINT unique_app_per_tenant_scope
+    DO UPDATE SET app_title = EXCLUDED.app_title, last_updated = CURRENT_TIMESTAMP
+    RETURNING app_id INTO dev_console_app_id;
+
+    IF dev_console_app_id IS NULL THEN
+        SELECT app_id INTO dev_console_app_id FROM public.apps WHERE app_name='developer_console' AND tenant_id IS NULL AND company_id IS NULL LIMIT 1;
+    END IF;
+
+    -- Menus for Developer Console app (all direct children, parent_id = NULL)
+    IF NOT EXISTS (SELECT 1 FROM public.menus WHERE app_id=dev_console_app_id AND parent_id IS NULL AND menu_title='Database') THEN
+        INSERT INTO public.menus (menu_title,parent_id,type,route_path,icon,app_id,scope,is_builtin,order_no,created_by)
+        VALUES ('Database',NULL,'item','dev_console_database','database',dev_console_app_id,'saas',TRUE,10,system_user_id);
+    END IF;
+    IF NOT EXISTS (SELECT 1 FROM public.menus WHERE app_id=dev_console_app_id AND parent_id IS NULL AND menu_title='Db Query') THEN
+        INSERT INTO public.menus (menu_title,parent_id,type,route_path,icon,app_id,scope,is_builtin,order_no,created_by)
+        VALUES ('Db Query',NULL,'item','dev_console_db_query','code',dev_console_app_id,'saas',TRUE,20,system_user_id);
+    END IF;
+
+    -- Menus for Organization app (all direct children, parent_id = NULL)
+    IF NOT EXISTS (SELECT 1 FROM public.menus WHERE app_id=organization_app_id AND parent_id IS NULL AND menu_title='Companies') THEN
+        INSERT INTO public.menus (menu_title,parent_id,type,route_path,icon,app_id,scope,is_builtin,order_no,created_by)
+        VALUES ('Companies',NULL,'item','org_companies','bank',organization_app_id,'saas',TRUE,10,system_user_id);
+    END IF;
+    IF NOT EXISTS (SELECT 1 FROM public.menus WHERE app_id=organization_app_id AND parent_id IS NULL AND menu_title='App Menus') THEN
+        INSERT INTO public.menus (menu_title,parent_id,type,route_path,icon,app_id,scope,is_builtin,order_no,created_by)
+        VALUES ('App Menus',NULL,'item','org_app_menus','appstore',organization_app_id,'saas',TRUE,20,system_user_id);
+    END IF;
+    IF NOT EXISTS (SELECT 1 FROM public.menus WHERE app_id=organization_app_id AND parent_id IS NULL AND menu_title='Users') THEN
+        INSERT INTO public.menus (menu_title,parent_id,type,route_path,icon,app_id,scope,is_builtin,order_no,created_by)
+        VALUES ('Users',NULL,'item','org_users','user',organization_app_id,'saas',TRUE,30,system_user_id);
+    END IF;
+    IF NOT EXISTS (SELECT 1 FROM public.menus WHERE app_id=organization_app_id AND parent_id IS NULL AND menu_title='User Groups') THEN
+        INSERT INTO public.menus (menu_title,parent_id,type,route_path,icon,app_id,scope,is_builtin,order_no,created_by)
+        VALUES ('User Groups',NULL,'item','org_user_groups','users',organization_app_id,'saas',TRUE,40,system_user_id);
+    END IF;
+    IF NOT EXISTS (SELECT 1 FROM public.menus WHERE app_id=organization_app_id AND parent_id IS NULL AND menu_title='Teams') THEN
+        INSERT INTO public.menus (menu_title,parent_id,type,route_path,icon,app_id,scope,is_builtin,order_no,created_by)
+        VALUES ('Teams',NULL,'item','org_teams','team',organization_app_id,'saas',TRUE,50,system_user_id);
+    END IF;
+    IF NOT EXISTS (SELECT 1 FROM public.menus WHERE app_id=organization_app_id AND parent_id IS NULL AND menu_title='Roles') THEN
+        INSERT INTO public.menus (menu_title,parent_id,type,route_path,icon,app_id,scope,is_builtin,order_no,created_by)
+        VALUES ('Roles',NULL,'item','org_roles','safety',organization_app_id,'saas',TRUE,60,system_user_id);
+    END IF;
+    IF NOT EXISTS (SELECT 1 FROM public.menus WHERE app_id=organization_app_id AND parent_id IS NULL AND menu_title='Permissions') THEN
+        INSERT INTO public.menus (menu_title,parent_id,type,route_path,icon,app_id,scope,is_builtin,order_no,created_by)
+        VALUES ('Permissions',NULL,'item','org_permissions','key',organization_app_id,'saas',TRUE,70,system_user_id);
+    END IF;
+    IF NOT EXISTS (SELECT 1 FROM public.menus WHERE app_id=organization_app_id AND parent_id IS NULL AND menu_title='Settings') THEN
+        INSERT INTO public.menus (menu_title,parent_id,type,route_path,icon,app_id,scope,is_builtin,order_no,created_by)
+        VALUES ('Settings',NULL,'item','settings','setting',organization_app_id,'saas',TRUE,80,system_user_id);
+    END IF;
+
+    -- Menus for App Studio app (all direct children, parent_id = NULL)
+    IF NOT EXISTS (SELECT 1 FROM public.menus WHERE app_id=appstudio_app_id AND parent_id IS NULL AND menu_title='App Store') THEN
+        INSERT INTO public.menus (menu_title,parent_id,type,route_path,icon,app_id,scope,is_builtin,order_no,created_by)
+        VALUES ('App Store',NULL,'item','studio_app_store','shop',appstudio_app_id,'saas',TRUE,10,system_user_id);
+    END IF;
+    IF NOT EXISTS (SELECT 1 FROM public.menus WHERE app_id=appstudio_app_id AND parent_id IS NULL AND menu_title='My Apps') THEN
+        INSERT INTO public.menus (menu_title,parent_id,type,route_path,icon,app_id,scope,is_builtin,order_no,created_by)
+        VALUES ('My Apps',NULL,'item','studio_my_apps','appstore',appstudio_app_id,'saas',TRUE,20,system_user_id);
+    END IF;
+    IF NOT EXISTS (SELECT 1 FROM public.menus WHERE app_id=appstudio_app_id AND parent_id IS NULL AND menu_title='Modules') THEN
+        INSERT INTO public.menus (menu_title,parent_id,type,route_path,icon,app_id,scope,is_builtin,order_no,created_by)
+        VALUES ('Modules',NULL,'item','studio_modules','blocks',appstudio_app_id,'saas',TRUE,30,system_user_id);
+    END IF;
+    IF NOT EXISTS (SELECT 1 FROM public.menus WHERE app_id=appstudio_app_id AND parent_id IS NULL AND menu_title='Features') THEN
+        INSERT INTO public.menus (menu_title,parent_id,type,route_path,icon,app_id,scope,is_builtin,order_no,created_by)
+        VALUES ('Features',NULL,'item','studio_features','profile',appstudio_app_id,'saas',TRUE,40,system_user_id);
+    END IF;
+    IF NOT EXISTS (SELECT 1 FROM public.menus WHERE app_id=appstudio_app_id AND parent_id IS NULL AND menu_title='Api Endpoints') THEN
+        INSERT INTO public.menus (menu_title,parent_id,type,route_path,icon,app_id,scope,is_builtin,order_no,created_by)
+        VALUES ('Api Endpoints',NULL,'item','studio_api_endpoints','api',appstudio_app_id,'saas',TRUE,50,system_user_id);
+    END IF;
+    IF NOT EXISTS (SELECT 1 FROM public.menus WHERE app_id=appstudio_app_id AND parent_id IS NULL AND menu_title='Data Models') THEN
+        INSERT INTO public.menus (menu_title,parent_id,type,route_path,icon,app_id,scope,is_builtin,order_no,created_by)
+        VALUES ('Data Models',NULL,'item','studio_data_models','database',appstudio_app_id,'saas',TRUE,60,system_user_id);
+    END IF;
+    IF NOT EXISTS (SELECT 1 FROM public.menus WHERE app_id=appstudio_app_id AND parent_id IS NULL AND menu_title='UI Views') THEN
+        INSERT INTO public.menus (menu_title,parent_id,type,route_path,icon,app_id,scope,is_builtin,order_no,created_by)
+        VALUES ('UI Views',NULL,'item','studio_ui_views','layout',appstudio_app_id,'saas',TRUE,70,system_user_id);
+    END IF;
+    IF NOT EXISTS (SELECT 1 FROM public.menus WHERE app_id=appstudio_app_id AND parent_id IS NULL AND menu_title='Jobs/Actions') THEN
+        INSERT INTO public.menus (menu_title,parent_id,type,route_path,icon,app_id,scope,is_builtin,order_no,created_by)
+        VALUES ('Jobs/Actions',NULL,'item','studio_jobs_actions','rocket',appstudio_app_id,'saas',TRUE,80,system_user_id);
+    END IF;
+    IF NOT EXISTS (SELECT 1 FROM public.menus WHERE app_id=appstudio_app_id AND parent_id IS NULL AND menu_title='Integration Manager') THEN
+        INSERT INTO public.menus (menu_title,parent_id,type,route_path,icon,app_id,scope,is_builtin,order_no,created_by)
+        VALUES ('Integration Manager',NULL,'item','studio_integrations','link',appstudio_app_id,'saas',TRUE,90,system_user_id);
+    END IF;
+    IF NOT EXISTS (SELECT 1 FROM public.menus WHERE app_id=appstudio_app_id AND parent_id IS NULL AND menu_title='Assets') THEN
+        INSERT INTO public.menus (menu_title,parent_id,type,route_path,icon,app_id,scope,is_builtin,order_no,created_by)
+        VALUES ('Assets',NULL,'item','studio_assets','picture',appstudio_app_id,'saas',TRUE,100,system_user_id);
+    END IF;
+    IF NOT EXISTS (SELECT 1 FROM public.menus WHERE app_id=appstudio_app_id AND parent_id IS NULL AND menu_title='UI Components') THEN
+        INSERT INTO public.menus (menu_title,parent_id,type,route_path,icon,app_id,scope,is_builtin,order_no,created_by)
+        VALUES ('UI Components',NULL,'item','studio_ui_components','build',appstudio_app_id,'saas',TRUE,110,system_user_id);
+    END IF;
 END $$;
 
 -- ==========================================

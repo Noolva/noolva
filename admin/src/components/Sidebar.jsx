@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Menu, Spin } from 'antd';
 import { api } from '../utils/api';
+import { renderIcon } from '../utils/iconMapper.jsx';
 
 const Sidebar = ({ selectedApp, selectedAppData, onSelect }) => {
     const [menus, setMenus] = useState([]);
@@ -17,8 +18,13 @@ const Sidebar = ({ selectedApp, selectedAppData, onSelect }) => {
                 setLoading(true);
                 // selectedApp could be app_id or app_name, try app_id first
                 const appId = selectedAppData.app_id || selectedApp;
-                const response = await api.getAppMenus(appId);
-                setMenus(response.menus || []);
+                console.log('Fetching menus for appId:', appId, 'selectedAppData:', selectedAppData);
+                const response = await api.getMenusForApp(appId);
+                console.log('API response:', response);
+                // Handle both response formats: {menus: [...]} or direct array
+                const menusList = Array.isArray(response) ? response : (response?.menus || response?.data || []);
+                console.log('Menus list:', menusList);
+                setMenus(menusList);
             } catch (error) {
                 console.error('Failed to fetch menus:', error);
                 setMenus([]);
@@ -30,30 +36,12 @@ const Sidebar = ({ selectedApp, selectedAppData, onSelect }) => {
         fetchMenus();
     }, [selectedApp, selectedAppData]);
 
-    const renderMenuItems = (menuList) => {
-        return menuList.map((menu) => {
-            if (menu.children && menu.children.length > 0) {
-                return (
-                    <Menu.SubMenu
-                        key={menu.menu_id || menu.menu_uuid}
-                        title={menu.menu_title}
-                        icon={menu.icon ? <span>{menu.icon}</span> : null}
-                    >
-                        {renderMenuItems(menu.children)}
-                    </Menu.SubMenu>
-                );
-            } else {
-                return (
-                    <Menu.Item
-                        key={menu.menu_id || menu.menu_uuid}
-                        onClick={() => onSelect(menu.route_path || menu.menu_id, menu)}
-                    >
-                        {menu.menu_title}
-                    </Menu.Item>
-                );
-            }
-        });
-    };
+    const menuItems = menus.map((menu) => ({
+        key: menu.menu_id || menu.menu_uuid,
+        label: menu.menu_title,
+        icon: menu.icon ? renderIcon(menu.icon) : null,
+        onClick: () => onSelect(menu.route_path || menu.menu_id || menu.menu_title, menu),
+    }));
 
     if (loading) {
         return (
@@ -75,10 +63,8 @@ const Sidebar = ({ selectedApp, selectedAppData, onSelect }) => {
         <Menu
             mode="inline"
             style={{ height: '100%', borderRight: 0 }}
-            defaultOpenKeys={menus.map(m => m.menu_id?.toString() || m.menu_uuid)}
-        >
-            {renderMenuItems(menus)}
-        </Menu>
+            items={menuItems}
+        />
     );
 };
 

@@ -1,0 +1,16 @@
+main            → production
+develop         → active development
+release/x.y.z   → stabilization & release
+
+| Type     | PR Title Example                                 |
+| -------- | ------------------------------------------------ |
+| feature  | `[NF0001] feature: add user login API`           |
+| bugfix   | `[NB0145] bugfix: fix null pointer in auth`      |
+| hotfix   | `[NH0160] hotfix: resolve prod crash on startup` |
+| chore    | `[NC0021] chore: update dependencies`            |
+| refactor | `[NR0033] refactor(auth): cleanup auth logic`    |
+| test     | `[NT0044] test: add auth integration tests`      |
+| docs     | `[ND0012] docs: update API README`               |
+| security | `[NS0055] security: harden token validation`     |
+| build    | `[NBUI0077] build: optimize docker image`        |
+| revert   | `[NRV0101] revert: rollback release 1.0.1`       |
