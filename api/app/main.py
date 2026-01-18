@@ -184,6 +184,15 @@ except Exception as e:
     logger.error(f"Failed to register field options router: {e}")
     raise
 
+# Import and include icons router
+try:
+    from routes import icons
+    app.include_router(icons.router, prefix="/icons", tags=["Icons"])
+    logger.info("Icons router registered successfully at /icons")
+except Exception as e:
+    logger.error(f"Failed to register icons router: {e}")
+    raise
+
 
 @app.get("/")
 def home():
