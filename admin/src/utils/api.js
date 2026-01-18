@@ -585,4 +585,36 @@ export const api = {
         const response = await axiosInstance.get("/data-models/field-types/list");
         return response.data;
     },
+
+    // Icons
+    getIcons: async ({ search, category, icon_type, tag, is_popular, limit = 10000, offset = 0 } = {}) => {
+        const params = { limit, offset };
+        if (search) params.search = search;
+        if (category) params.category = category;
+        if (icon_type) params.icon_type = icon_type;
+        if (tag) params.tag = tag;
+        if (is_popular !== undefined) params.is_popular = is_popular;
+        const response = await axiosInstance.get("/icons/list", { params });
+        return response.data;
+    },
+
+    getIcon: async (iconId) => {
+        const response = await axiosInstance.get(`/icons/${iconId}`);
+        return response.data;
+    },
+
+    getIconCategories: async () => {
+        const response = await axiosInstance.get("/icons/categories/list");
+        return response.data;
+    },
+
+    getIconTags: async () => {
+        const response = await axiosInstance.get("/icons/tags/list");
+        return response.data;
+    },
+
+    getIconTypes: async () => {
+        const response = await axiosInstance.get("/icons/types/list");
+        return response.data;
+    },
 };
