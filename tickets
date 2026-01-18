@@ -3,13 +3,18 @@ NF0001/feature/ui-custom-components-for-inputs-views
 admin themes, theming settings, parameters,
 branding,logo, url icon, loss of tabs when switching apps,
 tabs, right click , duplicate,etc.
-file manager,fa-icons,svg icons,
+file manager,
+fa-icons,svg icons,=>done
 auto hide side bar, theme side bar type, fontname in theme, side bar parent child menu support
 transaction password or pin/ on model field use pin/ use mfa
-delete confirmation=>2fa,simple dialog,confirm password again,
-debug mode in project
+delete confirmation=>2fa,simple dialog,confirm password again,=>it should be in view actions
+debug mode in project->conentrate when developing customer pages.
 collections add,edit,page,
 data-models, pages. field-types revise,
 auto-logout-timout-with relogin  with password protection, only for specific views.
+query edit not supporting own queries example distinct;
+
+given PRS:
+NF0002/feature/icons-libraries-for-fa-antd-smily-datamodels
 
 
