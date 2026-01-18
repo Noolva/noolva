@@ -166,6 +166,24 @@ except Exception as e:
     logger.error(f"Failed to register menus router: {e}")
     raise
 
+# Import and include data models router
+try:
+    from routes import data_models
+    app.include_router(data_models.router, prefix="/data-models", tags=["Data Models"])
+    logger.info("Data models router registered successfully at /data-models")
+except Exception as e:
+    logger.error(f"Failed to register data models router: {e}")
+    raise
+
+# Import and include field options router
+try:
+    from routes import field_options
+    app.include_router(field_options.router, tags=["Field Options"])
+    logger.info("Field options router registered successfully at /field-options")
+except Exception as e:
+    logger.error(f"Failed to register field options router: {e}")
+    raise
+
 
 @app.get("/")
 def home():
@@ -197,7 +215,8 @@ async def catch_all(request: Request, path: str):
     # For organization routes - check if it's exactly the base path or a sub-path
     # If it's exactly "app-menus", "companies", etc., the router should have handled it
     # If we're here, it means a specific endpoint wasn't found
-    base_paths = ["app-menus", "companies", "users", "user-groups", "teams", "roles", "permissions"]
+    # Note: "data-models" is handled by its router, so don't catch it here
+    base_paths = ["app-menus", "companies", "user-groups", "teams", "roles", "permissions"]
     for base_path in base_paths:
         if path == base_path or path.startswith(f"{base_path}/"):
             return JSONResponse(

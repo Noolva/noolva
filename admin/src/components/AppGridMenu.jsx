@@ -1,6 +1,5 @@
 const apps = [
     { key: 'dashbaords', title: 'Dashboards', icon: '/app_icons/dashboards.png' },
-    { key: 'users', title: 'Users', icon: '/app_icons/users.png' },
 ];
 const AppGridMenu = ({ onMenuSelect }) => (
     <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 80px)', gap: 12, padding: 12 }}>
