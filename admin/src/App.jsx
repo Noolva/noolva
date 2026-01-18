@@ -12,6 +12,7 @@ import AddForm from './pages/AddForm';
 import Settings from './pages/Settings';
 import Database from './pages/Database';
 import DbQuery from './pages/DbQuery';
+import DataModels from './pages/DataModels';
 import { useAuth } from './contexts/AuthContext';
 import { ThemeProvider } from './contexts/ThemeContext';
 
@@ -53,6 +54,8 @@ const AppContent = () => {
       case 'settings': return <Settings />;
       case 'dev_console_database': return <Database />;
       case 'dev_console_db_query': return <DbQuery />;
+      case 'studio_data_models': return <DataModels />;
+      case 'data_models': return <DataModels />;
       default: {
         // Try to render based on menu title if available
         if (menuData?.menu_title) {
