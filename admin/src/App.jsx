@@ -13,6 +13,7 @@ import Settings from './pages/Settings';
 import Database from './pages/Database';
 import DbQuery from './pages/DbQuery';
 import DataModels from './pages/DataModels';
+import IconExplorer from './pages/IconExplorer';
 import { useAuth } from './contexts/AuthContext';
 import { ThemeProvider } from './contexts/ThemeContext';
 
@@ -52,12 +53,23 @@ const AppContent = () => {
       case 'dev_console_db_query': return <DbQuery />;
       case 'studio_data_models': return <DataModels />;
       case 'data_models': return <DataModels />;
+      case 'studio_icons': return <IconExplorer />;
       default: {
+        // Try to match by route_path from menuData (since key might be menu_id)
+        if (menuData?.route_path) {
+          const routePath = menuData.route_path;
+          if (routePath === 'dev_console_database') return <Database />;
+          if (routePath === 'dev_console_db_query') return <DbQuery />;
+          if (routePath === 'studio_data_models' || routePath === 'data_models') return <DataModels />;
+          if (routePath === 'studio_icons') return <IconExplorer />;
+          if (routePath === 'settings') return <Settings />;
+        }
         // Try to render based on menu title if available
         if (menuData?.menu_title) {
           const title = menuData.menu_title.toLowerCase().replace(/\s+/g, '_');
           if (title === 'database') return <Database />;
           if (title === 'db_query' || title === 'db query') return <DbQuery />;
+          if (title === 'icons') return <IconExplorer />;
         }
         return <div>Unknown Page: {key}</div>;
       }
@@ -131,8 +143,28 @@ const AppContent = () => {
   const duplicateTab = useCallback((targetKey) => {
     const tabToDuplicate = tabs.items.find(tab => tab.key === targetKey);
     if (tabToDuplicate) {
-      const newKey = `${targetKey}_copy_${Date.now()}`;
-      const newLabel = `${tabToDuplicate.label} (Copy)`;
+      // Find all existing duplicates to determine the next number
+      const baseLabel = tabToDuplicate.label.replace(/\s*\(\d+\)$/, ''); // Remove existing number suffix
+      const duplicatePattern = new RegExp(`^${baseLabel.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\s*\\(\\d+\\)$`);
+      const existingDuplicates = tabs.items.filter(tab => 
+        duplicatePattern.test(tab.label) || tab.label === baseLabel
+      );
+      
+      // Find the highest number used
+      let maxNumber = 0;
+      existingDuplicates.forEach(tab => {
+        const match = tab.label.match(/\((\d+)\)$/);
+        if (match) {
+          maxNumber = Math.max(maxNumber, parseInt(match[1], 10));
+        } else if (tab.label === baseLabel) {
+          maxNumber = Math.max(maxNumber, 0); // Original counts as (0) or base
+        }
+      });
+      
+      const nextNumber = maxNumber + 1;
+      const newKey = `${targetKey}_${nextNumber}_${Date.now()}`;
+      const newLabel = `${baseLabel} (${nextNumber})`;
+      
       // Store menuData and app info so content can be re-rendered
       addTab(newKey, newLabel, tabToDuplicate.menuData, tabToDuplicate.appKey, tabToDuplicate.appData);
     }
