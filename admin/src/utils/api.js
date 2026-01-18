@@ -429,32 +429,6 @@ export const api = {
         return response.data;
     },
 
-    // Users
-    getUsers: async () => {
-        const response = await axiosInstance.get("/users");
-        return response.data;
-    },
-
-    getUser: async (userId) => {
-        const response = await axiosInstance.get(`/users/${userId}`);
-        return response.data;
-    },
-
-    createUser: async (data) => {
-        const response = await axiosInstance.post("/users", data);
-        return response.data;
-    },
-
-    updateUser: async (userId, data) => {
-        const response = await axiosInstance.put(`/users/${userId}`, data);
-        return response.data;
-    },
-
-    deleteUser: async (userId) => {
-        const response = await axiosInstance.delete(`/users/${userId}`);
-        return response.data;
-    },
-
     // User Groups
     getUserGroups: async () => {
         const response = await axiosInstance.get("/user-groups");
@@ -556,6 +530,59 @@ export const api = {
 
     deletePermission: async (permissionId) => {
         const response = await axiosInstance.delete(`/permissions/${permissionId}`);
+        return response.data;
+    },
+
+    // Data Models
+    getDataModels: async (appId = null) => {
+        const url = appId ? `/data-models/list?app_id=${appId}` : "/data-models/list";
+        const response = await axiosInstance.get(url);
+        return response.data;
+    },
+
+    getDataModel: async (modelId, includeFields = true) => {
+        const response = await axiosInstance.get(`/data-models/model/${modelId}`, {
+            params: { include_fields: includeFields }
+        });
+        return response.data;
+    },
+
+    createDataModel: async (data) => {
+        const response = await axiosInstance.post("/data-models/create", data);
+        return response.data;
+    },
+
+    updateDataModel: async (modelId, data) => {
+        const response = await axiosInstance.put(`/data-models/model/${modelId}`, data);
+        return response.data;
+    },
+
+    deleteDataModel: async (modelId, deleteTable = false) => {
+        const response = await axiosInstance.delete(`/data-models/model/${modelId}`, {
+            params: { delete_table: deleteTable }
+        });
+        return response.data;
+    },
+
+    addDataModelField: async (modelId, fieldData) => {
+        const response = await axiosInstance.post(`/data-models/model/${modelId}/fields`, fieldData);
+        return response.data;
+    },
+
+    updateDataModelField: async (modelId, fieldId, fieldData) => {
+        const response = await axiosInstance.put(`/data-models/model/${modelId}/fields/${fieldId}`, fieldData);
+        return response.data;
+    },
+
+    deleteDataModelField: async (modelId, fieldId, deleteColumn = false) => {
+        const response = await axiosInstance.delete(`/data-models/model/${modelId}/fields/${fieldId}`, {
+            params: { delete_column: deleteColumn }
+        });
+        return response.data;
+    },
+
+    getFieldTypes: async () => {
+        const response = await axiosInstance.get("/data-models/field-types/list");
         return response.data;
     },
 };

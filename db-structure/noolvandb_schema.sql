@@ -362,7 +362,7 @@ CREATE TABLE public.menus (
     
     type VARCHAR(20) DEFAULT 'item', 
     route_path VARCHAR(150),
-    icon VARCHAR(100),
+    icon VARCHAR(100), -- Stores icon code like "fa:heart", "antd:download", "smily:thanks", "custom:myhome"
     
     -- Links
     module_feature_id INTEGER REFERENCES public.module_features(module_feature_id) ON DELETE SET NULL, 
@@ -592,6 +592,71 @@ CREATE TABLE public.collections (
     last_updated TIMESTAMP WITHOUT TIME ZONE DEFAULT CURRENT_TIMESTAMP,
     
     UNIQUE(tenant_id, collection_code) -- Unique code per tenant (or global if tenant is null)
+);
+
+-- ==========================================
+-- 1.7 Icons Table
+-- ==========================================
+-- Stores icons from FontAwesome, Ant Design, Smilies, and Custom SVG icons
+-- Supports tag-based search and categorization
+CREATE TABLE public.icons (
+    icon_id SERIAL PRIMARY KEY,
+    icon_uuid UUID DEFAULT gen_random_uuid() NOT NULL UNIQUE,
+    
+    -- Icon identifier (e.g., "fa:heart", "antd:download", "smily:thanks", "custom:myhome")
+    icon_code VARCHAR(100) NOT NULL UNIQUE,
+    
+    -- Icon type: 'fa' (FontAwesome), 'antd' (Ant Design), 'smily' (Emoji/Smiley), 'custom' (SVG)
+    icon_type VARCHAR(20) NOT NULL CHECK (icon_type IN ('fa', 'antd', 'smily', 'custom')),
+    
+    -- Display name
+    icon_name VARCHAR(150) NOT NULL,
+    
+    -- Category for grouping (e.g., 'navigation', 'actions', 'social', 'business', 'emotions')
+    category VARCHAR(50) NOT NULL,
+    
+    -- Description
+    description TEXT,
+    
+    -- Tags for search (stored as array for easy querying)
+    tags TEXT[] DEFAULT '{}',
+    
+    -- Icon-specific data
+    -- For FA: stores the FA class name (e.g., "fas fa-heart")
+    -- For Antd: stores the component name (e.g., "HeartOutlined")
+    -- For Smily: stores the emoji or unicode (e.g., "😊" or "thanks")
+    -- For Custom: stores SVG path or reference
+    icon_data JSONB DEFAULT '{}'::jsonb,
+    
+    -- Popularity/Usage tracking
+    usage_count INTEGER DEFAULT 0,
+    is_popular BOOLEAN DEFAULT FALSE,
+    is_free BOOLEAN DEFAULT TRUE, -- All icons in this table are free
+    
+    -- Status
+    is_active BOOLEAN DEFAULT TRUE,
+    
+    -- Metadata
+    created_by INTEGER REFERENCES public.users(user_id),
+    created_at TIMESTAMP WITHOUT TIME ZONE DEFAULT CURRENT_TIMESTAMP NOT NULL,
+    last_updated TIMESTAMP WITHOUT TIME ZONE DEFAULT CURRENT_TIMESTAMP NOT NULL
+);
+
+-- Indexes for icons table
+CREATE INDEX idx_icons_type ON public.icons(icon_type);
+CREATE INDEX idx_icons_category ON public.icons(category);
+CREATE INDEX idx_icons_tags ON public.icons USING GIN(tags);
+CREATE INDEX idx_icons_code ON public.icons(icon_code);
+CREATE INDEX idx_icons_popular ON public.icons(is_popular) WHERE is_popular = TRUE;
+CREATE INDEX idx_icons_active ON public.icons(is_active) WHERE is_active = TRUE;
+
+-- Full-text search index on name, description, and tags
+CREATE INDEX idx_icons_search ON public.icons USING GIN(
+    to_tsvector('english', 
+        COALESCE(icon_name, '') || ' ' || 
+        COALESCE(description, '') || ' ' || 
+        COALESCE(array_to_string(tags, ' '), '')
+    )
 );
 
 -- ==========================================
