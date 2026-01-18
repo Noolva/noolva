@@ -25,6 +25,7 @@ import { VCTab } from "./displays/VCTab";
 import { VCDrawer } from "./displays/VCDrawer";
 import { VCModal } from "./displays/VCModal";
 import { VCSkeleton } from "./displays/VCSkeleton";
+import { VCIcon } from "./displays/VCIcon";
 
 import { VCRow, VCColumn, VCDivider, VCForm, VCCard } from "../layoutComponents";
 
@@ -70,5 +71,6 @@ export const viewComponentRegistry = {
   skeleton: VCSkeleton,
   jsonviewer: VCJsonViewer,
   json_viewer: VCJsonViewer,
+  icon: VCIcon,
 };
 

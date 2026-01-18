@@ -138,66 +138,76 @@ function mapSettingToVC(setting) {
     vcType = "color";
   } else if (fieldType === "single_choice") {
     vcType = "select";
-    // Normalize options and ensure they're properly formatted
-    let rawOptions = cfg?.options;
-    
-    // Handle different formats of options
-    if (rawOptions && typeof rawOptions === "string") {
-      // If options is a JSON string, parse it
-      try {
-        rawOptions = JSON.parse(rawOptions);
-      } catch (e) {
-        // If not JSON, treat as comma-separated string
-        rawOptions = rawOptions.split(",").map(s => s.trim()).filter(Boolean);
+    // Pass field_config_json and default_props_json to component for options_mode handling
+    input_values.field_config_json = cfg;
+    // Get default_props_json from field_types if available
+    if (setting.default_props_json) {
+      let defaultProps = setting.default_props_json;
+      if (typeof defaultProps === "string") {
+        try {
+          defaultProps = JSON.parse(defaultProps);
+        } catch (e) {
+          defaultProps = {};
+        }
       }
+      input_values.default_props_json = defaultProps;
     }
     
-    if (!Array.isArray(rawOptions)) {
-      rawOptions = [];
-    }
-    
-    input_values.options = normalizeOptions(rawOptions);
-    
-    // Debug: Log options for select fields
-    console.log(`mapSettingToVC: ${setting.setting_key}`, {
-      fieldType,
-      rawOptions,
-      normalizedOptions: input_values.options,
-      cfg,
-    });
-    
-    // Debug: Log if options exist but normalization failed
-    if (rawOptions.length > 0 && input_values.options.length === 0) {
-      console.warn(`mapSettingToVC: Options not normalized for ${setting.setting_key}. Raw:`, rawOptions);
+    // Legacy support: if options_mode is not set, use old behavior
+    if (!cfg?.options_mode && !setting.default_props_json?.options_mode) {
+      let rawOptions = cfg?.options;
+      
+      // Handle different formats of options
+      if (rawOptions && typeof rawOptions === "string") {
+        try {
+          rawOptions = JSON.parse(rawOptions);
+        } catch (e) {
+          rawOptions = rawOptions.split(",").map(s => s.trim()).filter(Boolean);
+        }
+      }
+      
+      if (!Array.isArray(rawOptions)) {
+        rawOptions = [];
+      }
+      
+      input_values.options = normalizeOptions(rawOptions);
     }
   } else if (fieldType === "multi_choice") {
     vcType = "select";
     input_values.mode = "multiple";
-    let rawOptions = cfg?.options;
-    
-    // Handle different formats of options
-    if (rawOptions && typeof rawOptions === "string") {
-      try {
-        rawOptions = JSON.parse(rawOptions);
-      } catch (e) {
-        rawOptions = rawOptions.split(",").map(s => s.trim()).filter(Boolean);
+    // Pass field_config_json and default_props_json to component for options_mode handling
+    input_values.field_config_json = cfg;
+    // Get default_props_json from field_types if available
+    if (setting.default_props_json) {
+      let defaultProps = setting.default_props_json;
+      if (typeof defaultProps === "string") {
+        try {
+          defaultProps = JSON.parse(defaultProps);
+        } catch (e) {
+          defaultProps = {};
+        }
       }
+      input_values.default_props_json = defaultProps;
     }
     
-    if (!Array.isArray(rawOptions)) {
-      rawOptions = [];
-    }
-    
-    input_values.options = normalizeOptions(rawOptions);
-    
-    console.log(`mapSettingToVC: ${setting.setting_key} (multi)`, {
-      fieldType,
-      rawOptions,
-      normalizedOptions: input_values.options,
-    });
-    
-    if (rawOptions.length > 0 && input_values.options.length === 0) {
-      console.warn(`mapSettingToVC: Options not normalized for ${setting.setting_key}. Raw:`, rawOptions);
+    // Legacy support: if options_mode is not set, use old behavior
+    if (!cfg?.options_mode && !setting.default_props_json?.options_mode) {
+      let rawOptions = cfg?.options;
+      
+      // Handle different formats of options
+      if (rawOptions && typeof rawOptions === "string") {
+        try {
+          rawOptions = JSON.parse(rawOptions);
+        } catch (e) {
+          rawOptions = rawOptions.split(",").map(s => s.trim()).filter(Boolean);
+        }
+      }
+      
+      if (!Array.isArray(rawOptions)) {
+        rawOptions = [];
+      }
+      
+      input_values.options = normalizeOptions(rawOptions);
     }
   } else if (fieldType === "date" || fieldType === "datetime" || fieldType === "time") {
     vcType = "date";

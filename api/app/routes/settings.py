@@ -71,6 +71,7 @@ async def get_settings_definitions(
             s.field_type_id,
             ft.type_code AS field_type_code,
             COALESCE(s.field_config_json, '{{}}'::jsonb) AS field_config_json,
+            ft.default_props_json AS default_props_json,
             s.default_value,
             s.value
         FROM public.settings s
