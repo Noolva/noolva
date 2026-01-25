@@ -37,6 +37,216 @@
       "mime_type": "image/svg+xml",
       "is_public": true,
       "description": "settings app icon"
+    },
+    {
+      "file_name": "field_types/field_type_text.svg",
+      "original_name": "field_type_text.svg",
+      "mime_type": "image/svg+xml",
+      "is_public": true,
+      "description": "Text field type image"
+    },
+    {
+      "file_name": "field_types/field_type_paragraph.svg",
+      "original_name": "field_type_paragraph.svg",
+      "mime_type": "image/svg+xml",
+      "is_public": true,
+      "description": "Paragraph field type image"
+    },
+    {
+      "file_name": "field_types/field_type_number.svg",
+      "original_name": "field_type_number.svg",
+      "mime_type": "image/svg+xml",
+      "is_public": true,
+      "description": "Number field type image"
+    },
+    {
+      "file_name": "field_types/field_type_auto_number.svg",
+      "original_name": "field_type_auto_number.svg",
+      "mime_type": "image/svg+xml",
+      "is_public": true,
+      "description": "Auto Number field type image"
+    },
+    {
+      "file_name": "field_types/field_type_currency.svg",
+      "original_name": "field_type_currency.svg",
+      "mime_type": "image/svg+xml",
+      "is_public": true,
+      "description": "Currency field type image"
+    },
+    {
+      "file_name": "field_types/field_type_percentage.svg",
+      "original_name": "field_type_percentage.svg",
+      "mime_type": "image/svg+xml",
+      "is_public": true,
+      "description": "Percentage field type image"
+    },
+    {
+      "file_name": "field_types/field_type_rating.svg",
+      "original_name": "field_type_rating.svg",
+      "mime_type": "image/svg+xml",
+      "is_public": true,
+      "description": "Rating field type image"
+    },
+    {
+      "file_name": "field_types/field_type_date.svg",
+      "original_name": "field_type_date.svg",
+      "mime_type": "image/svg+xml",
+      "is_public": true,
+      "description": "Date field type image"
+    },
+    {
+      "file_name": "field_types/field_type_datetime.svg",
+      "original_name": "field_type_datetime.svg",
+      "mime_type": "image/svg+xml",
+      "is_public": true,
+      "description": "DateTime field type image"
+    },
+    {
+      "file_name": "field_types/field_type_time.svg",
+      "original_name": "field_type_time.svg",
+      "mime_type": "image/svg+xml",
+      "is_public": true,
+      "description": "Time field type image"
+    },
+    {
+      "file_name": "field_types/field_type_duration.svg",
+      "original_name": "field_type_duration.svg",
+      "mime_type": "image/svg+xml",
+      "is_public": true,
+      "description": "Duration field type image"
+    },
+    {
+      "file_name": "field_types/field_type_boolean.svg",
+      "original_name": "field_type_boolean.svg",
+      "mime_type": "image/svg+xml",
+      "is_public": true,
+      "description": "Boolean field type image"
+    },
+    {
+      "file_name": "field_types/field_type_email.svg",
+      "original_name": "field_type_email.svg",
+      "mime_type": "image/svg+xml",
+      "is_public": true,
+      "description": "Email field type image"
+    },
+    {
+      "file_name": "field_types/field_type_phone.svg",
+      "original_name": "field_type_phone.svg",
+      "mime_type": "image/svg+xml",
+      "is_public": true,
+      "description": "Phone field type image"
+    },
+    {
+      "file_name": "field_types/field_type_url.svg",
+      "original_name": "field_type_url.svg",
+      "mime_type": "image/svg+xml",
+      "is_public": true,
+      "description": "URL field type image"
+    },
+    {
+      "file_name": "field_types/field_type_password.svg",
+      "original_name": "field_type_password.svg",
+      "mime_type": "image/svg+xml",
+      "is_public": true,
+      "description": "Password field type image"
+    },
+    {
+      "file_name": "field_types/field_type_color.svg",
+      "original_name": "field_type_color.svg",
+      "mime_type": "image/svg+xml",
+      "is_public": true,
+      "description": "Color field type image"
+    },
+    {
+      "file_name": "field_types/field_type_image.svg",
+      "original_name": "field_type_image.svg",
+      "mime_type": "image/svg+xml",
+      "is_public": true,
+      "description": "Image field type image"
+    },
+    {
+      "file_name": "field_types/field_type_file.svg",
+      "original_name": "field_type_file.svg",
+      "mime_type": "image/svg+xml",
+      "is_public": true,
+      "description": "File field type image"
+    },
+    {
+      "file_name": "field_types/field_type_video.svg",
+      "original_name": "field_type_video.svg",
+      "mime_type": "image/svg+xml",
+      "is_public": true,
+      "description": "Video field type image"
+    },
+    {
+      "file_name": "field_types/field_type_audio.svg",
+      "original_name": "field_type_audio.svg",
+      "mime_type": "image/svg+xml",
+      "is_public": true,
+      "description": "Audio field type image"
+    },
+    {
+      "file_name": "field_types/field_type_address.svg",
+      "original_name": "field_type_address.svg",
+      "mime_type": "image/svg+xml",
+      "is_public": true,
+      "description": "Address field type image"
+    },
+    {
+      "file_name": "field_types/field_type_location.svg",
+      "original_name": "field_type_location.svg",
+      "mime_type": "image/svg+xml",
+      "is_public": true,
+      "description": "Location field type image"
+    },
+    {
+      "file_name": "field_types/field_type_relation.svg",
+      "original_name": "field_type_relation.svg",
+      "mime_type": "image/svg+xml",
+      "is_public": true,
+      "description": "Relation field type image"
+    },
+    {
+      "file_name": "field_types/field_type_json.svg",
+      "original_name": "field_type_json.svg",
+      "mime_type": "image/svg+xml",
+      "is_public": true,
+      "description": "JSON field type image"
+    },
+    {
+      "file_name": "field_types/field_type_icon.svg",
+      "original_name": "field_type_icon.svg",
+      "mime_type": "image/svg+xml",
+      "is_public": true,
+      "description": "Icon field type image"
+    },
+    {
+      "file_name": "field_types/field_type_multi_choice.svg",
+      "original_name": "field_type_multi_choice.svg",
+      "mime_type": "image/svg+xml",
+      "is_public": true,
+      "description": "Multiple Choice field type image"
+    },
+    {
+      "file_name": "field_types/field_type_auto_code.svg",
+      "original_name": "field_type_auto_code.svg",
+      "mime_type": "image/svg+xml",
+      "is_public": true,
+      "description": "Auto Code field type image"
+    },
+    {
+      "file_name": "field_types/field_type_rich_text.svg",
+      "original_name": "field_type_rich_text.svg",
+      "mime_type": "image/svg+xml",
+      "is_public": true,
+      "description": "Rich Text field type image"
+    },
+    {
+      "file_name": "field_types/field_type_single_choice.svg",
+      "original_name": "field_type_single_choice.svg",
+      "mime_type": "image/svg+xml",
+      "is_public": true,
+      "description": "Single Choice field type image"
     }
   ]
 }

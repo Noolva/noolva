@@ -1,0 +1,13 @@
+| Meaning               | action_mask |
+| --------------------- | ----------- |
+| READ only             | 1           |
+| READ + UPDATE         | 5           |
+| READ + WRITE + UPDATE | 7           |
+| ALL actions           | 15          |
+
+| Action | Binary | Decimal |
+| ------ | ------ | ------- |
+| READ   | `0001` | 1       |
+| WRITE  | `0010` | 2       |
+| UPDATE | `0100` | 4       |
+| DELETE | `1000` | 8       |

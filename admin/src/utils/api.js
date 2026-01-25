@@ -534,9 +534,11 @@ export const api = {
     },
 
     // Data Models
-    getDataModels: async (appId = null) => {
-        const url = appId ? `/data-models/list?app_id=${appId}` : "/data-models/list";
-        const response = await axiosInstance.get(url);
+    getDataModels: async ({ appId = null, limit = 500, offset = 0, search = null } = {}) => {
+        const params = { limit, offset };
+        if (appId != null) params.app_id = appId;
+        if (search) params.search = search;
+        const response = await axiosInstance.get("/data-models/list", { params });
         return response.data;
     },
 
@@ -581,6 +583,13 @@ export const api = {
         return response.data;
     },
 
+    reorderDataModelFields: async (modelId, fieldIds) => {
+        const response = await axiosInstance.put(`/data-models/model/${modelId}/fields/reorder`, {
+            field_ids: fieldIds
+        });
+        return response.data;
+    },
+
     getFieldTypes: async () => {
         const response = await axiosInstance.get("/data-models/field-types/list");
         return response.data;
@@ -615,6 +624,35 @@ export const api = {
 
     getIconTypes: async () => {
         const response = await axiosInstance.get("/icons/types/list");
+        return response.data;
+    },
+
+    // Collections
+    getCollections: async ({ tenantId = null, limit = 500, offset = 0, search = null } = {}) => {
+        const params = { limit, offset };
+        if (tenantId != null) params.tenant_id = tenantId;
+        if (search) params.search = search;
+        const response = await axiosInstance.get("/collections/list", { params });
+        return response.data;
+    },
+
+    getCollection: async (collectionId) => {
+        const response = await axiosInstance.get(`/collections/${collectionId}`);
+        return response.data;
+    },
+
+    createCollection: async (data) => {
+        const response = await axiosInstance.post("/collections/create", data);
+        return response.data;
+    },
+
+    updateCollection: async (collectionId, data) => {
+        const response = await axiosInstance.put(`/collections/${collectionId}`, data);
+        return response.data;
+    },
+
+    deleteCollection: async (collectionId) => {
+        const response = await axiosInstance.delete(`/collections/${collectionId}`);
         return response.data;
     },
 };

@@ -1,0 +1,9 @@
+<svg width="128" height="128" viewBox="0 0 128 128" xmlns="http://www.w3.org/2000/svg">
+  <rect width="128" height="128" rx="12" fill="#FCE4EC"/>
+  <rect x="36" y="40" width="56" height="48" rx="2" fill="#C2185B" opacity="0.2"/>
+  <text x="64" y="70" font-family="Arial, sans-serif" font-size="20" font-weight="bold" text-anchor="middle" fill="#C2185B">25</text>
+  <text x="64" y="50" font-family="Arial, sans-serif" font-size="12" text-anchor="middle" fill="#C2185B">JAN</text>
+  <rect x="36" y="40" width="56" height="48" rx="2" fill="none" stroke="#C2185B" stroke-width="2"/>
+  <rect x="40" y="32" width="48" height="8" rx="1" fill="#C2185B"/>
+  <rect x="24" y="24" width="80" height="80" rx="4" fill="none" stroke="#C2185B" stroke-width="2"/>
+</svg>

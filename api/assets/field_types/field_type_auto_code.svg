@@ -1,0 +1,7 @@
+<svg width="128" height="128" viewBox="0 0 128 128" xmlns="http://www.w3.org/2000/svg">
+  <rect width="128" height="128" rx="12" fill="#E8F5E9"/>
+  <text x="64" y="70" font-family="monospace" font-size="14" font-weight="bold" text-anchor="middle" fill="#2E7D32">CODE-2026-0001</text>
+  <rect x="36" y="45" width="56" height="20" rx="2" fill="none" stroke="#2E7D32" stroke-width="2"/>
+  <path d="M44 50h4M52 50h4M60 50h4M68 50h4" stroke="#2E7D32" stroke-width="1.5"/>
+  <rect x="24" y="24" width="80" height="80" rx="4" fill="none" stroke="#2E7D32" stroke-width="2"/>
+</svg>

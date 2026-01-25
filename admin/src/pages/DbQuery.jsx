@@ -613,7 +613,14 @@ const DbQuery = () => {
             const updates = {};
             for (const key in values) {
                 if (key === primaryKey) continue; // Skip primary key
-                const newValue = values[key];
+                
+                // Get the actual value from the form field (more reliable for complex types like JSON)
+                let newValue = editForm.getFieldValue(key);
+                // Fallback to values if getFieldValue returns undefined
+                if (newValue === undefined) {
+                    newValue = values[key];
+                }
+                
                 const oldValue = editingRecord[key];
 
                 // Handle null/undefined comparison
@@ -631,6 +638,36 @@ const DbQuery = () => {
                 let normalizedNew = newValue;
                 let normalizedOld = oldValue;
 
+                // For JSONB fields, normalize both to JSON strings for comparison
+                if (isJsonb) {
+                    try {
+                        // Normalize new value to JSON string (VCJsonEditor now returns string)
+                        if (typeof newValue === 'string' && newValue.trim()) {
+                            // Parse and re-stringify to normalize format (removes whitespace differences)
+                            normalizedNew = JSON.stringify(JSON.parse(newValue));
+                        } else if (typeof newValue === 'object' && newValue !== null) {
+                            // Fallback: if we somehow get an object
+                            normalizedNew = JSON.stringify(newValue);
+                        } else {
+                            normalizedNew = newValue === null || newValue === '' ? null : String(newValue);
+                        }
+                        
+                        // Normalize old value to JSON string (from database, might be object or string)
+                        if (typeof oldValue === 'object' && oldValue !== null) {
+                            normalizedOld = JSON.stringify(oldValue);
+                        } else if (typeof oldValue === 'string' && oldValue.trim()) {
+                            // Parse and re-stringify to normalize format
+                            normalizedOld = JSON.stringify(JSON.parse(oldValue));
+                        } else {
+                            normalizedOld = oldValue === null || oldValue === '' ? null : String(oldValue);
+                        }
+                    } catch (e) {
+                        // If normalization fails, use original values
+                        normalizedNew = newValue;
+                        normalizedOld = oldValue;
+                    }
+                }
+
                 // For datetime fields, normalize format
                 if (isDateTime && typeof newValue === 'string' && newValue.endsWith('Z')) {
                     normalizedNew = newValue;
@@ -646,17 +683,46 @@ const DbQuery = () => {
                     } else if (newValue instanceof Date) {
                         updates[key] = newValue.toISOString();
                     } else if (isJsonb) {
-                        // For JSONB fields, VCJsonEditor returns parsed object, ensure it's valid JSON
-                        if (typeof newValue === 'object' && newValue !== null) {
-                            updates[key] = newValue; // Already an object
-                        } else if (typeof newValue === 'string') {
-                            try {
-                                updates[key] = JSON.parse(newValue); // Parse string to object
-                            } catch (e) {
-                                updates[key] = newValue; // Keep as string if invalid
+                        // For JSONB fields, VCJsonEditor now stores the raw JSON string
+                        try {
+                            let jsonString;
+                            
+                            if (typeof newValue === 'string') {
+                                // VCJsonEditor now returns the raw JSON string
+                                if (newValue.trim()) {
+                                    // Validate by parsing to ensure it's valid JSON
+                                    const parsed = JSON.parse(newValue);
+                                    // Re-stringify to ensure consistent formatting (removes extra whitespace)
+                                    jsonString = JSON.stringify(parsed);
+                                    updates[key] = jsonString;
+                                } else {
+                                    // Empty string means null for JSONB
+                                    updates[key] = null;
+                                }
+                            } else if (typeof newValue === 'object' && newValue !== null) {
+                                // Fallback: if we somehow get an object (backwards compatibility)
+                                jsonString = JSON.stringify(newValue);
+                                JSON.parse(jsonString); // Validate
+                                updates[key] = jsonString;
+                            } else if (newValue === null || newValue === undefined) {
+                                updates[key] = null;
+                            } else {
+                                // For other types, stringify directly
+                                jsonString = JSON.stringify(newValue);
+                                JSON.parse(jsonString); // Validate
+                                updates[key] = jsonString;
                             }
-                        } else {
-                            updates[key] = newValue;
+                        } catch (e) {
+                            // Invalid JSON - show error and prevent save
+                            const errorMsg = e.message || 'Invalid JSON format';
+                            message.error(`Invalid JSON in field "${key}": ${errorMsg}. Please fix the JSON syntax before saving.`);
+                            console.error('JSON validation error:', { 
+                                key, 
+                                newValue, 
+                                newValueType: typeof newValue,
+                                error: e 
+                            });
+                            throw new Error(`Invalid JSON in field "${key}": ${errorMsg}`);
                         }
                     } else {
                         updates[key] = newValue;
@@ -691,7 +757,41 @@ const DbQuery = () => {
                 return;
             }
 
-            await api.insertRecord(currentTableName, values);
+            // Validate and normalize JSONB fields before sending
+            const validatedValues = { ...values };
+            for (const key in validatedValues) {
+                const column = tableStructure?.columns?.find(c => c.column_name === key);
+                const dataType = column?.data_type?.toLowerCase() || '';
+                const isJsonb = dataType === 'jsonb' || dataType === 'json';
+                
+                if (isJsonb) {
+                    const value = validatedValues[key];
+                    // VCJsonEditor now returns JSON string
+                    if (typeof value === 'string' && value.trim()) {
+                        // Validate JSON string and normalize format
+                        try {
+                            const parsed = JSON.parse(value);
+                            validatedValues[key] = JSON.stringify(parsed); // Normalize format
+                        } catch (e) {
+                            message.error(`Invalid JSON in field "${key}": ${e.message}. Please fix the JSON syntax before saving.`);
+                            return; // Prevent save
+                        }
+                    } else if (typeof value === 'object' && value !== null) {
+                        // Fallback: if we somehow get an object
+                        try {
+                            validatedValues[key] = JSON.stringify(value);
+                            JSON.parse(validatedValues[key]); // Validate
+                        } catch (e) {
+                            message.error(`Invalid JSON object in field "${key}": ${e.message}. Please fix the JSON syntax before saving.`);
+                            return; // Prevent save
+                        }
+                    } else if (value === null || value === undefined || value === '') {
+                        validatedValues[key] = null;
+                    }
+                }
+            }
+
+            await api.insertRecord(currentTableName, validatedValues);
             message.success('Record added successfully');
             setAddModalVisible(false);
             // Refresh query

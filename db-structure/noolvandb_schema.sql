@@ -496,7 +496,7 @@ CREATE INDEX idx_user_module_features_user ON public.user_module_features(user_i
 -- 0. Enum Types (Shared)
 -- ==========================================
 CREATE TYPE public.encryption_method_enum AS ENUM ('none', 'aes', 'xor_cipher');
-CREATE TYPE public.table_use_case_enum AS ENUM ('system', 'tenant', 'app');
+CREATE TYPE public.model_scope_enum AS ENUM ('saas', 'tenant', 'both');
 
 -- ==========================================
 -- 1. Data Models (Merged Model Registry + Tables)
@@ -513,15 +513,15 @@ CREATE TABLE public.data_models (
     display_name VARCHAR(100), -- Human readable
     
     table_name VARCHAR(100) NOT NULL, -- Physical table in Postgres
+    table_alias VARCHAR(50), -- Short alias for queries/joins, e.g. "student_course" => "sc"
     
     -- Metadata (from Tables)
-    use_case public.table_use_case_enum DEFAULT 'system' NOT NULL,
+    model_scope public.model_scope_enum DEFAULT 'saas' NOT NULL,
     is_public BOOLEAN DEFAULT FALSE,
     is_system_model BOOLEAN DEFAULT FALSE,
     is_active BOOLEAN DEFAULT TRUE,
     
     description TEXT,
-    icon VARCHAR(100),
     
     created_by INTEGER REFERENCES public.users(user_id),
     idate TIMESTAMP WITHOUT TIME ZONE DEFAULT CURRENT_TIMESTAMP NOT NULL,
@@ -564,6 +564,7 @@ CREATE TABLE public.field_types (
     
     default_props_json JSONB DEFAULT '{}'::jsonb, -- Default config schema
     icon VARCHAR(50), 
+    input_type_image VARCHAR(255), -- Path to SVG image for field type identification
     
     is_active BOOLEAN DEFAULT TRUE,
     created_at TIMESTAMP WITHOUT TIME ZONE DEFAULT CURRENT_TIMESTAMP
@@ -580,10 +581,11 @@ CREATE TABLE public.collections (
     collection_code VARCHAR(100) NOT NULL, -- e.g., 'global_countries', 'org_statuses'
     
     -- Scoping: NULL = Global System Collection, SET = Tenant Specific
-    tenant_id INTEGER REFERENCES public.tenants(tenant_id) ON DELETE CASCADE, 
+    tenant_id INTEGER REFERENCES public.tenants(tenant_id) ON DELETE CASCADE,
     
-    -- The Options
-    items_json JSONB NOT NULL DEFAULT '[]'::jsonb, -- [{ "label": "A", "value": "a", "color": "red" }]
+    -- Field type linkage and config (replaces items_json)
+    field_type_id INTEGER REFERENCES public.field_types(field_type_id) ON DELETE SET NULL,
+    field_config_json JSONB NOT NULL DEFAULT '{}'::jsonb, -- e.g. { "items": [{ "label": "A", "value": "a" }] }
     
     is_system BOOLEAN DEFAULT FALSE, -- If true, locked from specific edits
     
@@ -593,6 +595,8 @@ CREATE TABLE public.collections (
     
     UNIQUE(tenant_id, collection_code) -- Unique code per tenant (or global if tenant is null)
 );
+
+CREATE INDEX idx_collections_field_type ON public.collections(field_type_id);
 
 -- ==========================================
 -- 1.7 Icons Table
@@ -698,10 +702,39 @@ CREATE TABLE public.field_permissions (
     model_id INTEGER NOT NULL REFERENCES public.data_models(model_id) ON DELETE CASCADE,
     field_name VARCHAR(100) NOT NULL,
     
-    can_read BOOLEAN DEFAULT FALSE,
-    can_write BOOLEAN DEFAULT FALSE,
+    -- Bitmask of allowed actions on this field:
+    -- READ=1, WRITE=2, UPDATE=4, DELETE=8  (ALL=15)
+    action_mask INTEGER DEFAULT 0 NOT NULL,
     
     UNIQUE(role_id, model_id, field_name)
+);
+
+-- ==========================================
+-- 3.1 Model Row Access Policies
+-- ==========================================
+-- Controls row-level access for auto CRUD on a model.
+-- A model can have multiple policy rows (combined as AND).
+CREATE TABLE public.model_row_access_policies (
+    id SERIAL PRIMARY KEY,
+    model_id INTEGER NOT NULL REFERENCES public.data_models(model_id) ON DELETE CASCADE,
+    
+    -- Bitmask of actions this policy applies to:
+    -- READ=1, WRITE=2, UPDATE=4, DELETE=8  (ALL=15)
+    action_mask INTEGER DEFAULT 0 NOT NULL,
+    
+    -- Column in the target table used for scoping, e.g. "company_id"
+    scope_field VARCHAR(100) NOT NULL,
+    
+    -- Where to source the scope value from:
+    -- AUTH_CONTEXT: JWT/session context
+    -- USER: request parameter/body (validated/enforced by server)
+    scope_source VARCHAR(20) NOT NULL CHECK (scope_source IN ('AUTH_CONTEXT', 'USER')),
+    
+    -- If true, access is denied if scope value cannot be determined.
+    required BOOLEAN DEFAULT TRUE NOT NULL,
+    
+    -- If false, user cannot override/expand scope filter.
+    user_override BOOLEAN DEFAULT FALSE NOT NULL
 );
 
 -- ==========================================
