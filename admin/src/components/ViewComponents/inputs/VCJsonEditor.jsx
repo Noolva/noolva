@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { Form, Input, Button, Space, message, Tooltip } from "antd";
 import { CheckOutlined, CloseOutlined, ReloadOutlined } from "@ant-design/icons";
 
@@ -10,6 +10,8 @@ export function VCJsonEditor({ component }) {
   const [jsonString, setJsonString] = useState('');
   const [isValid, setIsValid] = useState(true);
   const [error, setError] = useState(null);
+  // Use ref to always have the latest value for getValueFromEvent
+  const jsonStringRef = useRef('');
 
   // Initialize with default value
   useEffect(() => {
@@ -17,14 +19,24 @@ export function VCJsonEditor({ component }) {
     if (defaultValue) {
       try {
         const parsed = typeof defaultValue === 'string' ? JSON.parse(defaultValue) : defaultValue;
-        setJsonString(JSON.stringify(parsed, null, 2));
+        const formatted = JSON.stringify(parsed, null, 2);
+        setJsonString(formatted);
+        jsonStringRef.current = formatted; // Sync ref
         setIsValid(true);
         setError(null);
       } catch (e) {
-        setJsonString(typeof defaultValue === 'string' ? defaultValue : JSON.stringify(defaultValue));
+        const strValue = typeof defaultValue === 'string' ? defaultValue : JSON.stringify(defaultValue);
+        setJsonString(strValue);
+        jsonStringRef.current = strValue; // Sync ref
         setIsValid(false);
         setError(e.message);
       }
+    } else if (jsonString === '') {
+      // Only reset if jsonString is empty to avoid overwriting user input
+      setJsonString('');
+      jsonStringRef.current = '';
+      setIsValid(true);
+      setError(null);
     }
   }, [input_values.default_value, input_values.value]);
 
@@ -48,7 +60,10 @@ export function VCJsonEditor({ component }) {
 
   const handleChange = (e) => {
     const value = e.target.value;
+    // Always update state and ref immediately to keep TextArea in sync
     setJsonString(value);
+    jsonStringRef.current = value; // Keep ref in sync
+    // Validate asynchronously to avoid blocking input
     validateJson(value);
   };
 
@@ -61,6 +76,7 @@ export function VCJsonEditor({ component }) {
       const parsed = JSON.parse(jsonString);
       const formatted = JSON.stringify(parsed, null, 2);
       setJsonString(formatted);
+      jsonStringRef.current = formatted;
       setIsValid(true);
       setError(null);
       message.success('JSON formatted successfully');
@@ -76,17 +92,22 @@ export function VCJsonEditor({ component }) {
     if (defaultValue) {
       try {
         const parsed = typeof defaultValue === 'string' ? JSON.parse(defaultValue) : defaultValue;
-        setJsonString(JSON.stringify(parsed, null, 2));
+        const formatted = JSON.stringify(parsed, null, 2);
+        setJsonString(formatted);
+        jsonStringRef.current = formatted;
         setIsValid(true);
         setError(null);
         message.success('JSON reset to default value');
       } catch (e) {
-        setJsonString(typeof defaultValue === 'string' ? defaultValue : JSON.stringify(defaultValue));
+        const strValue = typeof defaultValue === 'string' ? defaultValue : JSON.stringify(defaultValue);
+        setJsonString(strValue);
+        jsonStringRef.current = strValue;
         setIsValid(false);
         setError(e.message);
       }
     } else {
       setJsonString('');
+      jsonStringRef.current = '';
       setIsValid(true);
       setError(null);
       message.success('JSON cleared');
@@ -130,17 +151,58 @@ export function VCJsonEditor({ component }) {
           },
         },
       ]}
-      getValueFromEvent={() => getValue()}
-      getValueProps={(value) => {
+      getValueFromEvent={() => {
+        // Always return the current value from ref (most up-to-date)
+        // This ensures we get exactly what the user typed, including all values like 0
+        const currentValue = jsonStringRef.current.trim();
+        if (!currentValue) {
+          return null;
+        }
+        // Return the raw JSON string as-is from ref
+        // Don't parse and re-stringify as that could lose values
+        return currentValue;
+      }}
+      normalize={(value) => {
+        // Normalize: if it's an object, convert to JSON string; if it's already a string, use it
         if (value === null || value === undefined) {
-          return { value: '' };
+          return null;
         }
-        try {
-          const jsonStr = typeof value === 'string' ? value : JSON.stringify(value, null, 2);
-          return { value: jsonStr };
-        } catch (e) {
-          return { value: String(value) };
+        if (typeof value === 'string') {
+          return value;
         }
+        if (typeof value === 'object') {
+          try {
+            return JSON.stringify(value, null, 2);
+          } catch (e) {
+            return JSON.stringify(value);
+          }
+        }
+        return String(value);
+      }}
+      getValueProps={(value) => {
+        // This is called by Ant Design Form to get props for the input
+        // But we control the TextArea ourselves via jsonString state
+        // So we only use this to sync initial values, not to control the input
+        if (value === null || value === undefined) {
+          return { value: jsonString || '' };
+        }
+        // If form provides a value and our state is empty, sync it
+        if (typeof value === 'string' && !jsonString) {
+          setJsonString(value);
+          jsonStringRef.current = value;
+          validateJson(value);
+        } else if (typeof value === 'object' && !jsonString) {
+          try {
+            const jsonStr = JSON.stringify(value, null, 2);
+            setJsonString(jsonStr);
+            jsonStringRef.current = jsonStr;
+            validateJson(jsonStr);
+          } catch (e) {
+            // Ignore
+          }
+        }
+        // Always return jsonString state value to keep TextArea controlled by our state
+        return { value: jsonString };
       }}
     >
       <div>
@@ -196,6 +258,10 @@ export function VCJsonEditor({ component }) {
           <TextArea
             value={jsonString}
             onChange={handleChange}
+            onBlur={() => {
+              // Ensure state is synced on blur
+              validateJson(jsonString);
+            }}
             placeholder={input_values.place_holder || 'Enter JSON...'}
             rows={input_values.rows || 8}
             style={{
@@ -203,6 +269,8 @@ export function VCJsonEditor({ component }) {
               fontSize: '13px',
               borderColor: isValid ? undefined : '#ff4d4f',
             }}
+            // Prevent form from controlling this input directly
+            autoComplete="off"
           />
         )}
         {!isOpen && jsonString && (

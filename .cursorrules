@@ -1,0 +1,24 @@
+# Noolva Development Rules
+
+## Database Schema & Feeds
+- `db-structure/noolvandb_schema.sql` contains full schema - always update here when making schema changes
+- `db-structure/noolvandb_feeds.sql` contains all essential feeds or inbuilt saas/tenant data - update here whenever schema changes
+- Whenever making DB changes (schema, migrations, new tables/columns, etc.), also provide update queries in a **separate file** (e.g. `db-structure/update_old_db_*.sql` or `migration_*.sql`) so existing/old databases can be updated without full schema reload
+
+
+## Assets Management
+- New images for apps: put in `api/assets` folder
+- Note entries in `api/assets/assets_manifest.json`
+- Make entries in assets table in `noolvandb_feeds.sql`
+
+## Component Development
+- Always implement components as VC (View Component) in `admin/src/components/ViewComponents/`
+- Use VC components in pages - keep them reusable and changeable
+- For new pages: always use components from existing VC components or implement new ones if required
+
+## UI/UX Standards
+- User interface and design: follow corporate style and keep uniform across all pages
+- For showing errors: always use `ErrorModal.jsx`
+
+## Development Notifications
+- Whenever API restart or React npm install/restart is needed, inform the user after making changes
