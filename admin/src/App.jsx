@@ -14,6 +14,7 @@ import Database from './pages/Database';
 import DbQuery from './pages/DbQuery';
 import DataModels from './pages/DataModels';
 import IconExplorer from './pages/IconExplorer';
+import Collections from './pages/Collections';
 import { useAuth } from './contexts/AuthContext';
 import { ThemeProvider } from './contexts/ThemeContext';
 
@@ -54,6 +55,7 @@ const AppContent = () => {
       case 'studio_data_models': return <DataModels />;
       case 'data_models': return <DataModels />;
       case 'studio_icons': return <IconExplorer />;
+      case 'studio_collections': return <Collections />;
       default: {
         // Try to match by route_path from menuData (since key might be menu_id)
         if (menuData?.route_path) {
@@ -62,6 +64,7 @@ const AppContent = () => {
           if (routePath === 'dev_console_db_query') return <DbQuery />;
           if (routePath === 'studio_data_models' || routePath === 'data_models') return <DataModels />;
           if (routePath === 'studio_icons') return <IconExplorer />;
+          if (routePath === 'studio_collections') return <Collections />;
           if (routePath === 'settings') return <Settings />;
         }
         // Try to render based on menu title if available

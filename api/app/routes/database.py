@@ -546,6 +546,7 @@ async def insert_record(
         """
         table_columns = await db.fetch(columns_query, payload.table_name)
         column_names = [col["column_name"] for col in table_columns]
+        column_types = {col["column_name"]: col["data_type"] for col in table_columns}
         
         # Validate all provided columns exist
         invalid_columns = [col for col in payload.data.keys() if col not in column_names]
@@ -559,8 +560,15 @@ async def insert_record(
         
         query = f'INSERT INTO public."{payload.table_name}" ({fields_str}) VALUES ({placeholders}) RETURNING *'
         
-        values = [payload.data[field] for field in fields]
-        new_record = await db.fetchrow(query, *values)
+        # Convert values to appropriate types for asyncpg
+        converted_values = []
+        for field in fields:
+            data_type = column_types.get(field, '')
+            value = payload.data[field]
+            converted_value = convert_value_for_db(value, data_type)
+            converted_values.append(converted_value)
+        
+        new_record = await db.fetchrow(query, *converted_values)
         
         return {
             "message": "Record inserted successfully",
@@ -654,6 +662,27 @@ def convert_value_for_db(value: Any, data_type: str) -> Any:
             except ValueError:
                 return value
         return value
+    
+    # Handle JSON/JSONB types
+    elif 'json' in data_type_lower:
+        # If value is already a string, validate it's valid JSON
+        if isinstance(value, str):
+            try:
+                # Validate by parsing - if it's valid JSON, we can pass it through
+                json.loads(value)
+                return value
+            except json.JSONDecodeError as e:
+                # If invalid JSON, raise a helpful error
+                raise HTTPException(
+                    status_code=400,
+                    detail=f"Invalid JSON string for field: {str(e)}. Please check your JSON syntax (missing commas, quotes, etc.)"
+                )
+        # If value is a dict or list, serialize it to JSON string
+        elif isinstance(value, (dict, list)):
+            return json.dumps(value)
+        # For other types, try to serialize
+        else:
+            return json.dumps(value)
     
     # For other types, return as is
     return value

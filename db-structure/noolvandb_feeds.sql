@@ -95,6 +95,89 @@ INSERT INTO public.field_types (type_name, type_code, category, actual_db_type, 
 ('Icon', 'icon', 'media', 'VARCHAR', '{"format": "prefix:name", "examples": ["fa:heart", "antd:download", "smily:thanks", "custom:myhome"]}', (SELECT component_type_id FROM public.ui_component_types WHERE type_code = 'select'))
 ON CONFLICT (type_code) DO NOTHING;
 
+-- Update input_type_image for all field types
+UPDATE public.field_types SET input_type_image = 'field_types/field_type_text.svg' WHERE type_code = 'text';
+UPDATE public.field_types SET input_type_image = 'field_types/field_type_paragraph.svg' WHERE type_code = 'paragraph';
+UPDATE public.field_types SET input_type_image = 'field_types/field_type_number.svg' WHERE type_code = 'number';
+UPDATE public.field_types SET input_type_image = 'field_types/field_type_auto_number.svg' WHERE type_code = 'auto_number';
+UPDATE public.field_types SET input_type_image = 'field_types/field_type_currency.svg' WHERE type_code = 'currency';
+UPDATE public.field_types SET input_type_image = 'field_types/field_type_percentage.svg' WHERE type_code = 'percentage';
+UPDATE public.field_types SET input_type_image = 'field_types/field_type_rating.svg' WHERE type_code = 'rating';
+UPDATE public.field_types SET input_type_image = 'field_types/field_type_date.svg' WHERE type_code = 'date';
+UPDATE public.field_types SET input_type_image = 'field_types/field_type_datetime.svg' WHERE type_code = 'datetime';
+UPDATE public.field_types SET input_type_image = 'field_types/field_type_time.svg' WHERE type_code = 'time';
+UPDATE public.field_types SET input_type_image = 'field_types/field_type_duration.svg' WHERE type_code = 'duration';
+UPDATE public.field_types SET input_type_image = 'field_types/field_type_boolean.svg' WHERE type_code = 'boolean';
+UPDATE public.field_types SET input_type_image = 'field_types/field_type_email.svg' WHERE type_code = 'email';
+UPDATE public.field_types SET input_type_image = 'field_types/field_type_phone.svg' WHERE type_code = 'phone';
+UPDATE public.field_types SET input_type_image = 'field_types/field_type_url.svg' WHERE type_code = 'url';
+UPDATE public.field_types SET input_type_image = 'field_types/field_type_password.svg' WHERE type_code = 'password';
+UPDATE public.field_types SET input_type_image = 'field_types/field_type_color.svg' WHERE type_code = 'color';
+UPDATE public.field_types SET input_type_image = 'field_types/field_type_image.svg' WHERE type_code = 'image';
+UPDATE public.field_types SET input_type_image = 'field_types/field_type_file.svg' WHERE type_code = 'file';
+UPDATE public.field_types SET input_type_image = 'field_types/field_type_video.svg' WHERE type_code = 'video';
+UPDATE public.field_types SET input_type_image = 'field_types/field_type_audio.svg' WHERE type_code = 'audio';
+UPDATE public.field_types SET input_type_image = 'field_types/field_type_address.svg' WHERE type_code = 'address';
+UPDATE public.field_types SET input_type_image = 'field_types/field_type_location.svg' WHERE type_code = 'location';
+UPDATE public.field_types SET input_type_image = 'field_types/field_type_relation.svg' WHERE type_code = 'relation';
+UPDATE public.field_types SET input_type_image = 'field_types/field_type_json.svg' WHERE type_code = 'json';
+UPDATE public.field_types SET input_type_image = 'field_types/field_type_icon.svg' WHERE type_code = 'icon';
+UPDATE public.field_types SET input_type_image = 'field_types/field_type_multi_choice.svg' WHERE type_code = 'multi_choice';
+UPDATE public.field_types SET input_type_image = 'field_types/field_type_auto_code.svg' WHERE type_code = 'auto_code';
+UPDATE public.field_types SET input_type_image = 'field_types/field_type_rich_text.svg' WHERE type_code = 'rich_text';
+UPDATE public.field_types SET input_type_image = 'field_types/field_type_single_choice.svg' WHERE type_code = 'single_choice';
+
+-- ==========================================
+-- 2.1. Assets for Field Type Images
+-- ==========================================
+-- Insert field type SVG images into assets table (system-level, public assets)
+-- Note: These assets should be uploaded to storage (S3/local) before or after this insert
+DO $$
+DECLARE
+    v_system_user_id INTEGER;
+BEGIN
+    -- Get system user (super admin)
+    SELECT user_id INTO v_system_user_id FROM public.users WHERE is_super_admin = TRUE LIMIT 1;
+    
+    -- Insert assets only if they don't already exist (check by storage_path)
+    INSERT INTO public.assets (file_name, original_name, mime_type, storage_path, is_public, company_id, uploaded_by)
+    SELECT * FROM (VALUES
+        ('field_type_text.svg', 'field_type_text.svg', 'image/svg+xml', 'field_types/field_type_text.svg', TRUE, NULL, v_system_user_id),
+        ('field_type_paragraph.svg', 'field_type_paragraph.svg', 'image/svg+xml', 'field_types/field_type_paragraph.svg', TRUE, NULL, v_system_user_id),
+        ('field_type_number.svg', 'field_type_number.svg', 'image/svg+xml', 'field_types/field_type_number.svg', TRUE, NULL, v_system_user_id),
+        ('field_type_auto_number.svg', 'field_type_auto_number.svg', 'image/svg+xml', 'field_types/field_type_auto_number.svg', TRUE, NULL, v_system_user_id),
+        ('field_type_currency.svg', 'field_type_currency.svg', 'image/svg+xml', 'field_types/field_type_currency.svg', TRUE, NULL, v_system_user_id),
+        ('field_type_percentage.svg', 'field_type_percentage.svg', 'image/svg+xml', 'field_types/field_type_percentage.svg', TRUE, NULL, v_system_user_id),
+        ('field_type_rating.svg', 'field_type_rating.svg', 'image/svg+xml', 'field_types/field_type_rating.svg', TRUE, NULL, v_system_user_id),
+        ('field_type_date.svg', 'field_type_date.svg', 'image/svg+xml', 'field_types/field_type_date.svg', TRUE, NULL, v_system_user_id),
+        ('field_type_datetime.svg', 'field_type_datetime.svg', 'image/svg+xml', 'field_types/field_type_datetime.svg', TRUE, NULL, v_system_user_id),
+        ('field_type_time.svg', 'field_type_time.svg', 'image/svg+xml', 'field_types/field_type_time.svg', TRUE, NULL, v_system_user_id),
+        ('field_type_duration.svg', 'field_type_duration.svg', 'image/svg+xml', 'field_types/field_type_duration.svg', TRUE, NULL, v_system_user_id),
+        ('field_type_boolean.svg', 'field_type_boolean.svg', 'image/svg+xml', 'field_types/field_type_boolean.svg', TRUE, NULL, v_system_user_id),
+        ('field_type_email.svg', 'field_type_email.svg', 'image/svg+xml', 'field_types/field_type_email.svg', TRUE, NULL, v_system_user_id),
+        ('field_type_phone.svg', 'field_type_phone.svg', 'image/svg+xml', 'field_types/field_type_phone.svg', TRUE, NULL, v_system_user_id),
+        ('field_type_url.svg', 'field_type_url.svg', 'image/svg+xml', 'field_types/field_type_url.svg', TRUE, NULL, v_system_user_id),
+        ('field_type_password.svg', 'field_type_password.svg', 'image/svg+xml', 'field_types/field_type_password.svg', TRUE, NULL, v_system_user_id),
+        ('field_type_color.svg', 'field_type_color.svg', 'image/svg+xml', 'field_types/field_type_color.svg', TRUE, NULL, v_system_user_id),
+        ('field_type_image.svg', 'field_type_image.svg', 'image/svg+xml', 'field_types/field_type_image.svg', TRUE, NULL, v_system_user_id),
+        ('field_type_file.svg', 'field_type_file.svg', 'image/svg+xml', 'field_types/field_type_file.svg', TRUE, NULL, v_system_user_id),
+        ('field_type_video.svg', 'field_type_video.svg', 'image/svg+xml', 'field_types/field_type_video.svg', TRUE, NULL, v_system_user_id),
+        ('field_type_audio.svg', 'field_type_audio.svg', 'image/svg+xml', 'field_types/field_type_audio.svg', TRUE, NULL, v_system_user_id),
+        ('field_type_address.svg', 'field_type_address.svg', 'image/svg+xml', 'field_types/field_type_address.svg', TRUE, NULL, v_system_user_id),
+        ('field_type_location.svg', 'field_type_location.svg', 'image/svg+xml', 'field_types/field_type_location.svg', TRUE, NULL, v_system_user_id),
+        ('field_type_relation.svg', 'field_type_relation.svg', 'image/svg+xml', 'field_types/field_type_relation.svg', TRUE, NULL, v_system_user_id),
+        ('field_type_json.svg', 'field_type_json.svg', 'image/svg+xml', 'field_types/field_type_json.svg', TRUE, NULL, v_system_user_id),
+        ('field_type_icon.svg', 'field_type_icon.svg', 'image/svg+xml', 'field_types/field_type_icon.svg', TRUE, NULL, v_system_user_id),
+        ('field_type_multi_choice.svg', 'field_type_multi_choice.svg', 'image/svg+xml', 'field_types/field_type_multi_choice.svg', TRUE, NULL, v_system_user_id),
+        ('field_type_auto_code.svg', 'field_type_auto_code.svg', 'image/svg+xml', 'field_types/field_type_auto_code.svg', TRUE, NULL, v_system_user_id),
+        ('field_type_rich_text.svg', 'field_type_rich_text.svg', 'image/svg+xml', 'field_types/field_type_rich_text.svg', TRUE, NULL, v_system_user_id),
+        ('field_type_single_choice.svg', 'field_type_single_choice.svg', 'image/svg+xml', 'field_types/field_type_single_choice.svg', TRUE, NULL, v_system_user_id)
+    ) AS t(file_name, original_name, mime_type, storage_path, is_public, company_id, uploaded_by)
+    WHERE NOT EXISTS (
+        SELECT 1 FROM public.assets WHERE assets.storage_path = t.storage_path AND assets.company_id IS NULL
+    );
+END $$;
+
 -- ==========================================
 -- 3. Settings
 -- ==========================================

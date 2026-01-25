@@ -3,16 +3,220 @@ Data Models Routes
 Provides CRUD operations for data_models and data_model_fields
 """
 
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, Depends, HTTPException, Query, Header, Request
 from pydantic import BaseModel
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, Tuple
 from middlewares.auth import verify_jwt_token
 from utils.db import get_db
 from classes.postgres_db import PostgresDB
 from datetime import datetime
 import json
+import re
+import base64
+import jwt
+import time
+import logging
+
+from middlewares.auth import SECRET_KEY, ALGORITHM
+from utils.encryption_service import get_encryption_service
 
 router = APIRouter()
+logger = logging.getLogger("noolva_api")
+
+# Action mask bits (shared convention)
+ACTION_READ = 1
+ACTION_WRITE = 2
+ACTION_UPDATE = 4
+ACTION_DELETE = 8
+
+
+def _is_safe_identifier(value: str) -> bool:
+    return bool(re.fullmatch(r"[A-Za-z_][A-Za-z0-9_]*", value or ""))
+
+
+def _decode_optional_user(authorization: Optional[str]) -> Optional[Dict[str, Any]]:
+    """
+    Decode JWT if present. Returns user payload dict or None.
+    """
+    if not authorization or not authorization.startswith("Bearer "):
+        return None
+    token = authorization.split(" ", 1)[1].strip()
+    if not token:
+        return None
+    try:
+        return jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
+    except Exception:
+        return None
+
+
+async def _get_user_role_ids(user_id: int, company_id: Optional[int]) -> List[int]:
+    """
+    Match the same role resolution logic used by MenuService.
+    """
+    role_rows = await PostgresDB.fetch(
+        """
+        SELECT DISTINCT r.role_id
+        FROM public.user_roles ur
+        JOIN public.roles r ON ur.role_id = r.role_id
+        WHERE ur.user_id = $1
+          AND (ur.company_id = $2 OR ur.company_id IS NULL OR $2 IS NULL)
+        """,
+        user_id,
+        company_id,
+    )
+    return [r["role_id"] for r in role_rows] if role_rows else []
+
+
+async def _get_model_by_name(model_name: str) -> Optional[Dict[str, Any]]:
+    if not _is_safe_identifier(model_name):
+        return None
+    return await PostgresDB.fetchrow(
+        """
+        SELECT model_id, model_name, table_name, table_alias, model_scope,
+               is_public, is_system_model, is_active
+        FROM public.data_models
+        WHERE model_name = $1 AND is_active = TRUE
+        """,
+        model_name,
+    )
+
+
+async def _get_model_fields_meta(model_id: int) -> List[Dict[str, Any]]:
+    return await PostgresDB.fetch(
+        """
+        SELECT field_name, encryption_method, order_no
+        FROM public.data_model_fields
+        WHERE model_id = $1
+        ORDER BY order_no, field_name
+        """,
+        model_id,
+    )
+
+
+async def _get_field_permission_masks(model_id: int, role_ids: List[int]) -> Dict[str, int]:
+    """
+    Returns field_name -> OR-ed action_mask across the user's roles.
+    """
+    if not role_ids:
+        return {}
+    rows = await PostgresDB.fetch(
+        """
+        SELECT field_name, action_mask
+        FROM public.field_permissions
+        WHERE model_id = $1 AND role_id = ANY($2::int[])
+        """,
+        model_id,
+        role_ids,
+    )
+    masks: Dict[str, int] = {}
+    for r in rows or []:
+        name = r["field_name"]
+        masks[name] = (masks.get(name, 0) | (r.get("action_mask") or 0))
+    return masks
+
+
+async def _get_row_access_policies(model_id: int, action_bit: int) -> List[Dict[str, Any]]:
+    return await PostgresDB.fetch(
+        """
+        SELECT id, action_mask, scope_field, scope_source, required, user_override
+        FROM public.model_row_access_policies
+        WHERE model_id = $1 AND (action_mask & $2) <> 0
+        ORDER BY id
+        """,
+        model_id,
+        action_bit,
+    )
+
+
+def _resolve_auth_scope_values(user: Dict[str, Any], scope_field: str) -> List[Any]:
+    """
+    Try several common auth-context key patterns:
+    - scope_field (company_id)
+    - user_{scope_field} (user_company_id)
+    - user_allowed_{scope_field}s (user_allowed_company_ids)
+    - {scope_field}s (company_ids)
+    """
+    if not user:
+        return []
+    candidates = [
+        scope_field,
+        f"user_{scope_field}",
+        f"user_allowed_{scope_field}s",
+        f"{scope_field}s",
+    ]
+    for key in candidates:
+        if key in user and user[key] is not None:
+            val = user[key]
+            if isinstance(val, list):
+                return val
+            return [val]
+    return []
+
+
+def _normalize_user_values(raw: Any) -> List[str]:
+    if raw is None:
+        return []
+    if isinstance(raw, list):
+        vals = raw
+    else:
+        vals = str(raw).split(",")
+    return [str(v).strip() for v in vals if str(v).strip() != ""]
+
+
+def _infer_array_type(values: List[str]) -> Tuple[str, List[Any]]:
+    """
+    Returns ("int" or "text", coerced_values)
+    """
+    if not values:
+        return ("text", [])
+    all_int = True
+    coerced: List[Any] = []
+    for v in values:
+        if re.fullmatch(r"-?\d+", v):
+            coerced.append(int(v))
+        else:
+            all_int = False
+            coerced.append(v)
+    return ("int" if all_int else "text", coerced)
+
+
+async def _get_primary_key_column(table_name: str) -> Optional[str]:
+    if not _is_safe_identifier(table_name):
+        return None
+    row = await PostgresDB.fetchrow(
+        """
+        SELECT kcu.column_name
+        FROM information_schema.table_constraints tc
+        JOIN information_schema.key_column_usage kcu
+          ON tc.constraint_name = kcu.constraint_name
+         AND tc.table_schema = kcu.table_schema
+        WHERE tc.table_schema = 'public'
+          AND tc.table_name = $1
+          AND tc.constraint_type = 'PRIMARY KEY'
+        ORDER BY kcu.ordinal_position
+        LIMIT 1
+        """,
+        table_name,
+    )
+    return (row or {}).get("column_name")
+
+
+def _xor_cipher(value: str, key: str) -> str:
+    if value is None:
+        return value
+    key_bytes = (key or "noolva").encode("utf-8")
+    data = value.encode("utf-8")
+    out = bytes([b ^ key_bytes[i % len(key_bytes)] for i, b in enumerate(data)])
+    return base64.b64encode(out).decode("utf-8")
+
+
+def _xor_decipher(value: str, key: str) -> str:
+    if value is None:
+        return value
+    key_bytes = (key or "noolva").encode("utf-8")
+    data = base64.b64decode(value.encode("utf-8"))
+    out = bytes([b ^ key_bytes[i % len(key_bytes)] for i, b in enumerate(data)])
+    return out.decode("utf-8")
 
 
 class DataModelFieldCreate(BaseModel):
@@ -47,24 +251,24 @@ class DataModelCreate(BaseModel):
     model_name: str
     display_name: Optional[str] = None
     table_name: str
-    use_case: str = "system"
+    table_alias: Optional[str] = None
+    model_scope: str = "saas"
     is_public: bool = False
     is_system_model: bool = False
     is_active: bool = True
     description: Optional[str] = None
-    icon: Optional[str] = None
     fields: Optional[List[DataModelFieldCreate]] = []
 
 
 class DataModelUpdate(BaseModel):
     display_name: Optional[str] = None
     table_name: Optional[str] = None
-    use_case: Optional[str] = None
+    table_alias: Optional[str] = None
+    model_scope: Optional[str] = None
     is_public: Optional[bool] = None
     is_system_model: Optional[bool] = None
     is_active: Optional[bool] = None
     description: Optional[str] = None
-    icon: Optional[str] = None
 
 
 class TableModificationRequest(BaseModel):
@@ -89,7 +293,7 @@ async def get_field_types(
             SELECT 
                 field_type_id, type_name, type_code, category,
                 actual_db_type, default_component_type_id, default_props_json,
-                icon, is_active
+                icon, input_type_image, is_active
             FROM public.field_types
             WHERE is_active = TRUE
             ORDER BY category, type_name
@@ -104,6 +308,9 @@ async def get_field_types(
 @router.get("/list")
 async def get_data_models(
     app_id: Optional[int] = Query(None, description="Filter by app_id"),
+    limit: int = Query(500, ge=1, le=500, description="Max models per call (max 500)"),
+    offset: int = Query(0, ge=0, description="Pagination offset"),
+    search: Optional[str] = Query(None, description="Search across model_name, display_name, table_name"),
     user: Dict = Depends(verify_jwt_token(["saas_admin", "saas_employee", "tenant_admin", "tenant_user"])),
     db=Depends(get_db),
 ):
@@ -114,35 +321,104 @@ async def get_data_models(
         raise HTTPException(status_code=401, detail="Authentication required")
 
     try:
-        query = """
-            SELECT DISTINCT
-                dm.model_id, dm.model_uuid, dm.app_id, dm.model_name, dm.display_name,
-                dm.table_name, dm.use_case, dm.is_public, dm.is_system_model,
-                dm.is_active, dm.description, dm.icon,
-                dm.created_by, dm.idate, dm.last_updated,
-                COUNT(DISTINCT dmf.field_id) as field_count
-            FROM public.data_models dm
-            LEFT JOIN public.data_model_fields dmf ON dm.model_id = dmf.model_id
-        """
-        
-        params = []
-        conditions = []
-        
+        t0 = time.perf_counter()
+        logger.info(
+            "data-models.list start user=%s app_id=%s limit=%s offset=%s search=%s",
+            user.get("username"),
+            app_id,
+            limit,
+            offset,
+            bool(search),
+        )
+
+        where = []
+        params: List[Any] = []
+
         if app_id is not None:
-            conditions.append("dm.app_id = $" + str(len(params) + 1))
+            where.append(f"dm.app_id = ${len(params) + 1}")
             params.append(app_id)
-        
-        if conditions:
-            query += " WHERE " + " AND ".join(conditions)
-        
-        query += " GROUP BY dm.model_id, dm.model_uuid, dm.app_id, dm.model_name, dm.display_name, "
-        query += "dm.table_name, dm.use_case, dm.is_public, dm.is_system_model, "
-        query += "dm.is_active, dm.description, dm.icon, dm.created_by, dm.idate, dm.last_updated "
-        query += "ORDER BY dm.model_name"
-        
-        models = await PostgresDB.fetch(query, *params)
-        return {"data_models": [dict(m) for m in models] if models else []}
+
+        if search:
+            where.append(
+                f"""(
+                    dm.model_name ILIKE ${len(params) + 1}
+                    OR COALESCE(dm.display_name, '') ILIKE ${len(params) + 1}
+                    OR dm.table_name ILIKE ${len(params) + 1}
+                )"""
+            )
+            params.append(f"%{search}%")
+
+        where_sql = (" WHERE " + " AND ".join(where)) if where else ""
+
+        # IMPORTANT: Avoid COUNT(*) on large tables (can hang).
+        # Use limit+1 technique to determine has_more, and compute field_count only for returned model_ids.
+        page_limit = min(limit + 1, 501)
+
+        # NOTE: ordering by model_name can be very slow without a supporting index.
+        # We order by model_id (PK) for reliability; the admin UI can sort client-side by name.
+        query = f"""
+            SELECT
+                dm.model_id, dm.model_uuid, dm.app_id, dm.model_name, dm.display_name,
+                dm.table_name, dm.table_alias, dm.model_scope, dm.is_public, dm.is_system_model,
+                dm.is_active, dm.description,
+                dm.created_by, dm.idate, dm.last_updated
+            FROM public.data_models dm
+            {where_sql}
+            ORDER BY dm.model_id
+            LIMIT ${len(params) + 1} OFFSET ${len(params) + 2}
+        """
+
+        t1 = time.perf_counter()
+        logger.info(
+            "data-models.list page query start page_limit=%s offset=%s",
+            page_limit,
+            offset,
+        )
+        models = await PostgresDB.fetch(query, *params, page_limit, offset)
+        t2 = time.perf_counter()
+
+        data = [dict(m) for m in models] if models else []
+        has_more = len(data) > limit
+        if has_more:
+            data = data[:limit]
+
+        # Field counts for just this page
+        model_ids = [m["model_id"] for m in data]
+        field_count_map: Dict[int, int] = {}
+        if model_ids:
+            rows = await PostgresDB.fetch(
+                """
+                SELECT model_id, COUNT(*)::int AS field_count
+                FROM public.data_model_fields
+                WHERE model_id = ANY($1::int[])
+                GROUP BY model_id
+                """,
+                model_ids,
+            )
+            for r in rows or []:
+                field_count_map[r["model_id"]] = r.get("field_count") or 0
+
+        for m in data:
+            m["field_count"] = field_count_map.get(m["model_id"], 0)
+
+        t3 = time.perf_counter()
+        logger.info(
+            "data-models.list done models=%s has_more=%s timings page=%.3fs counts=%.3fs total=%.3fs",
+            len(data),
+            has_more,
+            (t2 - t1),
+            (t3 - t2),
+            (t3 - t0),
+        )
+        return {
+            "data_models": data,
+            "total": None,
+            "limit": limit,
+            "offset": offset,
+            "has_more": has_more,
+        }
     except Exception as e:
+        logger.exception("data-models.list failed: %s", e)
         raise HTTPException(status_code=500, detail=f"Failed to fetch data models: {str(e)}")
 
 
@@ -165,8 +441,8 @@ async def get_data_model(
             """
             SELECT 
                 dm.model_id, dm.model_uuid, dm.app_id, dm.model_name, dm.display_name,
-                dm.table_name, dm.use_case, dm.is_public, dm.is_system_model,
-                dm.is_active, dm.description, dm.icon,
+                dm.table_name, dm.table_alias, dm.model_scope, dm.is_public, dm.is_system_model,
+                dm.is_active, dm.description,
                 dm.created_by, dm.idate, dm.last_updated
             FROM public.data_models dm
             WHERE dm.model_id = $1
@@ -188,7 +464,7 @@ async def get_data_model(
                     dmf.field_config_json, dmf.is_required, dmf.is_unique, dmf.is_primary_key,
                     dmf.default_value, dmf.encryption_method, dmf.ui_component, dmf.order_no,
                     dmf.idate,
-                    ft.type_name, ft.type_code, ft.actual_db_type
+                    ft.type_name, ft.type_code, ft.actual_db_type, ft.input_type_image
                 FROM public.data_model_fields dmf
                 LEFT JOIN public.field_types ft ON dmf.field_type_id = ft.field_type_id
                 WHERE dmf.model_id = $1
@@ -257,8 +533,8 @@ async def create_data_model(
         model_result = await PostgresDB.fetchrow(
             """
             INSERT INTO public.data_models (
-                app_id, model_name, display_name, table_name, use_case,
-                is_public, is_system_model, is_active, description, icon, created_by
+                app_id, model_name, display_name, table_name, table_alias, model_scope,
+                is_public, is_system_model, is_active, description, created_by
             ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
             RETURNING model_id, model_uuid
             """,
@@ -266,12 +542,12 @@ async def create_data_model(
             payload.model_name,
             payload.display_name or payload.model_name,
             payload.table_name,
-            payload.use_case,
+            payload.table_alias,
+            payload.model_scope,
             payload.is_public,
             payload.is_system_model,
             payload.is_active,
             payload.description,
-            payload.icon,
             user_id
         )
         
@@ -398,9 +674,14 @@ async def update_data_model(
             params.append(payload.display_name)
             param_idx += 1
         
-        if payload.use_case is not None:
-            updates.append(f"use_case = ${param_idx}")
-            params.append(payload.use_case)
+        if payload.table_alias is not None:
+            updates.append(f"table_alias = ${param_idx}")
+            params.append(payload.table_alias)
+            param_idx += 1
+
+        if payload.model_scope is not None:
+            updates.append(f"model_scope = ${param_idx}")
+            params.append(payload.model_scope)
             param_idx += 1
         
         if payload.is_public is not None:
@@ -421,11 +702,6 @@ async def update_data_model(
         if payload.description is not None:
             updates.append(f"description = ${param_idx}")
             params.append(payload.description)
-            param_idx += 1
-        
-        if payload.icon is not None:
-            updates.append(f"icon = ${param_idx}")
-            params.append(payload.icon)
             param_idx += 1
         
         # Handle table name change (requires ALTER TABLE)
@@ -577,6 +853,16 @@ async def add_field(
         
         if not field_type:
             raise HTTPException(status_code=400, detail=f"Invalid field_type_id: {field.field_type_id}")
+
+        # Determine order_no (append by default)
+        if field.order_no and field.order_no > 0:
+            order_no = field.order_no
+        else:
+            max_row = await PostgresDB.fetchrow(
+                "SELECT COALESCE(MAX(order_no), 0) AS max_order FROM public.data_model_fields WHERE model_id = $1",
+                model_id,
+            )
+            order_no = ((max_row or {}).get("max_order", 0) or 0) + 1
         
         # Insert field record
         await PostgresDB.execute(
@@ -598,7 +884,7 @@ async def add_field(
             field.default_value,
             field.encryption_method,
             field.ui_component,
-            field.order_no
+            order_no
         )
         
         # Add column to actual table
@@ -800,3 +1086,477 @@ async def delete_field(
         raise
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to delete field: {str(e)}")
+
+
+class ReorderFieldsRequest(BaseModel):
+    field_ids: List[int]
+
+
+@router.put("/model/{model_id}/fields/reorder")
+async def reorder_fields(
+    model_id: int,
+    payload: ReorderFieldsRequest,
+    user: Dict = Depends(verify_jwt_token(["saas_admin", "saas_employee", "tenant_admin"])),
+    db=Depends(get_db),
+):
+    """
+    Reorder fields in a model by updating order_no.
+    """
+    if not user:
+        raise HTTPException(status_code=401, detail="Authentication required")
+
+    if not payload.field_ids:
+        raise HTTPException(status_code=400, detail="field_ids cannot be empty")
+
+    try:
+        # Ensure all fields belong to this model
+        rows = await PostgresDB.fetch(
+            """
+            SELECT field_id
+            FROM public.data_model_fields
+            WHERE model_id = $1 AND field_id = ANY($2::int[])
+            """,
+            model_id,
+            payload.field_ids,
+        )
+        found_ids = {r["field_id"] for r in rows} if rows else set()
+        requested_ids = set(payload.field_ids)
+        if found_ids != requested_ids:
+            missing = sorted(list(requested_ids - found_ids))
+            raise HTTPException(status_code=400, detail=f"Invalid field_ids for this model: {missing}")
+
+        # Apply new order sequentially (1..n) based on payload order
+        for idx, field_id in enumerate(payload.field_ids, start=1):
+            await PostgresDB.execute(
+                "UPDATE public.data_model_fields SET order_no = $1 WHERE field_id = $2",
+                idx,
+                field_id,
+            )
+
+        return {"message": "Fields reordered successfully"}
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to reorder fields: {str(e)}")
+
+
+class AutoRecordPayload(BaseModel):
+    data: Dict[str, Any]
+
+
+def _assert_user_type_allowed(user: Dict[str, Any]) -> None:
+    allowed = {"saas_admin", "saas_employee", "tenant_admin", "tenant_user"}
+    if not user or user.get("user_type") not in allowed:
+        raise HTTPException(status_code=403, detail="Access denied")
+
+
+async def _build_row_policy_where(
+    model_id: int,
+    action_bit: int,
+    user: Optional[Dict[str, Any]],
+    request: Request,
+) -> Tuple[str, List[Any]]:
+    policies = await _get_row_access_policies(model_id, action_bit)
+    if not policies:
+        return ("", [])
+
+    clauses: List[str] = []
+    args: List[Any] = []
+    for p in policies:
+        scope_field = p.get("scope_field")
+        scope_source = p.get("scope_source")
+        required = bool(p.get("required"))
+
+        if not scope_field or not _is_safe_identifier(scope_field):
+            raise HTTPException(status_code=500, detail="Invalid row access policy configuration")
+
+        if scope_source == "AUTH_CONTEXT":
+            scope_vals = _resolve_auth_scope_values(user or {}, scope_field)
+            scope_vals = [str(v) for v in scope_vals if v is not None]
+        elif scope_source == "USER":
+            scope_vals = _normalize_user_values(request.query_params.get(scope_field))
+        else:
+            raise HTTPException(status_code=500, detail="Invalid row access policy configuration")
+
+        if required and not scope_vals:
+            raise HTTPException(status_code=403, detail=f"Missing required scope: {scope_field}")
+
+        if not scope_vals:
+            # Not required and not present -> skip
+            continue
+
+        array_type, coerced = _infer_array_type(scope_vals)
+        args.append(coerced)
+        param_idx = len(args)
+
+        if array_type == "int":
+            clauses.append(f'"{scope_field}" = ANY(${param_idx}::int[])')
+        else:
+            clauses.append(f'"{scope_field}"::text = ANY(${param_idx}::text[])')
+
+    if not clauses:
+        return ("", [])
+
+    return (" WHERE " + " AND ".join(clauses), args)
+
+
+def _apply_field_masking(
+    rows: List[Dict[str, Any]],
+    requested_fields: List[str],
+    readable_fields: set,
+    encryption_by_field: Dict[str, str],
+) -> List[Dict[str, Any]]:
+    """
+    Ensures every requested field exists in each row; unauthorized fields become "AuthFailed".
+    Decrypts values for readable encrypted fields when possible.
+    """
+    xor_key = "noolva"
+    enc = get_encryption_service()
+
+    out: List[Dict[str, Any]] = []
+    for r in rows or []:
+        item: Dict[str, Any] = {}
+        for f in requested_fields:
+            if f not in readable_fields:
+                item[f] = "AuthFailed"
+                continue
+
+            val = r.get(f)
+            method = encryption_by_field.get(f) or "none"
+            if val is None or method == "none":
+                item[f] = val
+            elif method == "xor_cipher":
+                try:
+                    item[f] = _xor_decipher(str(val), xor_key)
+                except Exception:
+                    item[f] = val
+            elif method == "aes":
+                # Best-effort: values encrypted via EncryptionService as {"v": "<string>"}
+                try:
+                    payload = enc.decrypt(str(val))
+                    item[f] = payload.get("v")
+                except Exception:
+                    item[f] = val
+            else:
+                item[f] = val
+        out.append(item)
+    return out
+
+
+@router.get("/auto/{model_name}/records")
+async def auto_list_records(
+    model_name: str,
+    request: Request,
+    limit: int = Query(100, ge=1, le=1000),
+    offset: int = Query(0, ge=0),
+    fields: Optional[str] = Query(None, description="Comma-separated fields; default = model fields"),
+    authorization: Optional[str] = Header(None),
+):
+    """
+    Automatic READ (list) endpoint for models registered in public.data_models.
+    Enforces model_row_access_policies + field_permissions masking.
+    """
+    model = await _get_model_by_name(model_name)
+    if not model:
+        raise HTTPException(status_code=404, detail="Model not found")
+
+    user = _decode_optional_user(authorization)
+    if not model.get("is_public") and not user:
+        raise HTTPException(status_code=401, detail="Authentication required")
+    if user:
+        _assert_user_type_allowed(user)
+
+    table_name = model.get("table_name")
+    if not table_name or not _is_safe_identifier(table_name):
+        raise HTTPException(status_code=500, detail="Invalid model configuration")
+
+    model_id = model["model_id"]
+    fields_meta = await _get_model_fields_meta(model_id)
+    all_fields = [f["field_name"] for f in fields_meta] if fields_meta else []
+    encryption_by_field = {f["field_name"]: f.get("encryption_method") for f in fields_meta or []}
+
+    if fields:
+        requested_fields = [x.strip() for x in fields.split(",") if x.strip()]
+    else:
+        requested_fields = all_fields
+
+    # Validate identifiers and existence in model fields
+    for f in requested_fields:
+        if not _is_safe_identifier(f) or f not in all_fields:
+            raise HTTPException(status_code=400, detail=f"Invalid field requested: {f}")
+
+    # Row-level policies
+    where_sql, where_args = await _build_row_policy_where(model_id, ACTION_READ, user, request)
+
+    # Field-level permissions (public requests without token can read all fields)
+    readable_fields = set(requested_fields)
+    if user:
+        role_ids = await _get_user_role_ids(user["user_id"], user.get("company_id"))
+        masks = await _get_field_permission_masks(model_id, role_ids)
+        readable_fields = {f for f in requested_fields if (masks.get(f, 0) & ACTION_READ) != 0}
+
+    # Always select at least one column for paging; use primary key if present
+    pk_col = await _get_primary_key_column(table_name)
+    select_fields = [f for f in requested_fields if f in readable_fields]
+    if pk_col and pk_col not in select_fields:
+        select_fields = [pk_col] + select_fields
+
+    if not select_fields:
+        # Fallback: select primary key or any safe column from model fields
+        fallback = pk_col or (all_fields[0] if all_fields else None)
+        if not fallback:
+            raise HTTPException(status_code=500, detail="Model has no fields")
+        select_fields = [fallback]
+
+    # Build SQL
+    cols_sql = ", ".join([f'"{c}"' for c in select_fields])
+    # Append LIMIT/OFFSET placeholders
+    args = list(where_args)
+    args.append(limit)
+    args.append(offset)
+    limit_idx = len(args) - 1
+    offset_idx = len(args)
+
+    sql = f'SELECT {cols_sql} FROM public."{table_name}"{where_sql} LIMIT ${limit_idx} OFFSET ${offset_idx}'
+    raw_rows = await PostgresDB.fetch(sql, *args)
+
+    # Ensure we can return all requested fields (mask unauthorized)
+    masked = _apply_field_masking(raw_rows, requested_fields, readable_fields, encryption_by_field)
+    return {"model_name": model_name, "records": masked, "limit": limit, "offset": offset}
+
+
+@router.post("/auto/{model_name}/records")
+async def auto_create_record(
+    model_name: str,
+    request: Request,
+    payload: AutoRecordPayload,
+    authorization: Optional[str] = Header(None),
+):
+    """
+    Automatic CREATE endpoint (WRITE) for models registered in public.data_models.
+    Enforces model_row_access_policies + field_permissions.
+    """
+    model = await _get_model_by_name(model_name)
+    if not model:
+        raise HTTPException(status_code=404, detail="Model not found")
+
+    user = _decode_optional_user(authorization)
+    if not user:
+        raise HTTPException(status_code=401, detail="Authentication required")
+    _assert_user_type_allowed(user)
+
+    table_name = model.get("table_name")
+    if not table_name or not _is_safe_identifier(table_name):
+        raise HTTPException(status_code=500, detail="Invalid model configuration")
+
+    model_id = model["model_id"]
+    fields_meta = await _get_model_fields_meta(model_id)
+    all_fields = [f["field_name"] for f in fields_meta] if fields_meta else []
+    encryption_by_field = {f["field_name"]: f.get("encryption_method") for f in fields_meta or []}
+
+    data = payload.data or {}
+    if not isinstance(data, dict) or not data:
+        raise HTTPException(status_code=400, detail="data must be a non-empty object")
+
+    # Validate fields are part of model
+    for k in data.keys():
+        if not _is_safe_identifier(k) or k not in all_fields:
+            raise HTTPException(status_code=400, detail=f"Invalid field: {k}")
+
+    # Enforce row policies for WRITE (scope fields on insert)
+    policies = await _get_row_access_policies(model_id, ACTION_WRITE)
+    for p in policies or []:
+        scope_field = p.get("scope_field")
+        scope_source = p.get("scope_source")
+        required = bool(p.get("required"))
+
+        if not scope_field or not _is_safe_identifier(scope_field):
+            raise HTTPException(status_code=500, detail="Invalid row access policy configuration")
+
+        if scope_source == "AUTH_CONTEXT":
+            allowed_vals = _resolve_auth_scope_values(user, scope_field)
+            if required and not allowed_vals:
+                raise HTTPException(status_code=403, detail=f"Missing required scope: {scope_field}")
+
+            if len(allowed_vals) == 1:
+                # Server-enforced scope
+                data[scope_field] = allowed_vals[0]
+            elif len(allowed_vals) > 1:
+                # Must pick one within allowed set
+                if scope_field not in data:
+                    raise HTTPException(status_code=403, detail=f"Scope required in request: {scope_field}")
+                if data[scope_field] not in allowed_vals:
+                    raise HTTPException(status_code=403, detail=f"Invalid scope value for {scope_field}")
+            else:
+                # not required and no auth scope -> leave as is
+                pass
+        elif scope_source == "USER":
+            if required and scope_field not in data:
+                raise HTTPException(status_code=403, detail=f"Scope required in request: {scope_field}")
+        else:
+            raise HTTPException(status_code=500, detail="Invalid row access policy configuration")
+
+    # Field-level permissions (WRITE)
+    role_ids = await _get_user_role_ids(user["user_id"], user.get("company_id"))
+    masks = await _get_field_permission_masks(model_id, role_ids)
+    for k in data.keys():
+        if (masks.get(k, 0) & ACTION_WRITE) == 0:
+            raise HTTPException(status_code=403, detail=f"Write not allowed for field: {k}")
+
+    # Apply encryption
+    xor_key = "noolva"
+    enc = get_encryption_service()
+    for k, v in list(data.items()):
+        method = encryption_by_field.get(k) or "none"
+        if v is None or method == "none":
+            continue
+        if method == "xor_cipher":
+            data[k] = _xor_cipher(str(v), xor_key)
+        elif method == "aes":
+            data[k] = enc.encrypt({"v": str(v)})
+
+    cols = list(data.keys())
+    placeholders = ", ".join([f"${i+1}" for i in range(len(cols))])
+    cols_sql = ", ".join([f'"{c}"' for c in cols])
+    values = [data[c] for c in cols]
+
+    sql = f'INSERT INTO public."{table_name}" ({cols_sql}) VALUES ({placeholders}) RETURNING *'
+    inserted = await PostgresDB.fetchrow(sql, *values)
+
+    # Mask response using READ rules
+    fields_param = ",".join(all_fields)
+    requested_fields = [x.strip() for x in fields_param.split(",") if x.strip()]
+    readable_fields = {f for f in requested_fields if (masks.get(f, 0) & ACTION_READ) != 0}
+    masked = _apply_field_masking([inserted or {}], requested_fields, readable_fields, encryption_by_field)
+    return {"model_name": model_name, "record": masked[0] if masked else {}}
+
+
+@router.put("/auto/{model_name}/records/{record_id}")
+async def auto_update_record(
+    model_name: str,
+    record_id: str,
+    request: Request,
+    payload: AutoRecordPayload,
+    authorization: Optional[str] = Header(None),
+):
+    """
+    Automatic UPDATE endpoint for models registered in public.data_models.
+    Enforces model_row_access_policies + field_permissions.
+    """
+    model = await _get_model_by_name(model_name)
+    if not model:
+        raise HTTPException(status_code=404, detail="Model not found")
+
+    user = _decode_optional_user(authorization)
+    if not user:
+        raise HTTPException(status_code=401, detail="Authentication required")
+    _assert_user_type_allowed(user)
+
+    table_name = model.get("table_name")
+    if not table_name or not _is_safe_identifier(table_name):
+        raise HTTPException(status_code=500, detail="Invalid model configuration")
+
+    pk_col = await _get_primary_key_column(table_name)
+    if not pk_col:
+        raise HTTPException(status_code=400, detail="Target table has no primary key")
+
+    model_id = model["model_id"]
+    fields_meta = await _get_model_fields_meta(model_id)
+    all_fields = [f["field_name"] for f in fields_meta] if fields_meta else []
+    encryption_by_field = {f["field_name"]: f.get("encryption_method") for f in fields_meta or []}
+
+    updates = payload.data or {}
+    if not isinstance(updates, dict) or not updates:
+        raise HTTPException(status_code=400, detail="data must be a non-empty object")
+
+    for k in updates.keys():
+        if not _is_safe_identifier(k) or k not in all_fields:
+            raise HTTPException(status_code=400, detail=f"Invalid field: {k}")
+
+    role_ids = await _get_user_role_ids(user["user_id"], user.get("company_id"))
+    masks = await _get_field_permission_masks(model_id, role_ids)
+    for k in updates.keys():
+        if (masks.get(k, 0) & ACTION_UPDATE) == 0:
+            raise HTTPException(status_code=403, detail=f"Update not allowed for field: {k}")
+
+    # Enforce row policies for UPDATE
+    policy_where, policy_args = await _build_row_policy_where(model_id, ACTION_UPDATE, user, request)
+    where = f'WHERE "{pk_col}" = $1'
+    if policy_where:
+        where += " AND " + policy_where.replace(" WHERE ", "", 1)
+
+    # Apply encryption
+    xor_key = "noolva"
+    enc = get_encryption_service()
+    for k, v in list(updates.items()):
+        method = encryption_by_field.get(k) or "none"
+        if v is None or method == "none":
+            continue
+        if method == "xor_cipher":
+            updates[k] = _xor_cipher(str(v), xor_key)
+        elif method == "aes":
+            updates[k] = enc.encrypt({"v": str(v)})
+
+    # Build SQL with correct placeholder indices
+    args: List[Any] = [record_id] + list(policy_args)
+    param_idx = len(args) + 1
+    set_parts = []
+    for k in updates.keys():
+        set_parts.append(f'"{k}" = ${param_idx}')
+        args.append(updates[k])
+        param_idx += 1
+    set_sql = ", ".join(set_parts)
+
+    sql = f'UPDATE public."{table_name}" SET {set_sql} {where} RETURNING *'
+    updated = await PostgresDB.fetchrow(sql, *args)
+    if not updated:
+        raise HTTPException(status_code=404, detail="Record not found (or not permitted)")
+
+    requested_fields = all_fields
+    readable_fields = {f for f in requested_fields if (masks.get(f, 0) & ACTION_READ) != 0}
+    masked = _apply_field_masking([updated], requested_fields, readable_fields, encryption_by_field)
+    return {"model_name": model_name, "record": masked[0] if masked else {}}
+
+
+@router.delete("/auto/{model_name}/records/{record_id}")
+async def auto_delete_record(
+    model_name: str,
+    record_id: str,
+    request: Request,
+    authorization: Optional[str] = Header(None),
+):
+    """
+    Automatic DELETE endpoint for models registered in public.data_models.
+    Enforces model_row_access_policies.
+    """
+    model = await _get_model_by_name(model_name)
+    if not model:
+        raise HTTPException(status_code=404, detail="Model not found")
+
+    user = _decode_optional_user(authorization)
+    if not user:
+        raise HTTPException(status_code=401, detail="Authentication required")
+    _assert_user_type_allowed(user)
+
+    table_name = model.get("table_name")
+    if not table_name or not _is_safe_identifier(table_name):
+        raise HTTPException(status_code=500, detail="Invalid model configuration")
+
+    pk_col = await _get_primary_key_column(table_name)
+    if not pk_col:
+        raise HTTPException(status_code=400, detail="Target table has no primary key")
+
+    model_id = model["model_id"]
+    policy_where, policy_args = await _build_row_policy_where(model_id, ACTION_DELETE, user, request)
+    where = f'WHERE "{pk_col}" = $1'
+    if policy_where:
+        where += " AND " + policy_where.replace(" WHERE ", "", 1)
+
+    args: List[Any] = [record_id] + list(policy_args)
+    sql = f'DELETE FROM public."{table_name}" {where} RETURNING "{pk_col}"'
+    deleted = await PostgresDB.fetchrow(sql, *args)
+    if not deleted:
+        raise HTTPException(status_code=404, detail="Record not found (or not permitted)")
+
+    return {"model_name": model_name, "deleted": True, "record_id": deleted.get(pk_col)}
+
