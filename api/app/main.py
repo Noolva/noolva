@@ -193,6 +193,15 @@ except Exception as e:
     logger.error(f"Failed to register icons router: {e}")
     raise
 
+# Import and include collections router
+try:
+    from routes import collections
+    app.include_router(collections.router, prefix="/collections", tags=["Collections"])
+    logger.info("Collections router registered successfully at /collections")
+except Exception as e:
+    logger.error(f"Failed to register collections router: {e}")
+    raise
+
 
 @app.get("/")
 def home():
