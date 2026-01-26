@@ -1,0 +1,32 @@
+Sensitive Operations
+Delete Data Models
+-Show Warning Confirmation
+-Require Re-authentication
+-Require Multi-Factor Authentication (MFA)
+Modify Data Models and Fields
+-Show Warning Confirmation
+-Require Re-authentication
+-Require Multi-Factor Authentication (MFA)
+
+
+
+wrong in settings
+-----------------
+{
+    "setting_id": 5,
+    "group_name": "Theme",
+    "setting_key": "theme",
+    "setting_name": "Theme",
+    "description": "Selected theme key",
+    "field_type_id": 13,
+    "default_value": "\"default\"",
+    "value": "\"default\"",
+    "scope": "global",
+    "tenant_id": null,
+    "is_built_in": true,
+    "last_updated": "2026-01-17T23:41:07.001398",
+    "field_config_json": "{\"options\": [{\"label\": \"Default Corporate\", \"value\": \"default\"}, {\"label\": \"Slate Corporate\", \"value\": \"slate\"}]}"
+}
+
+after that apply in delete model and edit model
+delete confirmation=>2fa,simple dialog,confirm password again,=>it should be in view actions

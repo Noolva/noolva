@@ -559,9 +559,17 @@ export const api = {
         return response.data;
     },
 
-    deleteDataModel: async (modelId, deleteTable = false) => {
+    checkModelDeletion: async (modelId) => {
+        const response = await axiosInstance.get(`/data-models/model/${modelId}/delete-check`);
+        return response.data;
+    },
+
+    deleteDataModel: async (modelId, deleteTable = false, confirmDeleteData = false) => {
         const response = await axiosInstance.delete(`/data-models/model/${modelId}`, {
-            params: { delete_table: deleteTable }
+            params: { 
+                delete_table: deleteTable,
+                confirm_delete_data: confirmDeleteData
+            }
         });
         return response.data;
     },
