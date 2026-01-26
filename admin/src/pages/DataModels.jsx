@@ -27,7 +27,8 @@ import {
     DatabaseOutlined,
     FieldTimeOutlined,
     OrderedListOutlined,
-    ExclamationCircleOutlined
+    ExclamationCircleOutlined,
+    ReloadOutlined
 } from '@ant-design/icons';
 import { api } from '../utils/api';
 import { VCDragSortList } from '../components/ViewComponents/displays/VCDragSortList';
@@ -58,6 +59,9 @@ const DataModels = () => {
     const [searchText, setSearchText] = useState('');
     const [fieldConfigJson, setFieldConfigJson] = useState({});
     const [selectedFieldType, setSelectedFieldType] = useState(null);
+    const [deleteCheckModalVisible, setDeleteCheckModalVisible] = useState(false);
+    const [deleteCheckInfo, setDeleteCheckInfo] = useState(null);
+    const [pendingDeleteModelId, setPendingDeleteModelId] = useState(null);
 
     // Helper function to get asset URL
     const getAssetUrl = (assetPath) => {
@@ -112,7 +116,14 @@ const DataModels = () => {
     const loadModelFields = async (modelId) => {
         try {
             const response = await api.getDataModel(modelId);
-            setFields(response.fields || []);
+            // Filter out system fields (idate, created_by, last_updated) from UI display
+            const allFields = response.fields || [];
+            const visibleFields = allFields.filter(f => 
+                f.field_name !== 'idate' && 
+                f.field_name !== 'created_by' && 
+                f.field_name !== 'last_updated'
+            );
+            setFields(visibleFields);
         } catch (error) {
             message.error('Failed to load fields: ' + (error.message || 'Unknown error'));
         }
@@ -121,6 +132,14 @@ const DataModels = () => {
     const handleCreate = () => {
         setEditingModel(null);
         form.resetFields();
+        // Set initial values for new model creation
+        form.setFieldsValue({
+            model_scope: 'saas',
+            is_public: false,
+            is_active: true,
+            is_system_model: false,
+            id_field_name: 'id', // Default ID field name
+        });
         setModalVisible(true);
     };
 
@@ -131,7 +150,7 @@ const DataModels = () => {
             form.setFieldsValue({
                 model_name: response.model_name,
                 display_name: response.display_name,
-                table_name: response.table_name,
+                table_name: response.table_name, // Should match model_name
                 table_alias: response.table_alias,
                 model_scope: response.model_scope,
                 is_public: response.is_public,
@@ -139,7 +158,14 @@ const DataModels = () => {
                 is_active: response.is_active,
                 description: response.description,
             });
-            setFields(response.fields || []);
+            // Filter out system fields (idate, created_by, last_updated) from UI display
+            const allFields = response.fields || [];
+            const visibleFields = allFields.filter(f => 
+                f.field_name !== 'idate' && 
+                f.field_name !== 'created_by' && 
+                f.field_name !== 'last_updated'
+            );
+            setFields(visibleFields);
             setModalVisible(true);
         } catch (error) {
             message.error('Failed to load data model: ' + (error.message || 'Unknown error'));
@@ -148,8 +174,25 @@ const DataModels = () => {
 
     const handleDelete = async (modelId) => {
         try {
-            await api.deleteDataModel(modelId, false);
+            // Check deletion safety first
+            const checkResult = await api.checkModelDeletion(modelId);
+            setDeleteCheckInfo(checkResult);
+            setPendingDeleteModelId(modelId);
+            setDeleteCheckModalVisible(true);
+        } catch (error) {
+            message.error('Failed to check model deletion: ' + (error.message || 'Unknown error'));
+        }
+    };
+
+    const confirmDeleteModel = async (deleteTable = false, confirmDeleteData = false) => {
+        if (!pendingDeleteModelId) return;
+        
+        try {
+            await api.deleteDataModel(pendingDeleteModelId, deleteTable, confirmDeleteData);
             message.success('Data model deleted successfully');
+            setDeleteCheckModalVisible(false);
+            setDeleteCheckInfo(null);
+            setPendingDeleteModelId(null);
             loadDataModels();
         } catch (error) {
             message.error('Failed to delete data model: ' + (error.message || 'Unknown error'));
@@ -175,7 +218,12 @@ const DataModels = () => {
                 await api.updateDataModel(editingModel.model_id, values);
                 message.success('Data model updated successfully');
             } else {
-                await api.createDataModel(values);
+                // For new model creation, include id field and essential fields
+                const submitValues = {
+                    ...values,
+                    id_field_name: values.id_field_name || 'id'
+                };
+                await api.createDataModel(submitValues);
                 message.success('Data model created successfully');
             }
             setModalVisible(false);
@@ -452,22 +500,15 @@ const DataModels = () => {
                     >
                         Edit
                     </Button>
-                    <Popconfirm
-                        title="Are you sure you want to delete this data model?"
-                        onConfirm={() => handleDelete(record.model_id)}
-                        okText="Yes"
-                        cancelText="No"
+                    <Button
+                        type="link"
+                        danger
+                        icon={<DeleteOutlined />}
+                        onClick={() => handleDelete(record.model_id)}
                         disabled={record.is_system_model}
                     >
-                        <Button
-                            type="link"
-                            danger
-                            icon={<DeleteOutlined />}
-                            disabled={record.is_system_model}
-                        >
-                            Delete
-                        </Button>
-                    </Popconfirm>
+                        Delete
+                    </Button>
                 </Space>
             ),
         },
@@ -585,6 +626,13 @@ const DataModels = () => {
                             style={{ width: 360 }}
                         />
                         <Button
+                            icon={<ReloadOutlined />}
+                            onClick={loadDataModels}
+                            loading={loading}
+                        >
+                            Refresh
+                        </Button>
+                        <Button
                             type="primary"
                             icon={<PlusOutlined />}
                             onClick={handleCreate}
@@ -619,31 +667,111 @@ const DataModels = () => {
                     <Row gutter={16}>
                         <Col span={12}>
                             <Form.Item
-                                name="model_name"
-                                label="Model Name"
-                                rules={[{ required: true, message: 'Please enter model name' }]}
+                                name="display_name"
+                                label="Display Name"
+                                rules={[{ required: true, message: 'Please enter display name' }]}
                             >
-                                <Input disabled={!!editingModel} placeholder="e.g., users" />
+                                <Input 
+                                    placeholder="e.g., Users" 
+                                    onChange={(e) => {
+                                        if (!editingModel) {
+                                            // Auto-populate model_name and table_name from display_name
+                                            const displayName = e.target.value;
+                                            const modelName = displayName
+                                                .trim()
+                                                .toLowerCase()
+                                                .replace(/\s+/g, '_')
+                                                .replace(/[^a-z0-9_]/g, '');
+                                            // model_name and table_name must be the same
+                                            form.setFieldsValue({ 
+                                                model_name: modelName,
+                                                table_name: modelName  // Enforce same value
+                                            });
+                                            
+                                            // Auto-populate id field name based on first word
+                                            const firstWord = displayName.trim().split(/\s+/)[0].toLowerCase();
+                                            const idFieldName = firstWord ? `${firstWord}_id` : 'id';
+                                            form.setFieldsValue({ id_field_name: idFieldName });
+                                        }
+                                    }}
+                                />
                             </Form.Item>
                         </Col>
                         <Col span={12}>
                             <Form.Item
-                                name="display_name"
-                                label="Display Name"
+                                name="model_name"
+                                label="Model Name"
+                                rules={[
+                                    { required: true, message: 'Please enter model name' },
+                                    {
+                                        validator: (_, value) => {
+                                            const tableName = form.getFieldValue('table_name');
+                                            if (value && tableName && value !== tableName) {
+                                                return Promise.reject(new Error('Model name and table name must be the same'));
+                                            }
+                                            return Promise.resolve();
+                                        }
+                                    }
+                                ]}
                             >
-                                <Input placeholder="e.g., Users" />
+                                <Input 
+                                    disabled={!!editingModel} 
+                                    placeholder="Auto-generated from display name"
+                                    onChange={(e) => {
+                                        // Keep table_name in sync with model_name (for both create and edit)
+                                        form.setFieldsValue({ table_name: e.target.value });
+                                    }}
+                                />
                             </Form.Item>
                         </Col>
                     </Row>
+                    
+                    {!editingModel && (
+                        <Row gutter={16}>
+                            <Col span={12}>
+                                <Form.Item
+                                    name="id_field_name"
+                                    label="ID Field Name"
+                                    initialValue="id"
+                                    rules={[{ required: true, message: 'Please enter ID field name' }]}
+                                >
+                                    <Input placeholder="Auto-generated from display name" />
+                                </Form.Item>
+                            </Col>
+                        </Row>
+                    )}
 
                     <Row gutter={16}>
                         <Col span={12}>
                             <Form.Item
                                 name="table_name"
                                 label="Table Name"
-                                rules={[{ required: true, message: 'Please enter table name' }]}
+                                rules={[
+                                    { required: true, message: 'Please enter table name' },
+                                    {
+                                        validator: (_, value) => {
+                                            const modelName = form.getFieldValue('model_name');
+                                            if (value && modelName && value !== modelName) {
+                                                return Promise.reject(new Error('Table name and model name must be the same'));
+                                            }
+                                            return Promise.resolve();
+                                        }
+                                    }
+                                ]}
                             >
-                                <Input placeholder="e.g., users" />
+                                <Input 
+                                    disabled={!!editingModel}
+                                    placeholder="Auto-generated from display name"
+                                    onChange={(e) => {
+                                        if (!editingModel) {
+                                            // Keep model_name in sync with table_name
+                                            form.setFieldsValue({ model_name: e.target.value });
+                                        } else {
+                                            // For editing, also sync model_name with table_name
+                                            form.setFieldsValue({ model_name: e.target.value });
+                                        }
+                                    }}
+                                />
                             </Form.Item>
                         </Col>
                         <Col span={12}>
@@ -955,6 +1083,133 @@ const DataModels = () => {
                     onReorder={setOrderingItems}
                 />
             </Drawer>
+
+            {/* Delete Model Warning Modal */}
+            <Modal
+                title="Delete Data Model"
+                open={deleteCheckModalVisible}
+                onCancel={() => {
+                    setDeleteCheckModalVisible(false);
+                    setDeleteCheckInfo(null);
+                    setPendingDeleteModelId(null);
+                }}
+                footer={null}
+                width={700}
+            >
+                {deleteCheckInfo && (
+                    <div>
+                        <Alert
+                            message="Warning: This action cannot be undone"
+                            description={
+                                <div>
+                                    <p><strong>Model:</strong> {deleteCheckInfo.display_name || deleteCheckInfo.model_name}</p>
+                                    <p><strong>Table:</strong> {deleteCheckInfo.table_name}</p>
+                                </div>
+                            }
+                            type="warning"
+                            showIcon
+                            style={{ marginBottom: 16 }}
+                        />
+
+                        {/* Row Count */}
+                        <div style={{ marginBottom: 16 }}>
+                            <Text strong>Data Records:</Text>
+                            <div style={{ marginTop: 8 }}>
+                                {deleteCheckInfo.row_count === 0 ? (
+                                    <Tag color="green">No records (0 rows) - Safe to delete</Tag>
+                                ) : (
+                                    <div>
+                                        <Tag color="red">{deleteCheckInfo.row_count} record(s) found</Tag>
+                                        <div style={{ marginTop: 8 }}>
+                                            <Text type="danger">
+                                                This model contains {deleteCheckInfo.row_count} record(s). 
+                                                Deleting will permanently remove all data.
+                                            </Text>
+                                        </div>
+                                    </div>
+                                )}
+                            </div>
+                        </div>
+
+                        {/* Relations */}
+                        {deleteCheckInfo.relations && deleteCheckInfo.relations.length > 0 && (
+                            <div style={{ marginBottom: 16 }}>
+                                <Text strong>Referenced by Relation Fields:</Text>
+                                <div style={{ marginTop: 8 }}>
+                                    <Alert
+                                        message="This model is used in relation fields"
+                                        description={
+                                            <ul style={{ marginTop: 8, paddingLeft: 20 }}>
+                                                {deleteCheckInfo.relations.map((rel, idx) => (
+                                                    <li key={idx}>
+                                                        <Text>
+                                                            <strong>{rel.display_name || rel.model_name}</strong> 
+                                                            {' → '}
+                                                            <strong>{rel.field_display_name || rel.field_name}</strong>
+                                                        </Text>
+                                                    </li>
+                                                ))}
+                                            </ul>
+                                        }
+                                        type="error"
+                                        showIcon
+                                    />
+                                    <div style={{ marginTop: 8 }}>
+                                        <Text type="danger">
+                                            Please unlink these relation fields before deleting this model.
+                                        </Text>
+                                    </div>
+                                </div>
+                            </div>
+                        )}
+
+                        {/* Other References */}
+                        {deleteCheckInfo.other_references && deleteCheckInfo.other_references.length > 0 && (
+                            <div style={{ marginBottom: 16 }}>
+                                <Text strong>Other References:</Text>
+                                <div style={{ marginTop: 8 }}>
+                                    {deleteCheckInfo.other_references.map((ref, idx) => (
+                                        <Tag key={idx} color="orange" style={{ marginBottom: 4 }}>
+                                            {ref.type}: {ref.count}
+                                        </Tag>
+                                    ))}
+                                </div>
+                            </div>
+                        )}
+
+                        {/* Action Buttons */}
+                        <div style={{ marginTop: 24, textAlign: 'right' }}>
+                            <Space>
+                                <Button onClick={() => {
+                                    setDeleteCheckModalVisible(false);
+                                    setDeleteCheckInfo(null);
+                                    setPendingDeleteModelId(null);
+                                }}>
+                                    Cancel
+                                </Button>
+                                {deleteCheckInfo.can_delete || (deleteCheckInfo.row_count > 0 && deleteCheckInfo.relations.length === 0) ? (
+                                    <Button
+                                        type="primary"
+                                        danger
+                                        onClick={() => {
+                                            const hasData = deleteCheckInfo.row_count > 0;
+                                            confirmDeleteModel(true, hasData);
+                                        }}
+                                    >
+                                        {deleteCheckInfo.row_count > 0 
+                                            ? `Delete Model & ${deleteCheckInfo.row_count} Record(s)` 
+                                            : 'Delete Model'}
+                                    </Button>
+                                ) : (
+                                    <Button type="primary" disabled>
+                                        Cannot Delete
+                                    </Button>
+                                )}
+                            </Space>
+                        </div>
+                    </div>
+                )}
+            </Modal>
 
             {/* Confirmation Modal for Table Changes */}
             <Modal
