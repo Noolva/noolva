@@ -566,6 +566,8 @@ CREATE TABLE public.field_types (
     icon VARCHAR(50), 
     input_type_image VARCHAR(255), -- Path to SVG image for field type identification
     
+    order_no INTEGER DEFAULT 0, -- Order for displaying field types in UI
+    
     is_active BOOLEAN DEFAULT TRUE,
     created_at TIMESTAMP WITHOUT TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );

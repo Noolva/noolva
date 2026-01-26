@@ -127,6 +127,38 @@ UPDATE public.field_types SET input_type_image = 'field_types/field_type_auto_co
 UPDATE public.field_types SET input_type_image = 'field_types/field_type_rich_text.svg' WHERE type_code = 'rich_text';
 UPDATE public.field_types SET input_type_image = 'field_types/field_type_single_choice.svg' WHERE type_code = 'single_choice';
 
+-- Update order_no for field types (for consistent ordering in UI)
+UPDATE public.field_types SET order_no = 1 WHERE type_code = 'text';
+UPDATE public.field_types SET order_no = 2 WHERE type_code = 'paragraph';
+UPDATE public.field_types SET order_no = 3 WHERE type_code = 'number';
+UPDATE public.field_types SET order_no = 4 WHERE type_code = 'auto_number';
+UPDATE public.field_types SET order_no = 5 WHERE type_code = 'currency';
+UPDATE public.field_types SET order_no = 6 WHERE type_code = 'percentage';
+UPDATE public.field_types SET order_no = 7 WHERE type_code = 'rating';
+UPDATE public.field_types SET order_no = 8 WHERE type_code = 'date';
+UPDATE public.field_types SET order_no = 9 WHERE type_code = 'datetime';
+UPDATE public.field_types SET order_no = 10 WHERE type_code = 'time';
+UPDATE public.field_types SET order_no = 11 WHERE type_code = 'duration';
+UPDATE public.field_types SET order_no = 12 WHERE type_code = 'boolean';
+UPDATE public.field_types SET order_no = 13 WHERE type_code = 'single_choice';
+UPDATE public.field_types SET order_no = 14 WHERE type_code = 'multi_choice';
+UPDATE public.field_types SET order_no = 15 WHERE type_code = 'auto_code';
+UPDATE public.field_types SET order_no = 16 WHERE type_code = 'email';
+UPDATE public.field_types SET order_no = 17 WHERE type_code = 'phone';
+UPDATE public.field_types SET order_no = 18 WHERE type_code = 'url';
+UPDATE public.field_types SET order_no = 19 WHERE type_code = 'password';
+UPDATE public.field_types SET order_no = 20 WHERE type_code = 'color';
+UPDATE public.field_types SET order_no = 21 WHERE type_code = 'image';
+UPDATE public.field_types SET order_no = 22 WHERE type_code = 'file';
+UPDATE public.field_types SET order_no = 23 WHERE type_code = 'video';
+UPDATE public.field_types SET order_no = 24 WHERE type_code = 'audio';
+UPDATE public.field_types SET order_no = 25 WHERE type_code = 'address';
+UPDATE public.field_types SET order_no = 26 WHERE type_code = 'location';
+UPDATE public.field_types SET order_no = 27 WHERE type_code = 'relation';
+UPDATE public.field_types SET order_no = 28 WHERE type_code = 'rich_text';
+UPDATE public.field_types SET order_no = 29 WHERE type_code = 'json';
+UPDATE public.field_types SET order_no = 30 WHERE type_code = 'icon';
+
 -- ==========================================
 -- 2.1. Assets for Field Type Images
 -- ==========================================

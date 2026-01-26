@@ -257,11 +257,13 @@ class DataModelCreate(BaseModel):
     is_system_model: bool = False
     is_active: bool = True
     description: Optional[str] = None
+    id_field_name: Optional[str] = "id"  # ID field name for the primary key
     fields: Optional[List[DataModelFieldCreate]] = []
 
 
 class DataModelUpdate(BaseModel):
     display_name: Optional[str] = None
+    model_name: Optional[str] = None
     table_name: Optional[str] = None
     table_alias: Optional[str] = None
     model_scope: Optional[str] = None
@@ -293,10 +295,10 @@ async def get_field_types(
             SELECT 
                 field_type_id, type_name, type_code, category,
                 actual_db_type, default_component_type_id, default_props_json,
-                icon, input_type_image, is_active
+                icon, input_type_image, is_active, order_no
             FROM public.field_types
             WHERE is_active = TRUE
-            ORDER BY category, type_name
+            ORDER BY order_no, category, type_name
             """
         )
         
@@ -498,22 +500,44 @@ async def create_data_model(
     user_id = user.get("user_id")
     
     try:
+        # Enforce that model_name and table_name must be the same
+        if payload.model_name != payload.table_name:
+            raise HTTPException(
+                status_code=400,
+                detail="model_name and table_name must be the same"
+            )
+        
         # Check if model_name already exists for this app_id
-        existing = await PostgresDB.fetchrow(
+        existing_model = await PostgresDB.fetchrow(
             """
-            SELECT DISTINCT model_id FROM public.data_models 
+            SELECT model_id, model_name, table_name FROM public.data_models 
             WHERE model_name = $1 AND (app_id = $2 OR (app_id IS NULL AND $2 IS NULL))
             """,
             payload.model_name, payload.app_id
         )
         
-        if existing:
+        if existing_model:
             raise HTTPException(
                 status_code=400,
                 detail=f"Data model with name '{payload.model_name}' already exists for this app"
             )
         
-        # Check if table_name already exists
+        # Check if table_name already exists in data_models
+        existing_table = await PostgresDB.fetchrow(
+            """
+            SELECT model_id, model_name, table_name FROM public.data_models 
+            WHERE table_name = $1
+            """,
+            payload.table_name
+        )
+        
+        if existing_table:
+            raise HTTPException(
+                status_code=400,
+                detail=f"Table name '{payload.table_name}' is already used by model '{existing_table['model_name']}'"
+            )
+        
+        # Check if table_name already exists in the database
         table_check = await PostgresDB.fetchrow(
             """
             SELECT table_name
@@ -528,6 +552,22 @@ async def create_data_model(
                 status_code=400,
                 detail=f"Table '{payload.table_name}' already exists in the database"
             )
+        
+        # Check if table_alias already exists (if provided)
+        if payload.table_alias:
+            existing_alias = await PostgresDB.fetchrow(
+                """
+                SELECT model_id, model_name, table_alias FROM public.data_models 
+                WHERE table_alias = $1
+                """,
+                payload.table_alias
+            )
+            
+            if existing_alias:
+                raise HTTPException(
+                    status_code=400,
+                    detail=f"Table alias '{payload.table_alias}' is already used by model '{existing_alias['model_name']}'"
+                )
         
         # Insert data model
         model_result = await PostgresDB.fetchrow(
@@ -553,10 +593,26 @@ async def create_data_model(
         
         model_id = model_result["model_id"]
         
+        # Get auto_number field_type_id for ID field
+        auto_number_type = await PostgresDB.fetchrow(
+            "SELECT field_type_id FROM public.field_types WHERE type_code = 'auto_number' LIMIT 1"
+        )
+        if not auto_number_type:
+            await PostgresDB.execute("DELETE FROM public.data_models WHERE model_id = $1", model_id)
+            raise HTTPException(status_code=500, detail="Auto number field type not found")
+        
+        auto_number_field_type_id = auto_number_type["field_type_id"]
+        # Use id_field_name from payload, default to "id" if not provided
+        id_field_name = (payload.id_field_name or "id").strip()
+        if not _is_safe_identifier(id_field_name):
+            await PostgresDB.execute("DELETE FROM public.data_models WHERE model_id = $1", model_id)
+            raise HTTPException(status_code=400, detail=f"Invalid ID field name: {id_field_name}")
+        
         # Create the actual table
         try:
             # Build CREATE TABLE statement
-            columns = ["model_id SERIAL PRIMARY KEY"]
+            # Start with the ID field (primary key)
+            columns = [f'"{id_field_name}" SERIAL PRIMARY KEY']
             
             # Add fields from payload
             for field in payload.fields:
@@ -588,7 +644,7 @@ async def create_data_model(
                 
                 columns.append(col_def)
             
-            # Add standard audit columns
+            # Add standard audit columns (these are always present)
             columns.append("created_by INTEGER REFERENCES public.users(user_id)")
             columns.append("idate TIMESTAMP WITHOUT TIME ZONE DEFAULT CURRENT_TIMESTAMP NOT NULL")
             columns.append("last_updated TIMESTAMP WITHOUT TIME ZONE DEFAULT CURRENT_TIMESTAMP NOT NULL")
@@ -605,7 +661,30 @@ async def create_data_model(
                 detail=f"Failed to create table '{payload.table_name}': {str(e)}"
             )
         
-        # Insert fields
+        # Insert ID field first (order_no = 1)
+        await PostgresDB.execute(
+            """
+            INSERT INTO public.data_model_fields (
+                model_id, field_name, display_name, field_type_id,
+                field_config_json, is_required, is_unique, is_primary_key,
+                default_value, encryption_method, ui_component, order_no
+            ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
+            """,
+            model_id,
+            id_field_name,
+            "ID",
+            auto_number_field_type_id,
+            "{}",
+            False,
+            False,
+            True,  # is_primary_key
+            None,
+            "none",
+            None,
+            1  # order_no = 1 for ID field
+        )
+        
+        # Insert user-defined fields (starting from order_no = 2)
         if payload.fields:
             for idx, field in enumerate(payload.fields):
                 await PostgresDB.execute(
@@ -627,8 +706,95 @@ async def create_data_model(
                     field.default_value,
                     field.encryption_method,
                     field.ui_component,
-                    field.order_no or idx + 1
+                    field.order_no or (idx + 2)  # Start from 2 (after ID field)
                 )
+        
+        # Insert essential system fields (idate, created_by, last_updated)
+        # Get field_type_id for timestamp and integer types
+        timestamp_type = await PostgresDB.fetchrow(
+            "SELECT field_type_id FROM public.field_types WHERE type_code = 'datetime' LIMIT 1"
+        )
+        integer_type = await PostgresDB.fetchrow(
+            "SELECT field_type_id FROM public.field_types WHERE type_code = 'number' LIMIT 1"
+        )
+        
+        timestamp_field_type_id = timestamp_type["field_type_id"] if timestamp_type else None
+        integer_field_type_id = integer_type["field_type_id"] if integer_type else None
+        
+        # Calculate starting order_no for system fields (after user fields)
+        system_fields_start_order = 2 + len(payload.fields) if payload.fields else 2
+        
+        # Insert created_by field
+        if integer_field_type_id:
+            await PostgresDB.execute(
+                """
+                INSERT INTO public.data_model_fields (
+                    model_id, field_name, display_name, field_type_id,
+                    field_config_json, is_required, is_unique, is_primary_key,
+                    default_value, encryption_method, ui_component, order_no
+                ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
+                """,
+                model_id,
+                "created_by",
+                "Created By",
+                integer_field_type_id,
+                "{}",
+                False,
+                False,
+                False,
+                None,
+                "none",
+                None,
+                system_fields_start_order
+            )
+        
+        # Insert idate field
+        if timestamp_field_type_id:
+            await PostgresDB.execute(
+                """
+                INSERT INTO public.data_model_fields (
+                    model_id, field_name, display_name, field_type_id,
+                    field_config_json, is_required, is_unique, is_primary_key,
+                    default_value, encryption_method, ui_component, order_no
+                ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
+                """,
+                model_id,
+                "idate",
+                "Created Date",
+                timestamp_field_type_id,
+                "{}",
+                True,
+                False,
+                False,
+                None,
+                "none",
+                None,
+                system_fields_start_order + 1
+            )
+        
+        # Insert last_updated field
+        if timestamp_field_type_id:
+            await PostgresDB.execute(
+                """
+                INSERT INTO public.data_model_fields (
+                    model_id, field_name, display_name, field_type_id,
+                    field_config_json, is_required, is_unique, is_primary_key,
+                    default_value, encryption_method, ui_component, order_no
+                ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
+                """,
+                model_id,
+                "last_updated",
+                "Last Updated",
+                timestamp_field_type_id,
+                "{}",
+                True,
+                False,
+                False,
+                None,
+                "none",
+                None,
+                system_fields_start_order + 2
+            )
         
         # Return created model
         return await get_data_model(model_id, include_fields=True, user=user, db=db)
@@ -655,7 +821,7 @@ async def update_data_model(
     try:
         # Get existing model
         existing = await PostgresDB.fetchrow(
-            "SELECT model_id, table_name FROM public.data_models WHERE model_id = $1",
+            "SELECT model_id, table_name, table_alias FROM public.data_models WHERE model_id = $1",
             model_id
         )
         
@@ -663,6 +829,51 @@ async def update_data_model(
             raise HTTPException(status_code=404, detail="Data model not found")
         
         old_table_name = existing["table_name"]
+        old_table_alias = existing.get("table_alias")
+        
+        # Enforce that model_name and table_name must be the same if either is being updated
+        if payload.model_name is not None and payload.table_name is not None:
+            if payload.model_name != payload.table_name:
+                raise HTTPException(
+                    status_code=400,
+                    detail="model_name and table_name must be the same"
+                )
+        elif payload.model_name is not None:
+            # If only model_name is provided, set table_name to match
+            payload.table_name = payload.model_name
+        elif payload.table_name is not None:
+            # If only table_name is provided, set model_name to match
+            payload.model_name = payload.table_name
+        
+        # Check if new model_name already exists (if being changed)
+        if payload.model_name is not None and payload.model_name != existing.get("model_name"):
+            existing_model = await PostgresDB.fetchrow(
+                """
+                SELECT model_id, model_name FROM public.data_models 
+                WHERE model_name = $1 AND model_id != $2
+                """,
+                payload.model_name, model_id
+            )
+            if existing_model:
+                raise HTTPException(
+                    status_code=400,
+                    detail=f"Data model with name '{payload.model_name}' already exists"
+                )
+        
+        # Check if new table_name already exists (if being changed)
+        if payload.table_name is not None and payload.table_name != old_table_name:
+            existing_table = await PostgresDB.fetchrow(
+                """
+                SELECT model_id, table_name FROM public.data_models 
+                WHERE table_name = $1 AND model_id != $2
+                """,
+                payload.table_name, model_id
+            )
+            if existing_table:
+                raise HTTPException(
+                    status_code=400,
+                    detail=f"Table name '{payload.table_name}' is already used by another model"
+                )
         
         # Build update query
         updates = []
@@ -675,6 +886,22 @@ async def update_data_model(
             param_idx += 1
         
         if payload.table_alias is not None:
+            # Check if new table_alias already exists (if being changed)
+            if payload.table_alias != old_table_alias:
+                existing_alias = await PostgresDB.fetchrow(
+                    """
+                    SELECT model_id, model_name, table_alias FROM public.data_models 
+                    WHERE table_alias = $1 AND model_id != $2
+                    """,
+                    payload.table_alias, model_id
+                )
+                
+                if existing_alias:
+                    raise HTTPException(
+                        status_code=400,
+                        detail=f"Table alias '{payload.table_alias}' is already used by model '{existing_alias['model_name']}'"
+                    )
+            
             updates.append(f"table_alias = ${param_idx}")
             params.append(payload.table_alias)
             param_idx += 1
@@ -705,30 +932,42 @@ async def update_data_model(
             param_idx += 1
         
         # Handle table name change (requires ALTER TABLE)
-        if payload.table_name and payload.table_name != old_table_name:
-            # Check if new table name exists
+        # Since model_name and table_name must be the same, determine the new name
+        new_name = None
+        if payload.model_name is not None:
+            new_name = payload.model_name
+        elif payload.table_name is not None:
+            new_name = payload.table_name
+        
+        if new_name and new_name != old_table_name:
+            # Check if new table name exists in database
             table_check = await PostgresDB.fetchrow(
                 """
                 SELECT table_name
                 FROM information_schema.tables
                 WHERE table_schema = 'public' AND table_name = $1
                 """,
-                payload.table_name
+                new_name
             )
             
             if table_check:
                 raise HTTPException(
                     status_code=400,
-                    detail=f"Table '{payload.table_name}' already exists"
+                    detail=f"Table '{new_name}' already exists in the database"
                 )
             
             # Rename the table
             await PostgresDB.execute(
-                f'ALTER TABLE public."{old_table_name}" RENAME TO "{payload.table_name}"'
+                f'ALTER TABLE public."{old_table_name}" RENAME TO "{new_name}"'
             )
             
+            # Update both model_name and table_name to keep them in sync
+            updates.append(f"model_name = ${param_idx}")
+            params.append(new_name)
+            param_idx += 1
+            
             updates.append(f"table_name = ${param_idx}")
-            params.append(payload.table_name)
+            params.append(new_name)
             param_idx += 1
         
         if not updates:
@@ -753,15 +992,189 @@ async def update_data_model(
         raise HTTPException(status_code=500, detail=f"Failed to update data model: {str(e)}")
 
 
+@router.get("/model/{model_id}/delete-check")
+async def check_model_deletion(
+    model_id: int,
+    user: Dict = Depends(verify_jwt_token(["saas_admin", "saas_employee", "tenant_admin"])),
+    db=Depends(get_db),
+):
+    """
+    Check if a model can be safely deleted. Returns row count and relation usages.
+    """
+    if not user:
+        raise HTTPException(status_code=401, detail="Authentication required")
+
+    try:
+        # Get model info
+        model = await PostgresDB.fetchrow(
+            """
+            SELECT model_id, model_name, display_name, table_name, is_system_model 
+            FROM public.data_models 
+            WHERE model_id = $1
+            """,
+            model_id
+        )
+        
+        if not model:
+            raise HTTPException(status_code=404, detail="Data model not found")
+        
+        if model["is_system_model"]:
+            return {
+                "can_delete": False,
+                "reason": "Cannot delete system data model",
+                "row_count": 0,
+                "relations": []
+            }
+        
+        table_name = model["table_name"]
+        model_name = model["model_name"]
+        
+        # Check row count in the actual table
+        row_count = 0
+        try:
+            table_check = await PostgresDB.fetchrow(
+                """
+                SELECT table_name
+                FROM information_schema.tables
+                WHERE table_schema = 'public' AND table_name = $1
+                """,
+                table_name
+            )
+            
+            if table_check:
+                count_result = await PostgresDB.fetchrow(
+                    f'SELECT COUNT(*) as count FROM public."{table_name}"'
+                )
+                row_count = count_result["count"] if count_result else 0
+        except Exception as e:
+            # Table might not exist, that's okay
+            logger.warning(f"Could not count rows in table {table_name}: {str(e)}")
+        
+        # Check for relation field usages (fields in other models that reference this model)
+        # Get all relation fields and check their target_model
+        all_relation_fields = await PostgresDB.fetch(
+            """
+            SELECT 
+                dm.model_id,
+                dm.model_name,
+                dm.display_name,
+                dmf.field_id,
+                dmf.field_name,
+                dmf.display_name as field_display_name,
+                dmf.field_config_json,
+                ft.type_code
+            FROM public.data_model_fields dmf
+            JOIN public.data_models dm ON dmf.model_id = dm.model_id
+            JOIN public.field_types ft ON dmf.field_type_id = ft.field_type_id
+            WHERE ft.type_code = 'relation'
+              AND dmf.model_id != $1
+            """,
+            model_id
+        )
+        
+        relation_list = []
+        if all_relation_fields:
+            for rel in all_relation_fields:
+                # Parse field_config_json to get target_model
+                try:
+                    config = rel.get("field_config_json")
+                    if isinstance(config, str):
+                        config = json.loads(config)
+                    elif config is None:
+                        config = {}
+                    target_model = config.get("target_model") if config else None
+                    if target_model == model_name:
+                        relation_list.append({
+                            "model_id": rel["model_id"],
+                            "model_name": rel["model_name"],
+                            "display_name": rel["display_name"],
+                            "field_id": rel["field_id"],
+                            "field_name": rel["field_name"],
+                            "field_display_name": rel["field_display_name"]
+                        })
+                except Exception as e:
+                    logger.warning(f"Error parsing field_config_json for field {rel.get('field_id')}: {str(e)}")
+        
+        # Check for other references (app_views, archival_policies, data_flattening_rules, api_endpoints)
+        other_references = []
+        
+        # Check app_views
+        app_views = await PostgresDB.fetch(
+            "SELECT app_view_id, view_name FROM public.app_views WHERE model_id = $1",
+            model_id
+        )
+        if app_views:
+            other_references.append({
+                "type": "app_views",
+                "count": len(app_views),
+                "items": [{"id": v["app_view_id"], "name": v["view_name"]} for v in app_views]
+            })
+        
+        # Check archival_policies
+        archival_policies = await PostgresDB.fetch(
+            "SELECT policy_id FROM public.archival_policies WHERE model_id = $1",
+            model_id
+        )
+        if archival_policies:
+            other_references.append({
+                "type": "archival_policies",
+                "count": len(archival_policies),
+                "items": []
+            })
+        
+        # Check data_flattening_rules
+        flattening_rules = await PostgresDB.fetch(
+            "SELECT rule_id, rule_name FROM public.data_flattening_rules WHERE source_model_id = $1",
+            model_id
+        )
+        if flattening_rules:
+            other_references.append({
+                "type": "data_flattening_rules",
+                "count": len(flattening_rules),
+                "items": [{"id": r["rule_id"], "name": r["rule_name"]} for r in flattening_rules]
+            })
+        
+        # Check api_endpoints
+        api_endpoints = await PostgresDB.fetch(
+            "SELECT endpoint_id, path FROM public.api_endpoints WHERE related_model_id = $1",
+            model_id
+        )
+        if api_endpoints:
+            other_references.append({
+                "type": "api_endpoints",
+                "count": len(api_endpoints),
+                "items": [{"id": e["endpoint_id"], "name": e["path"]} for e in api_endpoints]
+            })
+        
+        can_delete = row_count == 0 and len(relation_list) == 0 and len(other_references) == 0
+        
+        return {
+            "can_delete": can_delete,
+            "row_count": row_count,
+            "relations": relation_list,
+            "other_references": other_references,
+            "model_name": model_name,
+            "display_name": model.get("display_name"),
+            "table_name": table_name
+        }
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to check model deletion: {str(e)}")
+
+
 @router.delete("/model/{model_id}")
 async def delete_data_model(
     model_id: int,
     delete_table: bool = Query(False, description="Also delete the actual database table"),
-    user: Dict = Depends(verify_jwt_token(["saas_admin", "saas_employee"])),
+    confirm_delete_data: bool = Query(False, description="Confirm deletion of data records"),
+    user: Dict = Depends(verify_jwt_token(["saas_admin", "saas_employee", "tenant_admin"])),
     db=Depends(get_db),
 ):
     """
     Delete a data model. Optionally delete the actual table.
+    Requires confirmation if model has data or relations.
     """
     if not user:
         raise HTTPException(status_code=401, detail="Authentication required")
@@ -784,8 +1197,84 @@ async def delete_data_model(
         
         table_name = model["table_name"]
         
-        # Delete the table if requested
-        if delete_table:
+        # Check row count
+        row_count = 0
+        try:
+            table_check = await PostgresDB.fetchrow(
+                """
+                SELECT table_name
+                FROM information_schema.tables
+                WHERE table_schema = 'public' AND table_name = $1
+                """,
+                table_name
+            )
+            
+            if table_check:
+                count_result = await PostgresDB.fetchrow(
+                    f'SELECT COUNT(*) as count FROM public."{table_name}"'
+                )
+                row_count = count_result["count"] if count_result else 0
+        except Exception:
+            pass
+        
+        # Check for relations
+        model_name_result = await PostgresDB.fetchrow(
+            "SELECT model_name FROM public.data_models WHERE model_id = $1",
+            model_id
+        )
+        model_name = model_name_result["model_name"] if model_name_result else None
+        
+        relations = []
+        if model_name:
+            # Get all relation fields and check their target_model
+            all_relation_fields = await PostgresDB.fetch(
+                """
+                SELECT 
+                    dm.model_id,
+                    dm.model_name,
+                    dm.display_name,
+                    dmf.field_id,
+                    dmf.field_name,
+                    dmf.field_config_json,
+                    ft.type_code
+                FROM public.data_model_fields dmf
+                JOIN public.data_models dm ON dmf.model_id = dm.model_id
+                JOIN public.field_types ft ON dmf.field_type_id = ft.field_type_id
+                WHERE ft.type_code = 'relation'
+                  AND dmf.model_id != $1
+                """,
+                model_id
+            )
+            
+            for rel in all_relation_fields:
+                try:
+                    config = rel.get("field_config_json")
+                    if isinstance(config, str):
+                        config = json.loads(config)
+                    elif config is None:
+                        config = {}
+                    target_model = config.get("target_model") if config else None
+                    if target_model == model_name:
+                        relations.append(rel)
+                except Exception:
+                    pass
+        
+        # Validate deletion conditions
+        if row_count > 0 and not confirm_delete_data:
+            raise HTTPException(
+                status_code=400,
+                detail=f"Cannot delete model: Table contains {row_count} record(s). Set confirm_delete_data=true to proceed."
+            )
+        
+        if relations and len(relations) > 0:
+            relation_names = [f"{r['model_name']}.{r['field_name']}" for r in relations]
+            raise HTTPException(
+                status_code=400,
+                detail=f"Cannot delete model: It is referenced by relation fields in other models: {', '.join(relation_names)}. Please unlink these relations first."
+            )
+        
+        # Delete the table if requested (or if it has data and user confirmed)
+        if delete_table or (row_count > 0 and confirm_delete_data):
             # Check if table exists
             table_check = await PostgresDB.fetchrow(
                 """
@@ -799,10 +1288,20 @@ async def delete_data_model(
             if table_check:
                 await PostgresDB.execute(f'DROP TABLE IF EXISTS public."{table_name}" CASCADE')
         
-        # Delete model (fields will be deleted via CASCADE)
+        # Delete model (fields, permissions, policies, views will be deleted via CASCADE)
+        # The following tables have ON DELETE CASCADE:
+        # - data_model_fields
+        # - field_permissions
+        # - model_row_access_policies
+        # - app_views
+        # - archival_policies (if exists)
         await PostgresDB.execute("DELETE FROM public.data_models WHERE model_id = $1", model_id)
         
-        return {"message": "Data model deleted successfully", "table_deleted": delete_table}
+        return {
+            "message": "Data model deleted successfully",
+            "table_deleted": delete_table or (row_count > 0 and confirm_delete_data),
+            "records_deleted": row_count if row_count > 0 and confirm_delete_data else 0
+        }
         
     except HTTPException:
         raise

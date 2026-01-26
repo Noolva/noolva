@@ -1,11 +1,13 @@
 
 admin themes, theming settings, parameters,
+test with one more user login.
+side bar, search option, parent_child support,
 branding,logo, url icon, loss of tabs when switching apps,
-
+db analysis,index suggessions, rows in dangling without parent foreing reference,
 file manager,
 auto hide side bar, theme side bar type, fontname in theme, side bar parent child menu support
 transaction password or pin/ on model field use pin/ use mfa
-delete confirmation=>2fa,simple dialog,confirm password again,=>it should be in view actions
+another s3 storage for backups, another client pc for backups, it will synch automatically when we schedulled.
 debug mode in project->conentrate when developing customer pages.
 
 
@@ -22,22 +24,28 @@ timeout handling for,
 
 
 is ui components, existing views(direct jsx codes) following permissions rules. collect features insert it , and implement permission exists allow it.
-
+verify vc componentt usage by searchinch "moodal" in dir
+handle:{"detail": "Token expired"}, and check where we are setting token expiry, allow relogin with password:
 collections add,edit,page,
 protected image in field-type
-NF0004/feature/collections-management-page.
+
 given PRS:
 NF0001/feature/ui-custom-components-for-inputs-views
 NF0002/feature/icons-libraries-for-fa-antd-smily-datamodels
 NF0003/feature/icon-explorer-page-icon-viewer-and-chooser-components
-
+NF0004/feature/data-models-and-collections-page
 
 
 current,
 ======
-hide in ui for idate,created_by,last_updated
-data_models_direct_cruid_allowed field,
-NF0004/feature/data-models-and-collections-page
+NF0005/feature/data-models-create-new-model-drawer-enhancement
+
+
+validation of each field_type_json in data-models.
+after models, endpoints, actions,views.
+DB-Query->query builder should support join queries or object queries,
+actions may have requirements, eg. client app,runtime environment etc?
+
 
 
 
