@@ -35,13 +35,13 @@ CREATE TABLE public.users (
     
     -- Account Status
     active_status SMALLINT DEFAULT 1 NOT NULL CHECK (active_status IN (0, 1, 2)), -- 0:Inactive, 1:Active, 2:Suspended
-    last_login TIMESTAMP WITHOUT TIME ZONE,
+    last_login TIMESTAMPTZ,
     
     -- Auditing
-    deleted_at TIMESTAMP WITHOUT TIME ZONE, -- Soft delete support
+    deleted_at TIMESTAMPTZ, -- Soft delete support
     created_by INTEGER REFERENCES public.users(user_id),
-    idate TIMESTAMP WITHOUT TIME ZONE DEFAULT CURRENT_TIMESTAMP NOT NULL,
-    last_updated TIMESTAMP WITHOUT TIME ZONE DEFAULT CURRENT_TIMESTAMP NOT NULL
+    idate TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP NOT NULL,
+    last_updated TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP NOT NULL
 );
 
 -- Indexes
@@ -66,13 +66,13 @@ CREATE TABLE public.tenants (
     -- Billing Info
     subscription_plan VARCHAR(50) DEFAULT 'trial', -- 'free', 'pro', 'enterprise'
     subscription_status VARCHAR(20) DEFAULT 'active',
-    subscription_expires_at TIMESTAMP WITHOUT TIME ZONE,
+    subscription_expires_at TIMESTAMPTZ,
     
     is_active BOOLEAN DEFAULT TRUE,
     
     created_by INTEGER REFERENCES public.users(user_id),
-    created_at TIMESTAMP WITHOUT TIME ZONE DEFAULT CURRENT_TIMESTAMP NOT NULL,
-    last_updated TIMESTAMP WITHOUT TIME ZONE DEFAULT CURRENT_TIMESTAMP NOT NULL
+    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP NOT NULL,
+    last_updated TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP NOT NULL
 );
 
 -- ==========================================
@@ -101,8 +101,8 @@ CREATE TABLE public.companies (
     is_active BOOLEAN DEFAULT TRUE,
     
     created_by INTEGER REFERENCES public.users(user_id),
-    idate TIMESTAMP WITHOUT TIME ZONE DEFAULT CURRENT_TIMESTAMP NOT NULL,
-    last_updated TIMESTAMP WITHOUT TIME ZONE DEFAULT CURRENT_TIMESTAMP NOT NULL,
+    idate TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP NOT NULL,
+    last_updated TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP NOT NULL,
 
     UNIQUE(company_code) 
 );
@@ -119,7 +119,7 @@ CREATE TABLE public.user_companies (
     is_primary BOOLEAN DEFAULT FALSE, -- Default login context
     is_active BOOLEAN DEFAULT TRUE,
     
-    joined_at TIMESTAMP WITHOUT TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    joined_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
     
     UNIQUE(user_id, company_id)
 );
@@ -136,9 +136,9 @@ CREATE TABLE public.user_sessions (
     
     -- Session metadata
     login_method VARCHAR(20) NOT NULL, -- 'password', 'google_oauth', 'mfa'
-    login_at TIMESTAMP WITHOUT TIME ZONE DEFAULT CURRENT_TIMESTAMP,
-    last_activity TIMESTAMP WITHOUT TIME ZONE DEFAULT CURRENT_TIMESTAMP,
-    expires_at TIMESTAMP WITHOUT TIME ZONE,
+    login_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+    last_activity TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+    expires_at TIMESTAMPTZ,
     
     -- Client info
     device_info JSONB,
@@ -173,8 +173,8 @@ CREATE TABLE public.user_account_profiles (
     -- Context-specific settings
     preferences JSONB DEFAULT '{}'::jsonb,
     
-    created_at TIMESTAMP WITHOUT TIME ZONE DEFAULT CURRENT_TIMESTAMP,
-    last_used TIMESTAMP WITHOUT TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+    last_used TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
     
     UNIQUE(user_id, company_id, profile_name)
 );
@@ -197,8 +197,8 @@ CREATE TABLE public.user_groups (
     company_id INTEGER NOT NULL REFERENCES public.companies(company_id) ON DELETE CASCADE,
     
     created_by INTEGER REFERENCES public.users(user_id),
-    idate TIMESTAMP WITHOUT TIME ZONE DEFAULT CURRENT_TIMESTAMP NOT NULL,
-    last_updated TIMESTAMP WITHOUT TIME ZONE DEFAULT CURRENT_TIMESTAMP NOT NULL
+    idate TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP NOT NULL,
+    last_updated TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP NOT NULL
 );
 
 -- ==========================================
@@ -209,7 +209,7 @@ CREATE TABLE public.user_group_members (
     group_id INTEGER NOT NULL REFERENCES public.user_groups(group_id) ON DELETE CASCADE,
     user_id INTEGER NOT NULL REFERENCES public.users(user_id) ON DELETE CASCADE,
     
-    added_at TIMESTAMP WITHOUT TIME ZONE DEFAULT CURRENT_TIMESTAMP
+    added_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
 );
 
 -- ==========================================
@@ -227,8 +227,8 @@ CREATE TABLE public.teams (
     manager_id INTEGER REFERENCES public.users(user_id),
     
     created_by INTEGER REFERENCES public.users(user_id),
-    idate TIMESTAMP WITHOUT TIME ZONE DEFAULT CURRENT_TIMESTAMP NOT NULL,
-    last_updated TIMESTAMP WITHOUT TIME ZONE DEFAULT CURRENT_TIMESTAMP NOT NULL
+    idate TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP NOT NULL,
+    last_updated TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP NOT NULL
 );
 
 -- ==========================================
@@ -240,7 +240,7 @@ CREATE TABLE public.user_teams (
     user_id INTEGER NOT NULL REFERENCES public.users(user_id) ON DELETE CASCADE,
     
     role_in_team VARCHAR(50), 
-    joined_at TIMESTAMP WITHOUT TIME ZONE DEFAULT CURRENT_TIMESTAMP
+    joined_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
 );
 
 -- Indexes
@@ -290,8 +290,8 @@ CREATE TABLE public.apps (
     order_no INTEGER DEFAULT 0,
     
     created_by INTEGER REFERENCES public.users(user_id),
-    idate TIMESTAMP WITHOUT TIME ZONE DEFAULT CURRENT_TIMESTAMP NOT NULL,
-    last_updated TIMESTAMP WITHOUT TIME ZONE DEFAULT CURRENT_TIMESTAMP NOT NULL,
+    idate TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP NOT NULL,
+    last_updated TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP NOT NULL,
     
     -- Unique app name per scope
     CONSTRAINT unique_app_per_tenant_scope UNIQUE NULLS NOT DISTINCT (tenant_id, company_id, app_name)
@@ -317,8 +317,8 @@ CREATE TABLE public.modules (
     order_no INTEGER DEFAULT 0,
     
     created_by INTEGER REFERENCES public.users(user_id),
-    idate TIMESTAMP WITHOUT TIME ZONE DEFAULT CURRENT_TIMESTAMP NOT NULL,
-    last_updated TIMESTAMP WITHOUT TIME ZONE DEFAULT CURRENT_TIMESTAMP NOT NULL,
+    idate TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP NOT NULL,
+    last_updated TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP NOT NULL,
 
     UNIQUE(app_id, module_code)
 );
@@ -344,8 +344,8 @@ CREATE TABLE public.module_features (
     is_builtin BOOLEAN DEFAULT FALSE,
     
     created_by INTEGER REFERENCES public.users(user_id),
-    idate TIMESTAMP WITHOUT TIME ZONE DEFAULT CURRENT_TIMESTAMP NOT NULL,
-    last_updated TIMESTAMP WITHOUT TIME ZONE DEFAULT CURRENT_TIMESTAMP NOT NULL,
+    idate TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP NOT NULL,
+    last_updated TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP NOT NULL,
 
     UNIQUE(module_id, feature_code)
 );
@@ -380,8 +380,8 @@ CREATE TABLE public.menus (
     is_hidden BOOLEAN DEFAULT FALSE,
     
     created_by INTEGER REFERENCES public.users(user_id),
-    idate TIMESTAMP WITHOUT TIME ZONE DEFAULT CURRENT_TIMESTAMP NOT NULL,
-    last_updated TIMESTAMP WITHOUT TIME ZONE DEFAULT CURRENT_TIMESTAMP NOT NULL
+    idate TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP NOT NULL,
+    last_updated TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP NOT NULL
 );
 
 -- indexes
@@ -411,8 +411,8 @@ CREATE TABLE public.roles (
     is_system_role BOOLEAN DEFAULT FALSE, -- Predefined roles that cannot be deleted
     
     created_by INTEGER REFERENCES public.users(user_id),
-    idate TIMESTAMP WITHOUT TIME ZONE DEFAULT CURRENT_TIMESTAMP NOT NULL,
-    last_updated TIMESTAMP WITHOUT TIME ZONE DEFAULT CURRENT_TIMESTAMP NOT NULL,
+    idate TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP NOT NULL,
+    last_updated TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP NOT NULL,
     
     UNIQUE(company_id, role_key)
 );
@@ -427,7 +427,7 @@ CREATE TABLE public.user_roles (
     role_id INTEGER NOT NULL REFERENCES public.roles(role_id) ON DELETE CASCADE,
     company_id INTEGER REFERENCES public.companies(company_id) ON DELETE CASCADE, -- Must match Role's company
     
-    assigned_at TIMESTAMP WITHOUT TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    assigned_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
     assigned_by INTEGER REFERENCES public.users(user_id)
 );
 
@@ -444,7 +444,7 @@ CREATE TABLE public.role_module_features (
     is_granted BOOLEAN DEFAULT TRUE,
     
     granted_by INTEGER REFERENCES public.users(user_id),
-    granted_at TIMESTAMP WITHOUT TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    granted_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
     
     UNIQUE(role_id, module_feature_id)
 );
@@ -460,10 +460,10 @@ CREATE TABLE public.user_module_features (
     module_feature_id INTEGER NOT NULL REFERENCES public.module_features(module_feature_id) ON DELETE CASCADE,
     
     is_granted BOOLEAN DEFAULT TRUE,
-    expiration TIMESTAMP WITHOUT TIME ZONE,
+    expiration TIMESTAMPTZ,
     
     granted_by INTEGER REFERENCES public.users(user_id),
-    granted_at TIMESTAMP WITHOUT TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    granted_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
     
     UNIQUE(user_id, module_feature_id)
 );
@@ -524,8 +524,8 @@ CREATE TABLE public.data_models (
     description TEXT,
     
     created_by INTEGER REFERENCES public.users(user_id),
-    idate TIMESTAMP WITHOUT TIME ZONE DEFAULT CURRENT_TIMESTAMP NOT NULL,
-    last_updated TIMESTAMP WITHOUT TIME ZONE DEFAULT CURRENT_TIMESTAMP NOT NULL,
+    idate TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP NOT NULL,
+    last_updated TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP NOT NULL,
     
     UNIQUE(app_id, model_name)
 );
@@ -545,7 +545,7 @@ CREATE TABLE public.ui_component_types (
     props_schema_json JSONB DEFAULT '{}'::jsonb, 
     
     is_system BOOLEAN DEFAULT TRUE,
-    created_at TIMESTAMP WITHOUT TIME ZONE DEFAULT CURRENT_TIMESTAMP
+    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
 );
 
 -- ==========================================
@@ -569,7 +569,7 @@ CREATE TABLE public.field_types (
     order_no INTEGER DEFAULT 0, -- Order for displaying field types in UI
     
     is_active BOOLEAN DEFAULT TRUE,
-    created_at TIMESTAMP WITHOUT TIME ZONE DEFAULT CURRENT_TIMESTAMP
+    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
 );
 
 -- ==========================================
@@ -592,8 +592,8 @@ CREATE TABLE public.collections (
     is_system BOOLEAN DEFAULT FALSE, -- If true, locked from specific edits
     
     created_by INTEGER REFERENCES public.users(user_id),
-    created_at TIMESTAMP WITHOUT TIME ZONE DEFAULT CURRENT_TIMESTAMP,
-    last_updated TIMESTAMP WITHOUT TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+    last_updated TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
     
     UNIQUE(tenant_id, collection_code) -- Unique code per tenant (or global if tenant is null)
 );
@@ -644,8 +644,8 @@ CREATE TABLE public.icons (
     
     -- Metadata
     created_by INTEGER REFERENCES public.users(user_id),
-    created_at TIMESTAMP WITHOUT TIME ZONE DEFAULT CURRENT_TIMESTAMP NOT NULL,
-    last_updated TIMESTAMP WITHOUT TIME ZONE DEFAULT CURRENT_TIMESTAMP NOT NULL
+    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP NOT NULL,
+    last_updated TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP NOT NULL
 );
 
 -- Indexes for icons table
@@ -692,7 +692,7 @@ CREATE TABLE public.data_model_fields (
     ui_component VARCHAR(50), -- Can override default from field_type
     order_no INTEGER DEFAULT 0,
     
-    idate TIMESTAMP WITHOUT TIME ZONE DEFAULT CURRENT_TIMESTAMP
+    idate TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
 );
 
 -- ==========================================
@@ -759,8 +759,8 @@ CREATE TABLE public.app_views (
     is_builtin BOOLEAN DEFAULT FALSE,
     
     created_by INTEGER REFERENCES public.users(user_id),
-    idate TIMESTAMP WITHOUT TIME ZONE DEFAULT CURRENT_TIMESTAMP,
-    last_updated TIMESTAMP WITHOUT TIME ZONE DEFAULT CURRENT_TIMESTAMP
+    idate TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+    last_updated TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
 );
 
 -- Indexes
@@ -800,7 +800,7 @@ CREATE TABLE public.archival_policies (
     is_active BOOLEAN DEFAULT TRUE,
     
     created_by INTEGER REFERENCES public.users(user_id),
-    last_updated TIMESTAMP WITHOUT TIME ZONE DEFAULT CURRENT_TIMESTAMP
+    last_updated TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
 );
 
 -- ==========================================
@@ -809,7 +809,7 @@ CREATE TABLE public.archival_policies (
 -- High-volume event tracking. Partitioned by Time Range.
 CREATE TABLE public.audit_logs (
     log_id BIGSERIAL, 
-    event_time TIMESTAMP WITHOUT TIME ZONE DEFAULT CURRENT_TIMESTAMP NOT NULL,
+    event_time TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP NOT NULL,
     
     -- Context
     tenant_id UUID, 
@@ -856,7 +856,7 @@ CREATE TABLE public.data_flattening_rules (
     is_active BOOLEAN DEFAULT TRUE,
     
     created_by INTEGER REFERENCES public.users(user_id),
-    last_updated TIMESTAMP WITHOUT TIME ZONE DEFAULT CURRENT_TIMESTAMP
+    last_updated TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
 );
 
 -- ==========================================
@@ -890,8 +890,8 @@ CREATE TABLE public.api_endpoints (
     is_builtin BOOLEAN DEFAULT FALSE, -- System protected
     
     created_by INTEGER REFERENCES public.users(user_id),
-    idate TIMESTAMP WITHOUT TIME ZONE DEFAULT CURRENT_TIMESTAMP,
-    last_updated TIMESTAMP WITHOUT TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    idate TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+    last_updated TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
     
     UNIQUE(path, method)
 );
@@ -952,8 +952,8 @@ CREATE TABLE public.workflows (
     steps_json JSONB NOT NULL DEFAULT '[]'::jsonb, 
     
     is_active BOOLEAN DEFAULT TRUE,
-    created_at TIMESTAMP WITHOUT TIME ZONE DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP WITHOUT TIME ZONE DEFAULT CURRENT_TIMESTAMP
+    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
 );
 
 -- 1.3 Workflow Runs (History)
@@ -965,8 +965,8 @@ CREATE TABLE public.workflow_runs (
     status VARCHAR(20) DEFAULT 'pending', -- 'pending', 'running', 'completed', 'failed', 'cancelled'
     trigger_context_json JSONB, -- Event payload that triggered this run
     
-    started_at TIMESTAMP WITHOUT TIME ZONE,
-    completed_at TIMESTAMP WITHOUT TIME ZONE,
+    started_at TIMESTAMPTZ,
+    completed_at TIMESTAMPTZ,
     error_details JSONB
 );
 
@@ -988,11 +988,11 @@ CREATE TABLE public.job_queue (
     payload JSONB, -- Execution Arguments
     result JSONB,
     
-    started_at TIMESTAMP WITHOUT TIME ZONE,
-    completed_at TIMESTAMP WITHOUT TIME ZONE,
+    started_at TIMESTAMPTZ,
+    completed_at TIMESTAMPTZ,
     
     created_by INTEGER REFERENCES public.users(user_id),
-    created_at TIMESTAMP WITHOUT TIME ZONE DEFAULT CURRENT_TIMESTAMP
+    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
 );
 
 -- ==========================================
@@ -1027,8 +1027,8 @@ CREATE TABLE public.integration_providers (
     is_active BOOLEAN DEFAULT TRUE,
     is_builtin BOOLEAN DEFAULT TRUE, -- System-provided providers cannot be deleted
     
-    created_at TIMESTAMP WITHOUT TIME ZONE DEFAULT CURRENT_TIMESTAMP,
-    last_updated TIMESTAMP WITHOUT TIME ZONE DEFAULT CURRENT_TIMESTAMP
+    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+    last_updated TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
 );
 
 -- ==========================================
@@ -1059,7 +1059,7 @@ CREATE TABLE public.integrations (
     is_default BOOLEAN DEFAULT FALSE NOT NULL, -- Required: Mark default integration for each provider type
     
     created_by INTEGER REFERENCES public.users(user_id),
-    last_updated TIMESTAMP WITHOUT TIME ZONE DEFAULT CURRENT_TIMESTAMP
+    last_updated TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
 );
 
 -- ==========================================
@@ -1087,7 +1087,7 @@ CREATE TABLE public.assets (
     related_id INTEGER,
     
     uploaded_by INTEGER REFERENCES public.users(user_id),
-    uploaded_at TIMESTAMP WITHOUT TIME ZONE DEFAULT CURRENT_TIMESTAMP
+    uploaded_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
 );
 
 -- Indexes
@@ -1127,7 +1127,7 @@ CREATE TABLE public.settings (
     
     is_built_in BOOLEAN DEFAULT FALSE,
     
-    last_updated TIMESTAMP WITHOUT TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    last_updated TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
     
     UNIQUE(setting_key, tenant_id) -- One value per key per tenant (or one global if tenant is null)
 );
@@ -1156,8 +1156,8 @@ CREATE TABLE public.ai_knowledge_nodes (
     is_active BOOLEAN DEFAULT TRUE,
     version INTEGER DEFAULT 1,
     
-    created_at TIMESTAMP WITHOUT TIME ZONE DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP WITHOUT TIME ZONE DEFAULT CURRENT_TIMESTAMP
+    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
 );
 
 -- Edges represent the semantic relationships between nodes.
@@ -1170,7 +1170,7 @@ CREATE TABLE public.ai_knowledge_relations (
     attributes JSONB DEFAULT '{}'::jsonb, -- Edge properties e.g. { "weight": 0.8 }
     
     is_active BOOLEAN DEFAULT TRUE,
-    created_at TIMESTAMP WITHOUT TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
     
     UNIQUE(from_node, to_node, relation)
 );
@@ -1192,8 +1192,8 @@ CREATE TABLE public.ai_events (
     
     attributes JSONB,                -- Contextual data e.g. { "amount": 500 }
     
-    occurred_at TIMESTAMP WITHOUT TIME ZONE NOT NULL,
-    recorded_at TIMESTAMP WITHOUT TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    occurred_at TIMESTAMPTZ NOT NULL,
+    recorded_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
     
     is_active BOOLEAN DEFAULT TRUE
 );
@@ -1214,7 +1214,7 @@ CREATE TABLE public.ai_knowledge_vectors (
     searchable_text TEXT,             
     
     is_active BOOLEAN DEFAULT TRUE,
-    updated_at TIMESTAMP WITHOUT TIME ZONE DEFAULT CURRENT_TIMESTAMP
+    updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
 );
 
 -- Indexes for Performance
@@ -1255,7 +1255,7 @@ CREATE TABLE public.ai_query_plans (
     error_message TEXT,
 
     latency_ms INTEGER,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
 );
 
 CREATE INDEX idx_ai_query_plans_created ON public.ai_query_plans(created_at DESC);
@@ -1283,8 +1283,8 @@ CREATE TABLE public.ai_rules (
     priority INTEGER DEFAULT 0,
     is_active BOOLEAN DEFAULT TRUE,
 
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
 );
 -- Note: Seed data (ui_component_types, field_types, settings) has been moved to noolvandb_feeds.sql
 -- 96_seed_ai_model.sql

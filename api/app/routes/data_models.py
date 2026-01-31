@@ -646,8 +646,8 @@ async def create_data_model(
             
             # Add standard audit columns (these are always present)
             columns.append("created_by INTEGER REFERENCES public.users(user_id)")
-            columns.append("idate TIMESTAMP WITHOUT TIME ZONE DEFAULT CURRENT_TIMESTAMP NOT NULL")
-            columns.append("last_updated TIMESTAMP WITHOUT TIME ZONE DEFAULT CURRENT_TIMESTAMP NOT NULL")
+            columns.append("idate TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP NOT NULL")
+            columns.append("last_updated TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP NOT NULL")
             
             create_table_sql = f'CREATE TABLE public."{payload.table_name}" ({", ".join(columns)})'
             
