@@ -57,7 +57,7 @@ INSERT INTO public.field_types (type_name, type_code, category, actual_db_type, 
 
 -- Dates & Time
 ('Date', 'date', 'basic', 'DATE', '{}', (SELECT component_type_id FROM public.ui_component_types WHERE type_code = 'date')),
-('DateTime', 'datetime', 'basic', 'TIMESTAMP', '{}', (SELECT component_type_id FROM public.ui_component_types WHERE type_code = 'date')),
+('DateTime', 'datetime', 'basic', 'TIMESTAMPTZ', '{}', (SELECT component_type_id FROM public.ui_component_types WHERE type_code = 'date')),
 ('Time', 'time', 'basic', 'TIME', '{}', (SELECT component_type_id FROM public.ui_component_types WHERE type_code = 'date')),
 ('Duration', 'duration', 'advanced', 'INTERVAL', '{}', (SELECT component_type_id FROM public.ui_component_types WHERE type_code = 'text')),
 
