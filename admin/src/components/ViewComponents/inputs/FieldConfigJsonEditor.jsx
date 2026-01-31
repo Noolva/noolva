@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import {
     Form,
     Input,
@@ -39,30 +39,62 @@ export function FieldConfigJsonEditor({ fieldTypeId, fieldTypeCode, defaultProps
     const [modelModalVisible, setModelModalVisible] = useState(false);
     const [fieldModalVisible, setFieldModalVisible] = useState(false);
     const [searchText, setSearchText] = useState('');
+    const [collections, setCollections] = useState([]);
+    const [collectionsLoading, setCollectionsLoading] = useState(false);
+    const isSyncingFromValue = useRef(false);
+    const prevValueRef = useRef(undefined);
 
-    // Initialize config from value or defaultPropsJson
+    // Initialize config from value or defaultPropsJson (merge defaults so missing keys get default values)
     useEffect(() => {
-        let initialConfig = {};
+        let parsedValue = {};
+        let parsedDefaults = {};
         if (value) {
             try {
-                initialConfig = typeof value === 'string' ? JSON.parse(value) : value;
+                parsedValue = typeof value === 'string' ? JSON.parse(value) : value;
             } catch (e) {
                 console.error('Failed to parse field_config_json:', e);
             }
-        } else if (defaultPropsJson) {
+        }
+        if (defaultPropsJson) {
             try {
-                initialConfig = typeof defaultPropsJson === 'string' ? JSON.parse(defaultPropsJson) : defaultPropsJson;
+                parsedDefaults = typeof defaultPropsJson === 'string' ? JSON.parse(defaultPropsJson) : defaultPropsJson;
             } catch (e) {
                 console.error('Failed to parse default_props_json:', e);
             }
         }
-        setConfig(initialConfig);
+        // Merge: defaults first, then value overrides (so default_props_json fills in missing keys)
+        const initialConfig = { ...parsedDefaults, ...parsedValue };
+        // Only update if merged config actually changed (prevents flicker from unstable refs)
+        const valueKey = JSON.stringify(initialConfig);
+        if (prevValueRef.current !== valueKey) {
+            prevValueRef.current = valueKey;
+            isSyncingFromValue.current = true;
+            setConfig(initialConfig);
+        }
     }, [value, defaultPropsJson]);
+
+    // Notify parent of changes (skip when syncing from value to prevent effect loop)
+    useEffect(() => {
+        if (isSyncingFromValue.current) {
+            isSyncingFromValue.current = false;
+            return;
+        }
+        if (onChange) {
+            onChange(config);
+        }
+    }, [config, onChange]);
 
     // Load data models for relation field
     useEffect(() => {
         if (fieldTypeCode === 'relation') {
             loadDataModels();
+        }
+    }, [fieldTypeCode]);
+
+    // Load collections for single_choice / multi_choice
+    useEffect(() => {
+        if (fieldTypeCode === 'single_choice' || fieldTypeCode === 'multi_choice') {
+            loadCollections();
         }
     }, [fieldTypeCode]);
 
@@ -72,13 +104,6 @@ export function FieldConfigJsonEditor({ fieldTypeId, fieldTypeCode, defaultProps
             loadModelFields(selectedModel.model_id);
         }
     }, [selectedModel, fieldTypeCode]);
-
-    // Notify parent of changes
-    useEffect(() => {
-        if (onChange) {
-            onChange(config);
-        }
-    }, [config, onChange]);
 
     const loadDataModels = async () => {
         try {
@@ -95,6 +120,30 @@ export function FieldConfigJsonEditor({ fieldTypeId, fieldTypeCode, defaultProps
             setModelFields(response.fields || []);
         } catch (error) {
             console.error('Failed to load model fields:', error);
+        }
+    };
+
+    const loadCollections = async () => {
+        setCollectionsLoading(true);
+        try {
+            const limit = 500;
+            let offset = 0;
+            const all = [];
+            // eslint-disable-next-line no-constant-condition
+            while (true) {
+                const response = await api.getCollections({ limit, offset });
+                const batch = response.collections || [];
+                all.push(...batch);
+                offset += batch.length;
+                if (!response.has_more || batch.length === 0) break;
+            }
+            all.sort((a, b) => (a.collection_name || '').localeCompare(b.collection_name || ''));
+            setCollections(all);
+        } catch (error) {
+            console.error('Failed to load collections:', error);
+            setCollections([]);
+        } finally {
+            setCollectionsLoading(false);
         }
     };
 
@@ -300,7 +349,6 @@ export function FieldConfigJsonEditor({ fieldTypeId, fieldTypeCode, defaultProps
             case 'single_choice':
                 const optionsMode = config.options_mode || 'custom_collection';
                 const isCustomCollection = optionsMode === 'custom_collection';
-                const isKeyValueMode = config.options_format === 'key_value';
                 const options = config.options || [];
 
                 return (
@@ -310,86 +358,77 @@ export function FieldConfigJsonEditor({ fieldTypeId, fieldTypeCode, defaultProps
                                 value={optionsMode}
                                 onChange={(val) => {
                                     updateConfig('options_mode', val);
+                                    updateConfig('options_format', undefined);
                                     if (val !== 'custom_collection') {
                                         updateConfig('options', []);
-                                        updateConfig('options_format', undefined);
                                     }
+                                    updateConfig('collection_id', undefined);
                                 }}
                                 style={{ width: '100%' }}
                             >
-                                <Option value="collection">Collection</Option>
+                                <Option value="collections">Collection</Option>
                                 <Option value="custom_collection">Custom Collection</Option>
                             </Select>
                         </Form.Item>
+                        {optionsMode === 'collections' && (
+                            <Form.Item label="Select Collection">
+                                <Select
+                                    showSearch
+                                    placeholder="Select a collection"
+                                    value={config.collection_id ?? undefined}
+                                    onChange={(val) => updateConfig('collection_id', val)}
+                                    loading={collectionsLoading}
+                                    notFoundContent={collectionsLoading ? 'Loading...' : 'No collections found'}
+                                    filterOption={(input, option) =>
+                                        (option?.label ?? '').toString().toLowerCase().includes(input.toLowerCase())
+                                    }
+                                    optionFilterProp="label"
+                                    style={{ width: '100%' }}
+                                    allowClear
+                                    options={collections.map((c) => ({
+                                        value: c.collection_id,
+                                        label: `${c.collection_name} (${c.collection_code})`,
+                                        key: c.collection_id
+                                    }))}
+                                />
+                            </Form.Item>
+                        )}
                         {isCustomCollection && (
-                            <>
-                                <Form.Item label="Options Format">
-                                    <Select
-                                        value={isKeyValueMode ? 'key_value' : 'values'}
-                                        onChange={(val) => {
-                                            updateConfig('options_format', val);
-                                            if (val === 'values') {
-                                                updateConfig('options', []);
-                                            }
-                                        }}
-                                        style={{ width: '100%' }}
-                                    >
-                                        <Option value="key_value">Key-Value Pairs</Option>
-                                        <Option value="values">Comma Separated Values</Option>
-                                    </Select>
-                                </Form.Item>
-                                {isKeyValueMode ? (
-                                    <>
-                                        <Form.Item label="Options">
-                                            {options.map((opt, idx) => (
-                                                <Row key={idx} gutter={8} style={{ marginBottom: 8 }}>
-                                                    <Col span={10}>
-                                                        <Input
-                                                            placeholder="Key"
-                                                            value={opt.value || ''}
-                                                            onChange={(e) => updateArrayConfig('options', idx, { ...opt, value: e.target.value })}
-                                                        />
-                                                    </Col>
-                                                    <Col span={10}>
-                                                        <Input
-                                                            placeholder="Label"
-                                                            value={opt.label || ''}
-                                                            onChange={(e) => updateArrayConfig('options', idx, { ...opt, label: e.target.value })}
-                                                        />
-                                                    </Col>
-                                                    <Col span={4}>
-                                                        <Button
-                                                            icon={<DeleteOutlined />}
-                                                            onClick={() => removeArrayItem('options', idx)}
-                                                            danger
-                                                        />
-                                                    </Col>
-                                                </Row>
-                                            ))}
+                            <Form.Item label="Options (Key-Value Pairs)">
+                                {options.map((opt, idx) => (
+                                    <Row key={idx} gutter={8} style={{ marginBottom: 8 }}>
+                                        <Col span={10}>
+                                            <Input
+                                                placeholder="Key"
+                                                value={opt.value || ''}
+                                                onChange={(e) => updateArrayConfig('options', idx, { ...opt, value: e.target.value })}
+                                            />
+                                        </Col>
+                                        <Col span={10}>
+                                            <Input
+                                                placeholder="Label"
+                                                value={opt.label || ''}
+                                                onChange={(e) => updateArrayConfig('options', idx, { ...opt, label: e.target.value })}
+                                            />
+                                        </Col>
+                                        <Col span={4}>
                                             <Button
-                                                icon={<PlusOutlined />}
-                                                onClick={() => addArrayItem('options', { value: '', label: '' })}
-                                                type="dashed"
-                                                block
-                                            >
-                                                Add Option
-                                            </Button>
-                                        </Form.Item>
-                                    </>
-                                ) : (
-                                    <Form.Item label="Comma Separated Values">
-                                        <TextArea
-                                            rows={4}
-                                            placeholder="Option1, Option2, Option3"
-                                            value={Array.isArray(options) ? options.join(', ') : ''}
-                                            onChange={(e) => {
-                                                const vals = e.target.value.split(',').map(v => v.trim()).filter(v => v);
-                                                updateConfig('options', vals);
-                                            }}
-                                        />
-                                    </Form.Item>
-                                )}
-                            </>
+                                                icon={<DeleteOutlined />}
+                                                onClick={() => removeArrayItem('options', idx)}
+                                                danger
+                                            />
+                                        </Col>
+                                    </Row>
+                                ))}
+                                <Button
+                                    icon={<PlusOutlined />}
+                                    onClick={() => addArrayItem('options', { value: '', label: '' })}
+                                    type="dashed"
+                                    block
+                                >
+                                    Add Option
+                                </Button>
+                            </Form.Item>
                         )}
                     </>
                 );
@@ -534,7 +573,7 @@ export function FieldConfigJsonEditor({ fieldTypeId, fieldTypeCode, defaultProps
                         </Row>
                         <Form.Item label="Currency Symbol">
                             <Select
-                                value={config.currency_symbol || '$'}
+                                value={config.currency_symbol || '₹'}
                                 onChange={(val) => updateConfig('currency_symbol', val)}
                                 style={{ width: '100%' }}
                             >
