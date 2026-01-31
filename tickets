@@ -1,5 +1,6 @@
 
 admin themes, theming settings, parameters,
+shortcuts
 test with one more user login.
 side bar, search option, parent_child support,
 branding,logo, url icon, loss of tabs when switching apps,
@@ -12,7 +13,7 @@ debug mode in project->conentrate when developing customer pages.
 
 
 auto-logout-timout-with relogin  with password protection, only for specific views.
-query edit not supporting own queries example distinct;
+
 timeout handling for,
 | Layer            | Timeout |
 | ---------------- | ------- |
@@ -27,24 +28,28 @@ is ui components, existing views(direct jsx codes) following permissions rules. 
 verify vc componentt usage by searchinch "moodal" in dir
 handle:{"detail": "Token expired"}, and check where we are setting token expiry, allow relogin with password:
 collections add,edit,page,
-protected image in field-type
 
 given PRS:
 NF0001/feature/ui-custom-components-for-inputs-views
 NF0002/feature/icons-libraries-for-fa-antd-smily-datamodels
 NF0003/feature/icon-explorer-page-icon-viewer-and-chooser-components
 NF0004/feature/data-models-and-collections-page
-
+NF0005/feature/data-models-create-new-model-drawer-enhancement
 
 current,
 ======
-NF0005/feature/data-models-create-new-model-drawer-enhancement
+NF0005/feature/data-model-test-each-field-type-json-validation
 
 
-validation of each field_type_json in data-models.
+
+encryption testing?
 after models, endpoints, actions,views.
+
+Migrate timestamp → timestamptz
+
 DB-Query->query builder should support join queries or object queries,
 actions may have requirements, eg. client app,runtime environment etc?
+query edit not supporting own queries example distinct;
 
 
 

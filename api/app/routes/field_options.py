@@ -48,10 +48,10 @@ async def fetch_field_options(
                     detail="collection_id is required when options_mode is 'collections'"
                 )
             
-            # Fetch collection items
+            # Fetch collection items (stored in field_config_json.items)
             collection = await PostgresDB.fetchrow(
                 """
-                SELECT items_json, tenant_id
+                SELECT field_config_json, tenant_id
                 FROM public.collections
                 WHERE collection_id = $1
                 """,
@@ -61,7 +61,8 @@ async def fetch_field_options(
             if not collection:
                 raise HTTPException(status_code=404, detail="Collection not found")
             
-            items = collection.get("items_json", [])
+            field_config = collection.get("field_config_json") or {}
+            items = field_config.get("items", []) if isinstance(field_config, dict) else []
             
             # Normalize items to {label, value} format
             options = []
@@ -229,7 +230,7 @@ async def list_collections(
         
         query = """
             SELECT collection_id, collection_uuid, collection_name, collection_code,
-                   tenant_id, items_json, is_system
+                   tenant_id, field_config_json, is_system
             FROM public.collections
         """
         
@@ -248,7 +249,7 @@ async def list_collections(
                     "collection_name": r["collection_name"],
                     "collection_code": r["collection_code"],
                     "tenant_id": r["tenant_id"],
-                    "item_count": len(r.get("items_json", [])) if r.get("items_json") else 0,
+                    "item_count": len((r.get("field_config_json") or {}).get("items", [])),
                     "is_system": r["is_system"]
                 }
                 for r in rows

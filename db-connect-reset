@@ -1,9 +1,7 @@
 colima start --profile syntaxoo --network-address
-psql -h localhost -p 5432 -U noolvan noolvan
-password : 
-
 external access
 psql -h 192.168.106.2 -p 5432 -U noolvan noolvandb
+password:avkaran
 
 restore-db,
 ===========

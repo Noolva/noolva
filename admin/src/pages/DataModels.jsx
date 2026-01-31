@@ -79,6 +79,33 @@ const DataModels = () => {
         loadFieldTypes();
     }, []);
 
+    // Set form values when edit drawer opens (ensures Form is mounted and values display)
+    useEffect(() => {
+        if (fieldEditorDrawerVisible && editingField) {
+            const recordFieldTypeId = Number(editingField.field_type_id);
+            const fieldType = fieldTypes.find(ft => ft.field_type_id === recordFieldTypeId) || {
+                field_type_id: editingField.field_type_id,
+                type_name: editingField.type_name,
+                type_code: editingField.type_code,
+                actual_db_type: editingField.actual_db_type,
+                input_type_image: editingField.input_type_image,
+                default_props_json: {}
+            };
+            setSelectedFieldType(fieldType);
+            fieldForm.setFieldsValue({
+                field_name: editingField.field_name,
+                display_name: editingField.display_name,
+                field_type_id: recordFieldTypeId,
+                is_required: editingField.is_required,
+                is_unique: editingField.is_unique,
+                is_primary_key: editingField.is_primary_key,
+                default_value: editingField.default_value,
+                encryption_method: editingField.encryption_method || 'none',
+                ui_component: editingField.ui_component,
+            });
+        }
+    }, [fieldEditorDrawerVisible, editingField, fieldTypes]);
+
     const loadDataModels = async () => {
         try {
             setLoading(true);
@@ -118,9 +145,9 @@ const DataModels = () => {
             const response = await api.getDataModel(modelId);
             // Filter out system fields (idate, created_by, last_updated) from UI display
             const allFields = response.fields || [];
-            const visibleFields = allFields.filter(f => 
-                f.field_name !== 'idate' && 
-                f.field_name !== 'created_by' && 
+            const visibleFields = allFields.filter(f =>
+                f.field_name !== 'idate' &&
+                f.field_name !== 'created_by' &&
                 f.field_name !== 'last_updated'
             );
             setFields(visibleFields);
@@ -160,9 +187,9 @@ const DataModels = () => {
             });
             // Filter out system fields (idate, created_by, last_updated) from UI display
             const allFields = response.fields || [];
-            const visibleFields = allFields.filter(f => 
-                f.field_name !== 'idate' && 
-                f.field_name !== 'created_by' && 
+            const visibleFields = allFields.filter(f =>
+                f.field_name !== 'idate' &&
+                f.field_name !== 'created_by' &&
                 f.field_name !== 'last_updated'
             );
             setFields(visibleFields);
@@ -186,7 +213,7 @@ const DataModels = () => {
 
     const confirmDeleteModel = async (deleteTable = false, confirmDeleteData = false) => {
         if (!pendingDeleteModelId) return;
-        
+
         try {
             await api.deleteDataModel(pendingDeleteModelId, deleteTable, confirmDeleteData);
             message.success('Data model deleted successfully');
@@ -372,41 +399,20 @@ const DataModels = () => {
     const handleEditField = (record) => {
         setEditingField(record);
         fieldForm.resetFields();
-        const fieldType = fieldTypes.find(ft => ft.field_type_id === record.field_type_id) || {
-            field_type_id: record.field_type_id,
-            type_name: record.type_name,
-            type_code: record.type_code,
-            actual_db_type: record.actual_db_type,
-            input_type_image: record.input_type_image,
-            default_props_json: {}
-        };
-        setSelectedFieldType(fieldType);
-        
         // Parse field_config_json
         let config = {};
         if (record.field_config_json) {
             try {
-                config = typeof record.field_config_json === 'string' 
-                    ? JSON.parse(record.field_config_json) 
+                config = typeof record.field_config_json === 'string'
+                    ? JSON.parse(record.field_config_json)
                     : record.field_config_json;
             } catch (e) {
                 console.error('Failed to parse field_config_json:', e);
             }
         }
         setFieldConfigJson(config);
-        
-        fieldForm.setFieldsValue({
-            field_name: record.field_name,
-            display_name: record.display_name,
-            field_type_id: record.field_type_id,
-            is_required: record.is_required,
-            is_unique: record.is_unique,
-            is_primary_key: record.is_primary_key,
-            default_value: record.default_value,
-            encryption_method: record.encryption_method || 'none',
-            ui_component: record.ui_component,
-        });
         setFieldEditorDrawerVisible(true);
+        // Form values are set in useEffect when drawer opens (ensures Form is mounted)
     };
 
     const openOrderingDrawer = () => {
@@ -519,18 +525,22 @@ const DataModels = () => {
             title: 'Field Name',
             dataIndex: 'field_name',
             key: 'field_name',
+            width: 180,
         },
         {
             title: 'Display Name',
             dataIndex: 'display_name',
             key: 'display_name',
+            width: 180,
         },
         {
             title: 'Type',
             dataIndex: 'type_name',
             key: 'type_name',
+            width: 200,
+            ellipsis: true,
             render: (text, record) => (
-                <Space>
+                <Space size="small" wrap={false}>
                     {record.input_type_image && (
                         <Image
                             src={getAssetUrl(record.input_type_image)}
@@ -538,10 +548,10 @@ const DataModels = () => {
                             width={24}
                             height={24}
                             preview={false}
-                            style={{ objectFit: 'contain' }}
+                            style={{ objectFit: 'contain', flexShrink: 0 }}
                         />
                     )}
-                    <Tag>{text} ({record.actual_db_type})</Tag>
+                    <Tag style={{ maxWidth: 160, overflow: 'hidden', textOverflow: 'ellipsis' }}>{text} ({record.actual_db_type})</Tag>
                 </Space>
             ),
         },
@@ -549,23 +559,28 @@ const DataModels = () => {
             title: 'Required',
             dataIndex: 'is_required',
             key: 'is_required',
+            width: 90,
             render: (required) => required ? <Tag color="red">Yes</Tag> : <Tag>No</Tag>,
         },
         {
             title: 'Unique',
             dataIndex: 'is_unique',
             key: 'is_unique',
+            width: 80,
             render: (unique) => unique ? <Tag color="blue">Yes</Tag> : null,
         },
         {
             title: 'Primary Key',
             dataIndex: 'is_primary_key',
             key: 'is_primary_key',
+            width: 100,
             render: (pk) => pk ? <Tag color="green">PK</Tag> : null,
         },
         {
             title: 'Actions',
             key: 'actions',
+            fixed: 'right',
+            width: 140,
             render: (_, record) => (
                 <Space>
                     <Button
@@ -671,8 +686,8 @@ const DataModels = () => {
                                 label="Display Name"
                                 rules={[{ required: true, message: 'Please enter display name' }]}
                             >
-                                <Input 
-                                    placeholder="e.g., Users" 
+                                <Input
+                                    placeholder="e.g., Users"
                                     onChange={(e) => {
                                         if (!editingModel) {
                                             // Auto-populate model_name and table_name from display_name
@@ -683,11 +698,11 @@ const DataModels = () => {
                                                 .replace(/\s+/g, '_')
                                                 .replace(/[^a-z0-9_]/g, '');
                                             // model_name and table_name must be the same
-                                            form.setFieldsValue({ 
+                                            form.setFieldsValue({
                                                 model_name: modelName,
                                                 table_name: modelName  // Enforce same value
                                             });
-                                            
+
                                             // Auto-populate id field name based on first word
                                             const firstWord = displayName.trim().split(/\s+/)[0].toLowerCase();
                                             const idFieldName = firstWord ? `${firstWord}_id` : 'id';
@@ -714,8 +729,8 @@ const DataModels = () => {
                                     }
                                 ]}
                             >
-                                <Input 
-                                    disabled={!!editingModel} 
+                                <Input
+                                    disabled={!!editingModel}
                                     placeholder="Auto-generated from display name"
                                     onChange={(e) => {
                                         // Keep table_name in sync with model_name (for both create and edit)
@@ -725,7 +740,7 @@ const DataModels = () => {
                             </Form.Item>
                         </Col>
                     </Row>
-                    
+
                     {!editingModel && (
                         <Row gutter={16}>
                             <Col span={12}>
@@ -759,7 +774,7 @@ const DataModels = () => {
                                     }
                                 ]}
                             >
-                                <Input 
+                                <Input
                                     disabled={!!editingModel}
                                     placeholder="Auto-generated from display name"
                                     onChange={(e) => {
@@ -850,7 +865,7 @@ const DataModels = () => {
             <Drawer
                 title={`Fields: ${selectedModel?.display_name || selectedModel?.model_name}`}
                 placement="right"
-                width={800}
+                width={1000}
                 open={fieldDrawerVisible}
                 onClose={() => {
                     setFieldDrawerVisible(false);
@@ -887,11 +902,13 @@ const DataModels = () => {
                     rowKey="field_id"
                     pagination={false}
                     size="small"
+                    scroll={{ x: 970 }}
                 />
             </Drawer>
 
             {/* Field Editor Drawer (Add/Edit) */}
             <Drawer
+                key={editingField ? `edit-${editingField.field_id}` : 'add'}
                 title={editingField ? `Edit Field: ${editingField.field_name}` : 'Add Field'}
                 placement="right"
                 width={520}
@@ -910,28 +927,51 @@ const DataModels = () => {
                     onFinish={handleFieldSubmit}
                 >
                     <Form.Item
+                        name="display_name"
+                        label="Display Name"
+                        rules={[{ required: true, message: 'Please enter display name' }]}
+                    >
+                        <Input
+                            placeholder="e.g., Email Address"
+                            onChange={(e) => {
+                                if (!editingField) {
+                                    const displayName = e.target.value;
+                                    const fieldName = displayName
+                                        .trim()
+                                        .toLowerCase()
+                                        .replace(/\s+/g, '_');
+                                    fieldForm.setFieldsValue({ field_name: fieldName });
+                                }
+                            }}
+                        />
+                    </Form.Item>
+
+                    <Form.Item
                         name="field_name"
                         label="Field Name"
                         rules={[{ required: true, message: 'Please enter field name' }]}
                     >
-                        <Input disabled={!!editingField} placeholder="e.g., email" />
-                    </Form.Item>
-
-                    <Form.Item
-                        name="display_name"
-                        label="Display Name"
-                    >
-                        <Input placeholder="e.g., Email Address" />
+                        <Input disabled={!!editingField} placeholder="Auto-generated from display name" />
                     </Form.Item>
 
                     <Form.Item
                         name="field_type_id"
                         label="Field Type"
+                        initialValue={editingField ? Number(editingField.field_type_id) : undefined}
                         rules={[{ required: true, message: 'Please select field type' }]}
                     >
-                        <Select 
+                        <Select
+                            showSearch
                             placeholder="Select field type"
+                            {...(editingField && editingField.field_type_id != null && {
+                                value: fieldForm.getFieldValue('field_type_id') ?? Number(editingField.field_type_id)
+                            })}
+                            optionFilterProp="label"
+                            filterOption={(input, option) =>
+                                (option?.label ?? '').toString().toLowerCase().includes(input.toLowerCase())
+                            }
                             onChange={(value) => {
+                                fieldForm.setFieldsValue({ field_type_id: value });
                                 const ft = fieldTypes.find(f => f.field_type_id === value);
                                 setSelectedFieldType(ft);
                                 // Reset config when field type changes
@@ -948,13 +988,12 @@ const DataModels = () => {
                                     setFieldConfigJson({});
                                 }
                             }}
-                            optionLabelProp="label"
                         >
                             {fieldTypes.map(ft => (
-                                <Option 
-                                    key={ft.field_type_id} 
+                                <Option
+                                    key={ft.field_type_id}
                                     value={ft.field_type_id}
-                                    label={ft.type_name}
+                                    label={`${ft.type_name} (${ft.actual_db_type})`}
                                 >
                                     <Space>
                                         {ft.input_type_image && (
@@ -1122,7 +1161,7 @@ const DataModels = () => {
                                         <Tag color="red">{deleteCheckInfo.row_count} record(s) found</Tag>
                                         <div style={{ marginTop: 8 }}>
                                             <Text type="danger">
-                                                This model contains {deleteCheckInfo.row_count} record(s). 
+                                                This model contains {deleteCheckInfo.row_count} record(s).
                                                 Deleting will permanently remove all data.
                                             </Text>
                                         </div>
@@ -1143,7 +1182,7 @@ const DataModels = () => {
                                                 {deleteCheckInfo.relations.map((rel, idx) => (
                                                     <li key={idx}>
                                                         <Text>
-                                                            <strong>{rel.display_name || rel.model_name}</strong> 
+                                                            <strong>{rel.display_name || rel.model_name}</strong>
                                                             {' → '}
                                                             <strong>{rel.field_display_name || rel.field_name}</strong>
                                                         </Text>
@@ -1196,8 +1235,8 @@ const DataModels = () => {
                                             confirmDeleteModel(true, hasData);
                                         }}
                                     >
-                                        {deleteCheckInfo.row_count > 0 
-                                            ? `Delete Model & ${deleteCheckInfo.row_count} Record(s)` 
+                                        {deleteCheckInfo.row_count > 0
+                                            ? `Delete Model & ${deleteCheckInfo.row_count} Record(s)`
                                             : 'Delete Model'}
                                     </Button>
                                 ) : (
