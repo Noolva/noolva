@@ -298,7 +298,7 @@ async def get_field_types(
                 icon, input_type_image, is_active, order_no
             FROM public.field_types
             WHERE is_active = TRUE
-            ORDER BY order_no, category, type_name
+            ORDER BY order_no ASC NULLS LAST, category, type_name
             """
         )
         

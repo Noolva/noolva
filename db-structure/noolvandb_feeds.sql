@@ -46,12 +46,12 @@ ON CONFLICT (type_code) DO NOTHING;
 INSERT INTO public.field_types (type_name, type_code, category, actual_db_type, default_props_json, default_component_type_id) VALUES
 -- Basic Text
 ('Text', 'text', 'basic', 'VARCHAR', '{"max_length": 255}', (SELECT component_type_id FROM public.ui_component_types WHERE type_code = 'text')),
-('Paragraph', 'paragraph', 'basic', 'TEXT', '{}', (SELECT component_type_id FROM public.ui_component_types WHERE type_code = 'textarea')),
+('Paragraph', 'paragraph', 'basic', 'TEXT', '{"max_line_counts": 3}', (SELECT component_type_id FROM public.ui_component_types WHERE type_code = 'textarea')),
 
 -- Numbers
 ('Number', 'number', 'basic', 'NUMERIC', '{"precision": 10, "scale": 2}', (SELECT component_type_id FROM public.ui_component_types WHERE type_code = 'number')),
 ('Auto Number', 'auto_number', 'advanced', 'SERIAL', '{}', (SELECT component_type_id FROM public.ui_component_types WHERE type_code = 'label')),
-('Currency', 'currency', 'advanced', 'NUMERIC', '{"currency_symbol": "$", "precision": 10, "scale": 2}', (SELECT component_type_id FROM public.ui_component_types WHERE type_code = 'number')),
+('Currency', 'currency', 'advanced', 'NUMERIC', '{"currency_symbol": "₹", "precision": 10, "scale": 2}', (SELECT component_type_id FROM public.ui_component_types WHERE type_code = 'number')),
 ('Percentage', 'percentage', 'advanced', 'NUMERIC', '{"precision": 5, "scale": 2}', (SELECT component_type_id FROM public.ui_component_types WHERE type_code = 'number')),
 ('Rating', 'rating', 'advanced', 'INTEGER', '{"max_stars": 5}', (SELECT component_type_id FROM public.ui_component_types WHERE type_code = 'number')),
 
