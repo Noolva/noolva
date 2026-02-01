@@ -240,25 +240,12 @@ BEGIN
     ('General', 'app_name', 'Application Name', 'The visible name of the SaaS platform', ft_text, '"Noolva SaaS"', '"Noolva SaaS"', 'global', true, '{}'::jsonb),
     ('Branding', 'brand_color', 'Primary Brand Color', 'Main accent color', ft_color, '"#007bff"', '"#007bff"', 'global', true, '{}'::jsonb),
     
-    -- 1.1 Theme Settings
-    ('Theme', 'theme', 'Theme', 'Selected theme key', ft_single_choice, '"default"', '"default"', 'global', true,
+    -- 1.1 Theme Default Selection (actual themes in themes table)
+    ('Theme', 'default_saas_theme', 'Default SAAS Theme', 'Default theme for SAAS UI', ft_single_choice, '"default"', '"default"', 'global', true,
         '{"options":[{"label":"Default Corporate","value":"default"},{"label":"Slate Corporate","value":"slate"}]}'::jsonb
     ),
-    ('Theme', 'theme_color_primary', 'Theme Primary Color', 'Primary theme color', ft_color, '"#1890ff"', '"#1890ff"', 'global', true,
-        '{"presets":[{"label":"Blue / Green","primary":"#1890ff","secondary":"#52c41a"},{"label":"Purple / Orange","primary":"#722ed1","secondary":"#fa8c16"},{"label":"Teal / Gold","primary":"#13c2c2","secondary":"#faad14"},{"label":"Pink / Gray","primary":"#eb2f96","secondary":"#8c8c8c"}]}'::jsonb
-    ),
-    ('Theme', 'theme_color_secondary', 'Theme Secondary Color', 'Secondary theme color', ft_color, '"#52c41a"', '"#52c41a"', 'global', true, '{}'::jsonb),
-    ('Theme', 'theme_mode', 'Theme Mode', 'light or dark', ft_single_choice, '"light"', '"light"', 'global', true,
-        '{"options":[{"label":"Light","value":"light"},{"label":"Dark","value":"dark"}]}'::jsonb
-    ),
-    ('Theme', 'font_size_base', 'Base Font Size', 'Global base font size (px)', ft_number, '14', '14', 'global', true,
-        '{"min":12,"max":18,"step":1}'::jsonb
-    ),
-    ('Theme', 'font_size_small', 'Small Font Size', 'Small font size (px)', ft_number, '12', '12', 'global', true,
-        '{"min":10,"max":16,"step":1}'::jsonb
-    ),
-    ('Theme', 'font_size_large', 'Large Font Size', 'Large font size (px)', ft_number, '16', '16', 'global', true,
-        '{"min":14,"max":22,"step":1}'::jsonb
+    ('Theme', 'default_tenant_theme', 'Default Tenant Theme', 'Default theme for Tenant UI', ft_single_choice, '"default"', '"default"', 'global', true,
+        '{"options":[{"label":"Default Corporate","value":"default"},{"label":"Slate Corporate","value":"slate"}]}'::jsonb
     ),
     
     -- 2. Security
@@ -268,7 +255,35 @@ BEGIN
 END $$;
 
 -- ==========================================
--- 3.1 Apps & Menus (Seed)
+-- 3.1 Themes (Seed - builtin default and slate)
+-- ==========================================
+DO $$
+DECLARE
+    system_user_id INT;
+BEGIN
+    SELECT user_id INTO system_user_id FROM public.users WHERE user_type = 'system' LIMIT 1;
+    
+    IF NOT EXISTS (SELECT 1 FROM public.themes WHERE theme_key = 'default' AND scope = 'saas' AND user_id IS NULL) THEN
+        INSERT INTO public.themes (theme_name, theme_key, theme_json, user_id, scope, tenant_id, is_builtin, is_default, created_by)
+        VALUES (
+            'Default Corporate', 'default',
+            '{"theme":"default","theme_color_primary":"#1890ff","theme_color_secondary":"#52c41a","theme_mode":"light","font_size_base":14,"font_size_small":12,"font_size_large":16,"header_bg_color":"#2563eb","sidebar_bg_color":"#f1f5f9"}'::jsonb,
+            NULL, 'saas', NULL, TRUE, TRUE, system_user_id
+        );
+    END IF;
+    
+    IF NOT EXISTS (SELECT 1 FROM public.themes WHERE theme_key = 'slate' AND scope = 'saas' AND user_id IS NULL) THEN
+        INSERT INTO public.themes (theme_name, theme_key, theme_json, user_id, scope, tenant_id, is_builtin, is_default, created_by)
+        VALUES (
+            'Slate Corporate', 'slate',
+            '{"theme":"slate","theme_color_primary":"#1890ff","theme_color_secondary":"#52c41a","theme_mode":"light","font_size_base":14,"font_size_small":12,"font_size_large":16,"header_bg_color":"#475569","sidebar_bg_color":"#f8fafc"}'::jsonb,
+            NULL, 'saas', NULL, TRUE, FALSE, system_user_id
+        );
+    END IF;
+END $$;
+
+-- ==========================================
+-- 3.2 Apps & Menus (Seed)
 -- ==========================================
 -- Apps (top-level): Dashboards, Organization, App Studio, Settings
 DO $$
@@ -376,6 +391,10 @@ BEGIN
     IF NOT EXISTS (SELECT 1 FROM public.menus WHERE app_id=organization_app_id AND parent_id IS NULL AND menu_title='Settings') THEN
         INSERT INTO public.menus (menu_title,parent_id,type,route_path,icon,app_id,scope,is_builtin,order_no,created_by)
         VALUES ('Settings',NULL,'item','settings','setting',organization_app_id,'saas',TRUE,80,system_user_id);
+    END IF;
+    IF NOT EXISTS (SELECT 1 FROM public.menus WHERE app_id=organization_app_id AND parent_id IS NULL AND menu_title='Themes') THEN
+        INSERT INTO public.menus (menu_title,parent_id,type,route_path,icon,app_id,scope,is_builtin,order_no,created_by)
+        VALUES ('Themes',NULL,'item','themes','bgcolors',organization_app_id,'saas',TRUE,85,system_user_id);
     END IF;
 
     -- Menus for App Studio app (all direct children, parent_id = NULL)

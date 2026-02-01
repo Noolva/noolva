@@ -19,3 +19,7 @@ AWS Region [us-east-1]:
 Bucket Prefix/Folder (optional, e.g., 'production', 'staging'. Press Enter to skip): websites/noolva
 Custom Endpoint URL (optional, press Enter to skip):
 CDN URL for public assets (optional, press Enter to skip): https://cdn.avkaran.com
+
+
+backup:
+pg_dump -h 192.168.106.2 -p 5432 -U noolvan noolvandb > noolvandb_bkp20260201.sql
