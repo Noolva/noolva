@@ -8,7 +8,6 @@ import {
     Table as AntTable,
     Input,
     Select,
-    Tabs,
     Form,
     Collapse,
     Tag,
@@ -44,6 +43,7 @@ import { VCTimestampUTC } from '../components/ViewComponents/inputs/VCTimestampU
 import { VCSwitch } from '../components/ViewComponents/inputs/VCSwitch';
 import { VCJsonEditor } from '../components/ViewComponents/inputs/VCJsonEditor';
 import { VCJsonViewer } from '../components/ViewComponents/displays/VCJsonViewer';
+import QueryBuilderModal from '../components/ViewComponents/inputs/QueryBuilderModal';
 import { api } from '../utils/api';
 
 const { TextArea } = Input;
@@ -59,14 +59,6 @@ const DbQuery = () => {
     const [suggestions, setSuggestions] = useState(null);
     const [showSuggestions, setShowSuggestions] = useState(false);
     const [suggestionPosition, setSuggestionPosition] = useState({ top: 0, left: 0 });
-    const [queryBuilder, setQueryBuilder] = useState({
-        tables: [],
-        selectedColumns: [],
-        joins: [],
-        whereConditions: [],
-        orderBy: [],
-        limit: 1000
-    });
     const textAreaRef = useRef(null);
     const [cursorPosition, setCursorPosition] = useState(0);
     const [queryHistory, setQueryHistory] = useState([]);
@@ -93,6 +85,7 @@ const DbQuery = () => {
     const [jsonViewerData, setJsonViewerData] = useState(null);
     const [jsonViewerTitle, setJsonViewerTitle] = useState('');
     const [tablePagination, setTablePagination] = useState({ current: 1, pageSize: 50 });
+    const [queryBuilderModalVisible, setQueryBuilderModalVisible] = useState(false);
 
     useEffect(() => {
         loadSuggestions();
@@ -174,48 +167,6 @@ const DbQuery = () => {
         setQuery('');
         setResults([]);
         setColumns([]);
-    };
-
-    const buildQueryFromBuilder = (builder) => {
-        // Build SQL from query builder
-        if (builder.tables.length === 0) {
-            return '';
-        }
-
-        let sql = 'SELECT ';
-
-        if (builder.selectedColumns.length === 0) {
-            sql += '*';
-        } else {
-            sql += builder.selectedColumns.join(', ');
-        }
-
-        sql += ` FROM "${builder.tables[0]}"`;
-
-        // Add joins
-        builder.joins.forEach(join => {
-            sql += ` ${join.type} JOIN ${join.table} ON ${join.condition}`;
-        });
-
-        if (builder.whereConditions.length > 0) {
-            const conditions = builder.whereConditions
-                .filter(c => c.column && c.value)
-                .map(c => `"${c.column}" ${c.operator} '${c.value.replace(/'/g, "''")}'`)
-                .join(' AND ');
-            if (conditions) {
-                sql += ' WHERE ' + conditions;
-            }
-        }
-
-        if (builder.orderBy.length > 0) {
-            sql += ' ORDER BY ' + builder.orderBy.map(col => `"${col}"`).join(', ');
-        }
-
-        if (builder.limit) {
-            sql += ` LIMIT ${builder.limit}`;
-        }
-
-        return sql;
     };
 
     const handleInsertSuggestion = (suggestion) => {
@@ -1038,405 +989,164 @@ const DbQuery = () => {
                     <h2 style={{ margin: 0 }}>
                         <CodeOutlined /> Database Query
                     </h2>
-                    {results.length > 0 && (
+                    <Space>
                         <Button
-                            type="text"
-                            icon={showQueryPanel ? <DownOutlined /> : <UpOutlined />}
-                            onClick={() => setShowQueryPanel(!showQueryPanel)}
+                            icon={<DatabaseOutlined />}
+                            onClick={() => setQueryBuilderModalVisible(true)}
                         >
-                            {showQueryPanel ? 'Hide Query Panel' : 'Show Query Panel'}
+                            Query Builder
                         </Button>
-                    )}
+                        {results.length > 0 && (
+                            <Button
+                                type="text"
+                                icon={showQueryPanel ? <DownOutlined /> : <UpOutlined />}
+                                onClick={() => setShowQueryPanel(!showQueryPanel)}
+                            >
+                                {showQueryPanel ? 'Hide Query Panel' : 'Show Query Panel'}
+                            </Button>
+                        )}
+                    </Space>
                 </div>
 
                 {showQueryPanel && (
-                    <Tabs
-                        defaultActiveKey="editor"
-                        items={[
-                            {
-                                key: 'editor',
-                                label: 'SQL Editor',
-                                children: (
-                                    <Space direction="vertical" style={{ width: '100%' }} size="large">
-                                        <div>
-                                            <Space style={{ marginBottom: '12px' }}>
-                                                <Button
-                                                    type="primary"
-                                                    icon={<PlayCircleOutlined />}
-                                                    onClick={handleExecuteQuery}
-                                                    loading={loading}
-                                                >
-                                                    Execute Query
-                                                </Button>
-                                                <Button
-                                                    icon={<ClearOutlined />}
-                                                    onClick={handleClear}
-                                                >
-                                                    Clear
-                                                </Button>
-                                                {queryHistory.length > 0 && (
-                                                    <Select
-                                                        placeholder="Load from history"
-                                                        style={{ width: 200 }}
-                                                        onChange={(value) => setQuery(value)}
-                                                    >
-                                                        {queryHistory.map((q, idx) => (
-                                                            <Option key={idx} value={q}>
-                                                                {q.substring(0, 50)}{q.length > 50 ? '...' : ''}
-                                                            </Option>
-                                                        ))}
-                                                    </Select>
-                                                )}
-                                            </Space>
+                    <div>
+                        <Space style={{ marginBottom: 12 }}>
+                            <Button
+                                type="primary"
+                                icon={<PlayCircleOutlined />}
+                                onClick={handleExecuteQuery}
+                                loading={loading}
+                            >
+                                Execute Query
+                            </Button>
+                            <Button icon={<ClearOutlined />} onClick={handleClear}>
+                                Clear
+                            </Button>
+                            {queryHistory.length > 0 && (
+                                <Select
+                                    placeholder="Load from history"
+                                    style={{ width: 200 }}
+                                    onChange={(value) => setQuery(value)}
+                                >
+                                    {queryHistory.map((q, idx) => (
+                                        <Option key={idx} value={q}>
+                                            {q.substring(0, 50)}{q.length > 50 ? '...' : ''}
+                                        </Option>
+                                    ))}
+                                </Select>
+                            )}
+                        </Space>
 
-                                            <div style={{ position: 'relative' }}>
-                                                <TextArea
-                                                    ref={textAreaRef}
-                                                    value={query}
-                                                    onChange={handleTextChange}
-                                                    placeholder="Enter your SQL query here... (Only SELECT queries allowed)"
-                                                    rows={10}
-                                                    style={{
-                                                        fontFamily: 'monospace',
-                                                        fontSize: '14px'
-                                                    }}
-                                                    onKeyDown={(e) => {
-                                                        if (e.key === 'Tab' && showSuggestions) {
-                                                            e.preventDefault();
-                                                            // Insert first suggestion
-                                                            const textBefore = query.substring(0, cursorPosition);
-                                                            const match = textBefore.match(/(\w+)$/);
-                                                            if (match && suggestions) {
-                                                                const word = match[1].toUpperCase();
-                                                                const filtered = suggestions.keywords
-                                                                    .filter(k => k.startsWith(word))[0] ||
-                                                                    suggestions.tables
-                                                                        .filter(t => t.toUpperCase().startsWith(word.toUpperCase()))[0];
-                                                                if (filtered) {
-                                                                    handleInsertSuggestion(filtered);
-                                                                }
-                                                            }
-                                                        }
-                                                    }}
-                                                />
+                        <div style={{ position: 'relative' }}>
+                            <TextArea
+                                ref={textAreaRef}
+                                value={query}
+                                onChange={handleTextChange}
+                                placeholder="Enter your SQL query here... (Only SELECT queries allowed)"
+                                rows={10}
+                                style={{
+                                    fontFamily: 'monospace',
+                                    fontSize: '14px'
+                                }}
+                                onKeyDown={(e) => {
+                                    if (e.key === 'Tab' && showSuggestions) {
+                                        e.preventDefault();
+                                        const textBefore = query.substring(0, cursorPosition);
+                                        const match = textBefore.match(/(\w+)$/);
+                                        if (match && suggestions) {
+                                            const word = match[1].toUpperCase();
+                                            const filtered = suggestions.keywords
+                                                .filter(k => k.startsWith(word))[0] ||
+                                                suggestions.tables
+                                                    .filter(t => t.toUpperCase().startsWith(word.toUpperCase()))[0];
+                                            if (filtered) {
+                                                handleInsertSuggestion(filtered);
+                                            }
+                                        }
+                                    }
+                                }}
+                            />
 
-                                                {/* Auto-complete suggestions */}
-                                                {showSuggestions && suggestions && (
-                                                    <div
-                                                        style={{
-                                                            position: 'absolute',
-                                                            top: suggestionPosition.top,
-                                                            left: suggestionPosition.left,
-                                                            background: 'white',
-                                                            border: '1px solid #d9d9d9',
-                                                            borderRadius: '4px',
-                                                            boxShadow: '0 2px 8px rgba(0,0,0,0.15)',
-                                                            maxHeight: '200px',
-                                                            overflowY: 'auto',
-                                                            zIndex: 1000,
-                                                            minWidth: '200px'
-                                                        }}
-                                                    >
-                                                        {(() => {
-                                                            const textBefore = query.substring(0, cursorPosition);
-                                                            const match = textBefore.match(/(\w+)$/);
-                                                            const word = match ? match[1].toUpperCase() : '';
-
-                                                            const filteredKeywords = suggestions.keywords.filter(k =>
-                                                                k.startsWith(word)
-                                                            );
-                                                            const filteredTables = suggestions.tables.filter(t =>
-                                                                t.toUpperCase().startsWith(word.toUpperCase())
-                                                            );
-
-                                                            return (
-                                                                <>
-                                                                    {filteredKeywords.map((kw, idx) => (
-                                                                        <div
-                                                                            key={`kw-${idx}`}
-                                                                            onClick={() => handleInsertSuggestion(kw)}
-                                                                            style={{
-                                                                                padding: '8px 12px',
-                                                                                cursor: 'pointer',
-                                                                                borderBottom: '1px solid #f0f0f0'
-                                                                            }}
-                                                                            onMouseEnter={(e) => e.target.style.background = '#f5f5f5'}
-                                                                            onMouseLeave={(e) => e.target.style.background = 'white'}
-                                                                        >
-                                                                            <Tag color="blue">{kw}</Tag>
-                                                                        </div>
-                                                                    ))}
-                                                                    {filteredTables.map((table, idx) => (
-                                                                        <div
-                                                                            key={`table-${idx}`}
-                                                                            onClick={() => handleInsertSuggestion(table)}
-                                                                            style={{
-                                                                                padding: '8px 12px',
-                                                                                cursor: 'pointer',
-                                                                                borderBottom: '1px solid #f0f0f0'
-                                                                            }}
-                                                                            onMouseEnter={(e) => e.target.style.background = '#f5f5f5'}
-                                                                            onMouseLeave={(e) => e.target.style.background = 'white'}
-                                                                        >
-                                                                            <DatabaseOutlined /> {table}
-                                                                        </div>
-                                                                    ))}
-                                                                </>
-                                                            );
-                                                        })()}
-                                                    </div>
-                                                )}
-                                            </div>
-
-                                            <div style={{ fontSize: '12px', color: '#999', marginTop: '8px' }}>
-                                                Tip: Type SQL keywords or table names and press Tab for auto-complete
-                                            </div>
-                                        </div>
-
-                                    </Space>
-                                )
-                            },
-                            {
-                                key: 'builder',
-                                label: 'Query Builder',
-                                children: (
-                                    <Form layout="vertical">
-                                        <Row gutter={16}>
-                                            <Col span={12}>
-                                                <Form.Item label="From Table">
-                                                    <Select
-                                                        placeholder="Select table"
-                                                        showSearch
-                                                        value={queryBuilder.tables[0]}
-                                                        onChange={(value) => {
-                                                            const newBuilder = {
-                                                                ...queryBuilder,
-                                                                tables: value ? [value] : [],
-                                                                selectedColumns: [] // Reset columns when table changes
-                                                            };
-                                                            setQueryBuilder(newBuilder);
-                                                            setQuery(buildQueryFromBuilder(newBuilder));
-                                                        }}
-                                                    >
-                                                        {suggestions?.tables.map(table => (
-                                                            <Option key={table} value={table}>
-                                                                {table}
-                                                            </Option>
-                                                        ))}
-                                                    </Select>
-                                                </Form.Item>
-                                            </Col>
-
-                                            <Col span={12}>
-                                                <Form.Item label="Limit">
-                                                    <Input
-                                                        type="number"
-                                                        value={queryBuilder.limit}
-                                                        onChange={(e) => {
-                                                            const newBuilder = {
-                                                                ...queryBuilder,
-                                                                limit: parseInt(e.target.value) || 1000
-                                                            };
-                                                            setQueryBuilder(newBuilder);
-                                                            setQuery(buildQueryFromBuilder(newBuilder));
-                                                        }}
-                                                        min={1}
-                                                        max={1000}
-                                                    />
-                                                </Form.Item>
-                                            </Col>
-                                        </Row>
-
-                                        {queryBuilder.tables.length > 0 && suggestions?.columns[queryBuilder.tables[0]] && (
+                            {showSuggestions && suggestions && (
+                                <div
+                                    style={{
+                                        position: 'absolute',
+                                        top: suggestionPosition.top,
+                                        left: suggestionPosition.left,
+                                        background: 'white',
+                                        border: '1px solid #d9d9d9',
+                                        borderRadius: '4px',
+                                        boxShadow: '0 2px 8px rgba(0,0,0,0.15)',
+                                        maxHeight: '200px',
+                                        overflowY: 'auto',
+                                        zIndex: 1000,
+                                        minWidth: '200px'
+                                    }}
+                                >
+                                    {(() => {
+                                        const textBefore = query.substring(0, cursorPosition);
+                                        const match = textBefore.match(/(\w+)$/);
+                                        const word = match ? match[1].toUpperCase() : '';
+                                        const filteredKeywords = suggestions.keywords.filter(k => k.startsWith(word));
+                                        const filteredTables = suggestions.tables.filter(t =>
+                                            t.toUpperCase().startsWith(word.toUpperCase())
+                                        );
+                                        return (
                                             <>
-                                                <Form.Item label="Select Columns">
-                                                    <Select
-                                                        mode="multiple"
-                                                        placeholder="Select columns (leave empty for *)"
-                                                        value={queryBuilder.selectedColumns}
-                                                        onChange={(values) => {
-                                                            const newBuilder = {
-                                                                ...queryBuilder,
-                                                                selectedColumns: values
-                                                            };
-                                                            setQueryBuilder(newBuilder);
-                                                            setQuery(buildQueryFromBuilder(newBuilder));
+                                                {filteredKeywords.map((kw, idx) => (
+                                                    <div
+                                                        key={`kw-${idx}`}
+                                                        onClick={() => handleInsertSuggestion(kw)}
+                                                        style={{
+                                                            padding: '8px 12px',
+                                                            cursor: 'pointer',
+                                                            borderBottom: '1px solid #f0f0f0'
                                                         }}
+                                                        onMouseEnter={(e) => e.target.style.background = '#f5f5f5'}
+                                                        onMouseLeave={(e) => e.target.style.background = 'white'}
                                                     >
-                                                        {suggestions.columns[queryBuilder.tables[0]].map(col => (
-                                                            <Option key={col.name} value={col.name}>
-                                                                {col.name} <Tag color="geekblue" style={{ marginLeft: '8px' }}>{col.type}</Tag>
-                                                            </Option>
-                                                        ))}
-                                                    </Select>
-                                                </Form.Item>
-
-                                                <Form.Item label="Where Conditions">
-                                                    <Space direction="vertical" style={{ width: '100%' }}>
-                                                        {queryBuilder.whereConditions.map((condition, idx) => (
-                                                            <Space key={idx} style={{ width: '100%' }}>
-                                                                <Select
-                                                                    placeholder="Column"
-                                                                    style={{ width: '200px' }}
-                                                                    value={condition.column}
-                                                                    onChange={(value) => {
-                                                                        const newConditions = [...queryBuilder.whereConditions];
-                                                                        newConditions[idx].column = value;
-                                                                        const newBuilder = {
-                                                                            ...queryBuilder,
-                                                                            whereConditions: newConditions
-                                                                        };
-                                                                        setQueryBuilder(newBuilder);
-                                                                        setQuery(buildQueryFromBuilder(newBuilder));
-                                                                    }}
-                                                                >
-                                                                    {suggestions.columns[queryBuilder.tables[0]].map(col => (
-                                                                        <Option key={col.name} value={col.name}>{col.name}</Option>
-                                                                    ))}
-                                                                </Select>
-                                                                <Select
-                                                                    placeholder="Operator"
-                                                                    style={{ width: '120px' }}
-                                                                    value={condition.operator}
-                                                                    onChange={(value) => {
-                                                                        const newConditions = [...queryBuilder.whereConditions];
-                                                                        newConditions[idx].operator = value;
-                                                                        const newBuilder = {
-                                                                            ...queryBuilder,
-                                                                            whereConditions: newConditions
-                                                                        };
-                                                                        setQueryBuilder(newBuilder);
-                                                                        setQuery(buildQueryFromBuilder(newBuilder));
-                                                                    }}
-                                                                >
-                                                                    <Option value="=">=</Option>
-                                                                    <Option value="!=">!=</Option>
-                                                                    <Option value=">">&gt;</Option>
-                                                                    <Option value="<">&lt;</Option>
-                                                                    <Option value=">=">&gt;=</Option>
-                                                                    <Option value="<=">&lt;=</Option>
-                                                                    <Option value="LIKE">LIKE</Option>
-                                                                    <Option value="IN">IN</Option>
-                                                                </Select>
-                                                                <Input
-                                                                    placeholder="Value"
-                                                                    style={{ flex: 1 }}
-                                                                    value={condition.value}
-                                                                    onChange={(e) => {
-                                                                        const newConditions = [...queryBuilder.whereConditions];
-                                                                        newConditions[idx].value = e.target.value;
-                                                                        const newBuilder = {
-                                                                            ...queryBuilder,
-                                                                            whereConditions: newConditions
-                                                                        };
-                                                                        setQueryBuilder(newBuilder);
-                                                                        setQuery(buildQueryFromBuilder(newBuilder));
-                                                                    }}
-                                                                />
-                                                                <Button
-                                                                    icon={<DeleteOutlined />}
-                                                                    onClick={() => {
-                                                                        const newConditions = queryBuilder.whereConditions.filter((_, i) => i !== idx);
-                                                                        const newBuilder = {
-                                                                            ...queryBuilder,
-                                                                            whereConditions: newConditions
-                                                                        };
-                                                                        setQueryBuilder(newBuilder);
-                                                                        setQuery(buildQueryFromBuilder(newBuilder));
-                                                                    }}
-                                                                />
-                                                            </Space>
-                                                        ))}
-                                                        <Button
-                                                            icon={<PlusOutlined />}
-                                                            onClick={() => {
-                                                                const newCondition = { column: '', operator: '=', value: '' };
-                                                                const newConditions = [...queryBuilder.whereConditions, newCondition];
-                                                                setQueryBuilder({
-                                                                    ...queryBuilder,
-                                                                    whereConditions: newConditions
-                                                                });
-                                                            }}
-                                                        >
-                                                            Add Condition
-                                                        </Button>
-                                                    </Space>
-                                                </Form.Item>
-
-                                                <Form.Item label="Order By">
-                                                    <Select
-                                                        mode="multiple"
-                                                        placeholder="Select columns to order by"
-                                                        value={queryBuilder.orderBy}
-                                                        onChange={(values) => {
-                                                            const newBuilder = {
-                                                                ...queryBuilder,
-                                                                orderBy: values
-                                                            };
-                                                            setQueryBuilder(newBuilder);
-                                                            setQuery(buildQueryFromBuilder(newBuilder));
+                                                        <Tag color="blue">{kw}</Tag>
+                                                    </div>
+                                                ))}
+                                                {filteredTables.map((table, idx) => (
+                                                    <div
+                                                        key={`table-${idx}`}
+                                                        onClick={() => handleInsertSuggestion(table)}
+                                                        style={{
+                                                            padding: '8px 12px',
+                                                            cursor: 'pointer',
+                                                            borderBottom: '1px solid #f0f0f0'
                                                         }}
+                                                        onMouseEnter={(e) => e.target.style.background = '#f5f5f5'}
+                                                        onMouseLeave={(e) => e.target.style.background = 'white'}
                                                     >
-                                                        {suggestions.columns[queryBuilder.tables[0]].map(col => (
-                                                            <Option key={col.name} value={col.name}>{col.name}</Option>
-                                                        ))}
-                                                    </Select>
-                                                </Form.Item>
+                                                        <DatabaseOutlined /> {table}
+                                                    </div>
+                                                ))}
                                             </>
-                                        )}
+                                        );
+                                    })()}
+                                </div>
+                            )}
+                        </div>
 
-                                        <Form.Item>
-                                            <Space>
-                                                <Button
-                                                    type="primary"
-                                                    icon={<PlayCircleOutlined />}
-                                                    onClick={async () => {
-                                                        const sql = buildQueryFromBuilder(queryBuilder);
-                                                        if (!sql.trim()) {
-                                                            message.warning('Please select a table first');
-                                                            return;
-                                                        }
-                                                        setQuery(sql);
-                                                        handleExecuteQuery(sql);
-                                                    }}
-                                                    loading={loading}
-                                                >
-                                                    Execute Query
-                                                </Button>
-                                                <Button
-                                                    onClick={() => {
-                                                        setQueryBuilder({
-                                                            tables: [],
-                                                            selectedColumns: [],
-                                                            joins: [],
-                                                            whereConditions: [],
-                                                            orderBy: [],
-                                                            limit: 1000
-                                                        });
-                                                        setQuery('');
-                                                    }}
-                                                >
-                                                    Reset Builder
-                                                </Button>
-                                            </Space>
-                                        </Form.Item>
-
-                                        {query && (
-                                            <Form.Item label="Generated SQL">
-                                                <TextArea
-                                                    value={query}
-                                                    readOnly
-                                                    rows={5}
-                                                    style={{ fontFamily: 'monospace', fontSize: '12px' }}
-                                                />
-                                            </Form.Item>
-                                        )}
-                                    </Form>
-                                )
-                            }
-                        ]}
-                    />
+                        <div style={{ fontSize: '12px', color: '#999', marginTop: '8px' }}>
+                            Tip: Type SQL keywords or table names and press Tab for auto-complete. Use Query Builder for visual query building.
+                        </div>
+                    </div>
                 )}
+
+                <QueryBuilderModal
+                    visible={queryBuilderModalVisible}
+                    onClose={() => setQueryBuilderModalVisible(false)}
+                    onUseQuery={(sql) => {
+                        setQuery(sql);
+                        handleExecuteQuery(sql);
+                    }}
+                    dataSource="database"
+                    showPreviewResults={true}
+                    initialValue={query}
+                />
 
                 {/* Results Section - Always visible when results exist */}
                 {(results.length > 0 || loading) && (
