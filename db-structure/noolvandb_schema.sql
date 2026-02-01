@@ -863,27 +863,29 @@ CREATE TABLE public.data_flattening_rules (
 -- 4. API Endpoints (Unified Access)
 -- ==========================================
 -- Central registry for all API routes. 
--- Handles standard CRUD, Custom Queries, and Flattened/Materialized Views.
+-- Handles standard CRUD (auto_crud), Custom Queries, and Flattened/Materialized Views.
 CREATE TABLE public.api_endpoints (
     endpoint_id SERIAL PRIMARY KEY,
     endpoint_uuid UUID DEFAULT gen_random_uuid() NOT NULL UNIQUE,
     
-    path VARCHAR(200) NOT NULL, -- e.g. "/api/v1/orders/summary"
+    path VARCHAR(200) NOT NULL, -- e.g. "/data-models/auto/users/records"
     method VARCHAR(10) DEFAULT 'GET',
     
-    -- 'auto_crud': Standard REST on a model
+    -- 'auto_crud': Standard REST on a model (GET/POST/PUT/DELETE)
     -- 'flattened_view': Read-Optimized View (Materialized or Computed)
-    -- 'custom_query': Ad-hoc SQL
+    -- 'custom_query': Ad-hoc SQL with table joins using table_alias
     type VARCHAR(50) NOT NULL, 
     
-    -- Linked Resources
+    -- Main model for auto_crud; primary model for custom_query
     related_model_id INTEGER REFERENCES public.data_models(model_id) ON DELETE SET NULL,
     
-    -- Logic Linkage
-    flattening_rule_id INTEGER REFERENCES public.data_flattening_rules(rule_id) ON DELETE SET NULL, -- Used if type = 'flattened_view'
+    -- Models used in this endpoint (for permission check via model_row_access_policies)
+    -- Includes related_model_id and any joined models in custom_query
+    reference_model_ids INTEGER[] DEFAULT '{}', -- Array of data_models.model_id
     
-    -- Logic (Inline)
-    custom_logic_json JSONB, -- Ad-hoc SQL for 'custom_query'
+    -- Custom query SQL and config (for type = 'custom_query')
+    -- Stores: { "query": "SELECT ...", "joins": [...], "params": [...] }
+    custom_json JSONB DEFAULT '{}'::jsonb,
     
     -- Security & System
     permission_required VARCHAR(100), -- Role/Permission key

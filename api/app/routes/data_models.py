@@ -796,6 +796,31 @@ async def create_data_model(
                 system_fields_start_order + 2
             )
         
+        # Insert api_endpoints for auto_crud (GET, POST, PUT, DELETE)
+        base_path = f"/data-models/auto/{payload.model_name}/records"
+        ref_ids = [model_id]
+        for path_suffix, method in [
+            ("", "GET"),
+            ("", "POST"),
+            ("/{record_id}", "PUT"),
+            ("/{record_id}", "DELETE"),
+        ]:
+            path = base_path + path_suffix
+            await PostgresDB.execute(
+                """
+                INSERT INTO public.api_endpoints (
+                    path, method, type, related_model_id, reference_model_ids,
+                    permission_required, is_builtin, created_by
+                ) VALUES ($1, $2, 'auto_crud', $3, $4, NULL, FALSE, $5)
+                ON CONFLICT (path, method) DO NOTHING
+                """,
+                path,
+                method,
+                model_id,
+                ref_ids,
+                user_id,
+            )
+
         # Return created model
         return await get_data_model(model_id, include_fields=True, user=user, db=db)
         
@@ -1134,9 +1159,12 @@ async def check_model_deletion(
                 "items": [{"id": r["rule_id"], "name": r["rule_name"]} for r in flattening_rules]
             })
         
-        # Check api_endpoints
+        # Check api_endpoints (related_model_id or model_id in reference_model_ids)
         api_endpoints = await PostgresDB.fetch(
-            "SELECT endpoint_id, path FROM public.api_endpoints WHERE related_model_id = $1",
+            """
+            SELECT endpoint_id, path FROM public.api_endpoints
+            WHERE related_model_id = $1 OR $1 = ANY(reference_model_ids)
+            """,
             model_id
         )
         if api_endpoints:
@@ -2058,4 +2086,224 @@ async def auto_delete_record(
         raise HTTPException(status_code=404, detail="Record not found (or not permitted)")
 
     return {"model_name": model_name, "deleted": True, "record_id": deleted.get(pk_col)}
+
+
+# --- Custom Endpoint (custom_query with model_row_access_policies) ---
+
+async def _build_row_policy_clauses_with_qualifier(
+    model_id: int,
+    action_bit: int,
+    user: Optional[Dict[str, Any]],
+    request: Request,
+    table_qualifier: str,
+) -> Tuple[str, List[Any]]:
+    """
+    Build row policy clauses qualified by table_qualifier (alias or table name).
+    Returns (clause_sql_without_where, args).
+    """
+    policies = await _get_row_access_policies(model_id, action_bit)
+    if not policies:
+        return ("", [])
+
+    clauses: List[str] = []
+    args: List[Any] = []
+    qual = f'"{table_qualifier}"' if _is_safe_identifier(table_qualifier) else table_qualifier
+
+    for p in policies:
+        scope_field = p.get("scope_field")
+        scope_source = p.get("scope_source")
+        required = bool(p.get("required"))
+
+        if not scope_field or not _is_safe_identifier(scope_field):
+            raise HTTPException(status_code=500, detail="Invalid row access policy configuration")
+
+        if scope_source == "AUTH_CONTEXT":
+            scope_vals = _resolve_auth_scope_values(user or {}, scope_field)
+            scope_vals = [str(v) for v in scope_vals if v is not None]
+        elif scope_source == "USER":
+            scope_vals = _normalize_user_values(request.query_params.get(scope_field))
+        else:
+            raise HTTPException(status_code=500, detail="Invalid row access policy configuration")
+
+        if required and not scope_vals:
+            raise HTTPException(status_code=403, detail=f"Missing required scope: {scope_field}")
+
+        if not scope_vals:
+            continue
+
+        array_type, coerced = _infer_array_type(scope_vals)
+        args.append(coerced)
+        param_idx = len(args)
+
+        col_ref = f'{qual}."{scope_field}"'
+        if array_type == "int":
+            clauses.append(f"{col_ref} = ANY(${param_idx}::int[])")
+        else:
+            clauses.append(f"{col_ref}::text = ANY(${param_idx}::text[])")
+
+    if not clauses:
+        return ("", [])
+    return ("(" + " AND ".join(clauses) + ")", args)
+
+
+def _inject_row_policies_into_sql(
+    sql: str,
+    policy_clauses: List[Tuple[str, List[Any]]],
+) -> Tuple[str, List[Any]]:
+    """
+    Inject row policy clauses into custom SQL.
+    policy_clauses: list of (clause_sql, args) - clause_sql is e.g. "(alias.\"col\" = ANY($1::int[]))"
+    Returns (modified_sql, combined_args).
+    """
+    if not policy_clauses:
+        return (sql, [])
+
+    combined_args: List[Any] = []
+    all_clauses: List[str] = []
+    param_offset = 0
+
+    for clause_sql, args in policy_clauses:
+        if not clause_sql:
+            continue
+        # Re-number placeholders: $1 -> $(param_offset+1), $2 -> $(param_offset+2), etc.
+        def repl(m):
+            n = int(m.group(1))
+            return f"${param_offset + n}"
+
+        shifted = re.sub(r"\$(\d+)\b", repl, clause_sql)
+        combined_args.extend(args)
+        param_offset += len(args)
+        all_clauses.append(shifted)
+
+    policy_sql = " AND ".join(all_clauses)
+
+    sql_upper = sql.upper()
+    # Find insertion point: before ORDER BY, GROUP BY, HAVING, LIMIT, or OFFSET
+    pattern = re.compile(
+        r"\b(ORDER\s+BY|GROUP\s+BY|HAVING|LIMIT|OFFSET)\b",
+        re.IGNORECASE | re.DOTALL,
+    )
+    match = pattern.search(sql)
+    insert_before = match.start() if match else len(sql)
+
+    before_part = sql[:insert_before].rstrip()
+    after_part = sql[insert_before:].lstrip() if insert_before < len(sql) else ""
+
+    if " WHERE " in before_part.upper():
+        # Append AND (policy) before the next keyword
+        modified = before_part + " AND " + policy_sql
+    else:
+        modified = before_part + " WHERE " + policy_sql
+
+    if after_part:
+        modified += " " + after_part
+
+    return (modified, combined_args)
+
+
+@router.get("/custom-endpoint/{endpoint_id}")
+async def custom_endpoint_get(
+    endpoint_id: int,
+    request: Request,
+    limit: int = Query(10, ge=1, le=1000, description="Page size"),
+    offset: int = Query(0, ge=0, description="Offset for pagination"),
+    authorization: Optional[str] = Header(None),
+):
+    """
+    Execute a custom_query type API endpoint by ID.
+    Applies model_row_access_policies for reference_model_ids.
+    Pagination is compulsory (limit, offset).
+    """
+    user = _decode_optional_user(authorization)
+    if not user:
+        raise HTTPException(status_code=401, detail="Authentication required")
+    _assert_user_type_allowed(user)
+
+    row = await PostgresDB.fetchrow(
+        """
+        SELECT ae.endpoint_id, ae.path, ae.method, ae.type, ae.related_model_id,
+               ae.reference_model_ids, ae.custom_json
+        FROM public.api_endpoints ae
+        WHERE ae.endpoint_id = $1
+        """,
+        endpoint_id,
+    )
+    if not row:
+        raise HTTPException(status_code=404, detail="API endpoint not found")
+
+    if row.get("type") != "custom_query":
+        raise HTTPException(status_code=400, detail="Endpoint is not a custom_query type")
+
+    custom_json = row.get("custom_json") or {}
+    if isinstance(custom_json, str):
+        try:
+            custom_json = json.loads(custom_json)
+        except Exception:
+            custom_json = {}
+    query_sql = (custom_json.get("query") or "").strip()
+    if not query_sql:
+        raise HTTPException(status_code=400, detail="Custom endpoint has no query configured")
+
+    query_upper = query_sql.upper()
+    if not query_upper.startswith("SELECT"):
+        raise HTTPException(status_code=400, detail="Only SELECT queries are allowed")
+
+    ref_ids = row.get("reference_model_ids") or []
+    if not isinstance(ref_ids, list):
+        ref_ids = []
+
+    policy_clauses: List[Tuple[str, List[Any]]] = []
+    if ref_ids:
+        models = await PostgresDB.fetch(
+            """
+            SELECT model_id, table_name, table_alias
+            FROM public.data_models
+            WHERE model_id = ANY($1::int[])
+            """,
+            ref_ids,
+        )
+        model_by_id = {m["model_id"]: dict(m) for m in (models or [])}
+
+        for mid in ref_ids:
+            if mid not in model_by_id:
+                continue
+            m = model_by_id[mid]
+            qualifier = (m.get("table_alias") or m.get("table_name") or "").strip()
+            if not qualifier or not _is_safe_identifier(qualifier):
+                continue
+            clause, args = await _build_row_policy_clauses_with_qualifier(
+                mid, ACTION_READ, user, request, qualifier
+            )
+            if clause:
+                policy_clauses.append((clause, args))
+
+    if policy_clauses:
+        query_sql, policy_args = _inject_row_policies_into_sql(query_sql, policy_clauses)
+    else:
+        policy_args = []
+
+    # Enforce pagination: strip existing LIMIT/OFFSET and add our own
+    query_sql = re.sub(r"\s+LIMIT\s+\d+", "", query_sql, flags=re.IGNORECASE)
+    query_sql = re.sub(r"\s+OFFSET\s+\d+", "", query_sql, flags=re.IGNORECASE)
+    query_sql = query_sql.rstrip()
+    query_sql += f" LIMIT {min(limit, 1000)} OFFSET {offset}"
+
+    args = list(policy_args)
+    try:
+        rows = await PostgresDB.fetch(query_sql, *args)
+    except Exception as e:
+        logger.exception("Custom endpoint query failed")
+        raise HTTPException(status_code=400, detail=f"Query execution error: {str(e)}")
+
+    results = [dict(r) for r in (rows or [])]
+    columns = list(results[0].keys()) if results else []
+
+    return {
+        "endpoint_id": endpoint_id,
+        "columns": columns,
+        "records": results,
+        "limit": limit,
+        "offset": offset,
+        "row_count": len(results),
+    }
 
