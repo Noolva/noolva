@@ -451,23 +451,33 @@ async def get_suggestions(
             "columns": {}
         }
         
-        # Get tables
+        # Get tables with optional table_alias from data_models
         tables_query = """
-            SELECT table_name
-            FROM information_schema.tables
-            WHERE table_schema = 'public'
-              AND table_type = 'BASE TABLE'
-            ORDER BY table_name
+            SELECT t.table_name, dm.table_alias
+            FROM information_schema.tables t
+            LEFT JOIN public.data_models dm ON dm.table_name = t.table_name AND dm.is_active = TRUE
+            WHERE t.table_schema = 'public'
+              AND t.table_type = 'BASE TABLE'
+            ORDER BY t.table_name
         """
         
         if prefix:
-            tables_query += " AND table_name ILIKE $1"
+            tables_query = """
+                SELECT t.table_name, dm.table_alias
+                FROM information_schema.tables t
+                LEFT JOIN public.data_models dm ON dm.table_name = t.table_name AND dm.is_active = TRUE
+                WHERE t.table_schema = 'public'
+                  AND t.table_type = 'BASE TABLE'
+                  AND t.table_name ILIKE $1
+                ORDER BY t.table_name
+            """
             params = [f"{prefix}%"]
         else:
             params = []
         
         tables = await db.fetch(tables_query, *params)
         suggestions["tables"] = [t["table_name"] for t in tables]
+        suggestions["table_aliases"] = {t["table_name"]: t.get("table_alias") for t in tables if t.get("table_alias")}
         
         # Get columns for each table
         for table in tables:

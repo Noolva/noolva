@@ -1,32 +1,28 @@
+admin themes, theming settings, parameters,- separate pr
+shortcuts-  separate pr
+test with one more user login. separate pr,
+auto-logout-timout-with relogin  with password protection, only for specific views.
+handle:{"detail": "Token expired"}, and check where we are setting token expiry, allow relogin with password:
 
-admin themes, theming settings, parameters,
-shortcuts
-test with one more user login.
-side bar, search option, parent_child support,
+side bar, search option, parent_child support, do in a separate pr safety
+auto hide side bar, theme side bar type, fontname in theme, side bar parent child menu support
 branding,logo, url icon, loss of tabs when switching apps,
 db analysis,index suggessions, rows in dangling without parent foreing reference,
 file manager,
-auto hide side bar, theme side bar type, fontname in theme, side bar parent child menu support
+
 transaction password or pin/ on model field use pin/ use mfa
 another s3 storage for backups, another client pc for backups, it will synch automatically when we schedulled.
 debug mode in project->conentrate when developing customer pages.
 
 
-auto-logout-timout-with relogin  with password protection, only for specific views.
 
-timeout handling for,
-| Layer            | Timeout |
-| ---------------- | ------- |
-| HTTP client      | ✔️      |
-| DB queries       | ✔️      |
-| FastAPI request  | ✔️      |
-| Gunicorn workers | ✔️      |
-| Background jobs  | ✔️      |
+
+timeout handling for,HTTP client,DB queries,FastAPI request,Gunicorn workers,Background jobs
 
 
 is ui components, existing views(direct jsx codes) following permissions rules. collect features insert it , and implement permission exists allow it.
-verify vc componentt usage by searchinch "moodal" in dir
-handle:{"detail": "Token expired"}, and check where we are setting token expiry, allow relogin with password:
+verify vc componentt usage by searchinch "modal" in dir
+
 collections add,edit,page,
 
 given PRS:
@@ -36,16 +32,16 @@ NF0003/feature/icon-explorer-page-icon-viewer-and-chooser-components
 NF0004/feature/data-models-and-collections-page
 NF0005/feature/data-models-create-new-model-drawer-enhancement
 NF0006/feature/data-model-test-each-field-type-json-validation
+NF0007/hotfix/enforce-utc-timestampz-on-all-places
 current,
 ======
 
-
+NF0008/feature/api-endpoints-initiation
 
 
 encryption testing?
 after models, endpoints, actions,views.
 
-Migrate timestamp → timestamptz
 
 DB-Query->query builder should support join queries or object queries,
 actions may have requirements, eg. client app,runtime environment etc?
