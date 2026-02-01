@@ -202,6 +202,15 @@ except Exception as e:
     logger.error(f"Failed to register collections router: {e}")
     raise
 
+# Import and include api_endpoints router
+try:
+    from routes import api_endpoints
+    app.include_router(api_endpoints.router, prefix="/api-endpoints", tags=["API Endpoints"])
+    logger.info("API endpoints router registered successfully at /api-endpoints")
+except Exception as e:
+    logger.error(f"Failed to register api_endpoints router: {e}")
+    raise
+
 
 @app.get("/")
 def home():

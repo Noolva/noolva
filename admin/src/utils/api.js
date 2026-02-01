@@ -334,10 +334,10 @@ export const api = {
     },
 
     // Developer Console - Database Query
-    executeQuery: async (query) => {
+    executeQuery: async (query, limit = 1000) => {
         const response = await axiosInstance.post("/dev-console/database/execute-query", {
             query,
-            limit: 1000
+            limit
         });
         return response.data;
     },
@@ -661,6 +661,54 @@ export const api = {
 
     deleteCollection: async (collectionId) => {
         const response = await axiosInstance.delete(`/collections/${collectionId}`);
+        return response.data;
+    },
+
+    // API Endpoints
+    getApiEndpoints: async ({ limit = 500, offset = 0, search = null, type = null } = {}) => {
+        const params = { limit, offset };
+        if (search) params.search = search;
+        if (type) params.type_filter = type;
+        const response = await axiosInstance.get("/api-endpoints/list", { params });
+        return response.data;
+    },
+
+    getApiEndpoint: async (endpointId) => {
+        const response = await axiosInstance.get(`/api-endpoints/${endpointId}`);
+        return response.data;
+    },
+
+    createApiEndpoint: async (data) => {
+        const response = await axiosInstance.post("/api-endpoints/create", data);
+        return response.data;
+    },
+
+    updateApiEndpoint: async (endpointId, data) => {
+        const response = await axiosInstance.put(`/api-endpoints/${endpointId}`, data);
+        return response.data;
+    },
+
+    deleteApiEndpoint: async (endpointId) => {
+        const response = await axiosInstance.delete(`/api-endpoints/${endpointId}`);
+        return response.data;
+    },
+
+    // API Tester - call custom endpoint (GET with pagination)
+    callCustomEndpoint: async (endpointId, { limit = 10, offset = 0 } = {}) => {
+        const response = await axiosInstance.get(`/data-models/custom-endpoint/${endpointId}`, {
+            params: { limit, offset },
+        });
+        return response.data;
+    },
+
+    // API Tester - generic call for auto_crud or any endpoint
+    testApiCall: async ({ path, method = 'GET', params = {}, body = null }) => {
+        const url = path.startsWith('/') ? path : `/${path}`;
+        const config = { url, method, params };
+        if (body != null && ['POST', 'PUT', 'PATCH'].includes(method.toUpperCase())) {
+            config.data = body;
+        }
+        const response = await axiosInstance.request(config);
         return response.data;
     },
 };
