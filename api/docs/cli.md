@@ -546,6 +546,9 @@ ENV=development
 
 # Session Security
 SESSION_SECRET=your_session_secret
+
+# App Scope (saas | tenant) - controls theme and scope comparisons
+APP_SCOPE=saas
 ```
 
 ---

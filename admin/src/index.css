@@ -58,6 +58,16 @@ body[data-theme="light"] {
   --font-size-large: 16px;
 }
 
+/* Sidebar background - override Ant Design Sider */
+.ant-layout-sider.app-sidebar,
+.ant-layout-sider.app-sidebar.ant-layout-sider-dark {
+  background: var(--sidebar-bg-color, #f1f5f9) !important;
+}
+
+.ant-layout-sider.app-sidebar .ant-menu {
+  background: transparent !important;
+}
+
 .custom-window-tabs .ant-tabs-nav {
   margin-bottom: 2px !important;
 }
@@ -98,7 +108,7 @@ body[data-theme="light"] {
 .login-left {
   flex: 1;
   position: relative;
-  background: linear-gradient(135deg, var(--primary-color, #1677ff), rgba(0,0,0,0.15));
+  background: linear-gradient(135deg, var(--primary-color, #1677ff), rgba(0, 0, 0, 0.15));
   color: white;
   display: flex;
   align-items: center;

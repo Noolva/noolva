@@ -1,10 +1,11 @@
 import React from "react";
 import { ColorPicker, Form } from "antd";
 
-// Convert color value to hex string for ColorPicker
-function normalizeColorValue(value) {
+// Normalize: "none"/null/undefined -> "none" when allowNone (store "none"); else undefined for ColorPicker display
+function normalizeColorValue(value, allowNone) {
+  if (allowNone && (value === "none" || value === null || value === undefined || value === "")) return "none";
   if (!value) return undefined;
-  
+
   // If it's already a string (hex), return it
   if (typeof value === "string") {
     const cleaned = value.replace(/^["']+|["']+$/g, '');
@@ -13,7 +14,7 @@ function normalizeColorValue(value) {
     }
     return cleaned;
   }
-  
+
   // If it's an object, convert to hex
   if (typeof value === "object" && value !== null) {
     // Handle metaColor object
@@ -26,7 +27,7 @@ function normalizeColorValue(value) {
         return `#${r}${g}${b}`;
       }
     }
-    
+
     // Handle direct color object
     if (value.r !== undefined && value.g !== undefined && value.b !== undefined) {
       const r = Math.round(value.r).toString(16).padStart(2, '0');
@@ -34,36 +35,44 @@ function normalizeColorValue(value) {
       const b = Math.round(value.b).toString(16).padStart(2, '0');
       return `#${r}${g}${b}`;
     }
-    
+
     if (typeof value.toHexString === 'function') {
       return value.toHexString();
     }
-    
+
     if (value.hex) {
       return value.hex;
     }
   }
-  
+
   return value;
+}
+
+function ColorPickerWithNone({ value, onChange, allowNone, ...rest }) {
+  const pickerValue = (value === "none" || value === null || value === undefined || value === "") ? undefined : value;
+  const handleChange = (color) => {
+    if (allowNone && (color === null || color === undefined)) {
+      onChange("none");
+    } else if (color && typeof color.toHexString === "function") {
+      onChange(color.toHexString());
+    } else {
+      onChange(color);
+    }
+  };
+  return <ColorPicker {...rest} value={pickerValue} onChange={handleChange} showText allowClear={allowNone} />;
 }
 
 export function VCColor({ component }) {
   const input_values = component?.input_values || {};
+  const allowNone = input_values.allow_none ?? input_values.allow_clear ?? false;
 
   return (
-    <Form.Item 
-      name={input_values.name} 
+    <Form.Item
+      name={input_values.name}
       label={input_values.label}
-      getValueFromEvent={(color) => {
-        // ColorPicker returns a Color object, convert to hex string
-        if (color && typeof color.toHexString === 'function') {
-          return color.toHexString();
-        }
-        return color;
-      }}
-      normalize={(value) => normalizeColorValue(value)}
+      normalize={(value) => normalizeColorValue(value, allowNone)}
     >
-      <ColorPicker showText />
+      <ColorPickerWithNone allowNone={allowNone} />
     </Form.Item>
   );
 }

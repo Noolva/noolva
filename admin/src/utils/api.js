@@ -307,6 +307,42 @@ export const api = {
         return response.data;
     },
 
+    // Themes
+    getThemes: async ({ scope = "saas", user_id = null, tenant_id = null } = {}) => {
+        const params = { scope };
+        if (user_id != null) params.user_id = user_id;
+        if (tenant_id != null) params.tenant_id = tenant_id;
+        const response = await axiosInstance.get("/themes", { params });
+        return response.data;
+    },
+    getActiveTheme: async ({ scope = "saas", user_id = null, tenant_id = null } = {}) => {
+        const params = { scope };
+        if (user_id != null) params.user_id = user_id;
+        if (tenant_id != null) params.tenant_id = tenant_id;
+        const response = await axiosInstance.get("/themes/active", { params });
+        return response.data;
+    },
+    getTheme: async (themeId) => {
+        const response = await axiosInstance.get(`/themes/${themeId}`);
+        return response.data;
+    },
+    createTheme: async (data) => {
+        const response = await axiosInstance.post("/themes", data);
+        return response.data;
+    },
+    updateTheme: async (themeId, data) => {
+        const response = await axiosInstance.put(`/themes/${themeId}`, data);
+        return response.data;
+    },
+    upsertMyTheme: async ({ theme_json, scope = "saas" }) => {
+        const response = await axiosInstance.put("/themes/mine", { theme_json }, { params: { scope } });
+        return response.data;
+    },
+    deleteTheme: async (themeId) => {
+        const response = await axiosInstance.delete(`/themes/${themeId}`);
+        return response.data;
+    },
+
     // Developer Console - Database
     getDatabaseTables: async (search = null) => {
         const params = search ? { search } : {};
@@ -566,7 +602,7 @@ export const api = {
 
     deleteDataModel: async (modelId, deleteTable = false, confirmDeleteData = false) => {
         const response = await axiosInstance.delete(`/data-models/model/${modelId}`, {
-            params: { 
+            params: {
                 delete_table: deleteTable,
                 confirm_delete_data: confirmDeleteData
             }

@@ -46,6 +46,20 @@ psql -d noolva -f noolvandb.sql
 
 Alternatively, run files individually in the numbered order to debug specific modules.
 
+## 📦 Migrations (Existing Databases)
+
+For databases that were created before schema changes, run the appropriate migration scripts **in order**:
+
+```bash
+# 1. Themes refactor (add themes table, migrate settings, add Themes menu)
+psql -d noolva -f db-structure/update_old_db_themes.sql
+
+# 2. Add header/sidebar colors to existing themes
+psql -d noolva -f db-structure/update_themes_add_header_sidebar_bg.sql
+```
+
+Replace `noolva` with your actual database name if different.
+
 ## 🌟 Key Features
 
 1.  **Multi-Tenancy**:

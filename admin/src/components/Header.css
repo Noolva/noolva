@@ -5,8 +5,8 @@
     height: 52px;
     /* smaller header */
     padding: 0 12px;
-    background: var(--surface-color, #ffffff);
-    color: var(--text-color, #101828);
+    background: var(--header-bg-color, var(--primary-color, #001529));
+    color: var(--header-text-color, #ffffff);
     border-bottom: 1px solid var(--border-color, #e4e7ec);
 }
 
@@ -37,14 +37,72 @@
 
 .search-bar {
     border-radius: 4px;
-    border: 1px solid var(--border-color, #e4e7ec);
+    border: 1px solid rgba(255, 255, 255, 0.3);
     padding: 4px 8px;
     min-width: 150px;
+    background: rgba(255, 255, 255, 0.1);
+    color: var(--header-text-color, #ffffff);
 }
 
-.icon {
+.search-bar::placeholder {
+    color: rgba(255, 255, 255, 0.7);
+}
+
+.search-bar .ant-input {
+    color: var(--header-text-color, #ffffff);
+    background: transparent !important;
+}
+
+.search-bar .ant-input::placeholder {
+    color: rgba(255, 255, 255, 0.7);
+}
+
+.search-bar .ant-input-prefix {
+    color: rgba(255, 255, 255, 0.85);
+}
+
+/* Header icons and tools - use white when header has dark background */
+.header .icon {
     font-size: 18px;
-    color: var(--text-color, #101828);
+    color: var(--header-text-color, #ffffff);
+}
+
+.header .brand-name {
+    color: var(--header-text-color, #ffffff);
+}
+
+/* Select in header - white text for dark header */
+.header .ant-select .ant-select-selector {
+    background: rgba(255, 255, 255, 0.1) !important;
+    border-color: rgba(255, 255, 255, 0.3) !important;
+    color: var(--header-text-color, #ffffff) !important;
+}
+
+.header .ant-select .ant-select-selection-item,
+.header .ant-select .ant-select-selection-placeholder {
+    color: var(--header-text-color, #ffffff) !important;
+}
+
+.header .ant-select .ant-select-arrow {
+    color: rgba(255, 255, 255, 0.85) !important;
+}
+
+.header .ant-badge .ant-badge-count {
+    color: var(--header-text-color, #ffffff);
+}
+
+/* Account switcher and other text in header */
+.header .ant-typography,
+.header .ant-typography strong {
+    color: var(--header-text-color, #ffffff) !important;
+}
+
+.header .ant-typography.ant-typography-secondary {
+    color: rgba(255, 255, 255, 0.85) !important;
+}
+
+.header .ant-avatar {
+    border: 1px solid rgba(255, 255, 255, 0.3);
 }
 
 .clickable {

@@ -114,8 +114,8 @@ export function VCSelect({ component }) {
   };
 
   return (
-    <Form.Item 
-      name={input_values.name} 
+    <Form.Item
+      name={input_values.name}
       label={input_values.label}
       normalize={normalizeValue}
     >
@@ -127,6 +127,7 @@ export function VCSelect({ component }) {
         showSearch
         optionFilterProp="label"
         loading={loading}
+        onChange={input_values.onChange}
         notFoundContent={loading ? "Loading..." : (options.length === 0 ? "No options available" : undefined)}
       />
     </Form.Item>

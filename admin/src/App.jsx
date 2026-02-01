@@ -10,6 +10,7 @@ import Dashboard from './pages/Dashboard';
 import ListPage from './pages/ListPage';
 import AddForm from './pages/AddForm';
 import Settings from './pages/Settings';
+import Themes from './pages/Themes';
 import Database from './pages/Database';
 import DbQuery from './pages/DbQuery';
 import DataModels from './pages/DataModels';
@@ -51,6 +52,7 @@ const AppContent = () => {
       case 'list': return <ListPage />;
       case 'add': return <AddForm />;
       case 'settings': return <Settings />;
+      case 'themes': return <Themes />;
       case 'dev_console_database': return <Database />;
       case 'dev_console_db_query': return <DbQuery />;
       case 'studio_data_models': return <DataModels />;
@@ -69,6 +71,7 @@ const AppContent = () => {
           if (routePath === 'studio_collections') return <Collections />;
           if (routePath === 'studio_api_endpoints') return <ApiEndpoints />;
           if (routePath === 'settings') return <Settings />;
+          if (routePath === 'themes') return <Themes />;
         }
         // Try to render based on menu title if available
         if (menuData?.menu_title) {
@@ -103,7 +106,7 @@ const AppContent = () => {
   const addTab = useCallback((key, label, menuData, appKey = null, appData = null) => {
     const currentAppKey = appKey || selectedApp;
     const currentAppData = appData || selectedAppData;
-    
+
     if (!tabs.items.some(tab => tab.key === key)) {
       const newItems = [...tabs.items, { key, label, menuData, appKey: currentAppKey, appData: currentAppData }];
       const newTabs = { activeKey: key, items: newItems };
@@ -135,7 +138,7 @@ const AppContent = () => {
     }
     const newTabs = { activeKey: newActiveKey, items: newItems };
     updateTabs(newTabs);
-    
+
     // If we closed the active tab and there's a new active tab, switch to its app
     if (newActiveKey) {
       const newActiveTab = newItems.find(tab => tab.key === newActiveKey);
@@ -152,10 +155,10 @@ const AppContent = () => {
       // Find all existing duplicates to determine the next number
       const baseLabel = tabToDuplicate.label.replace(/\s*\(\d+\)$/, ''); // Remove existing number suffix
       const duplicatePattern = new RegExp(`^${baseLabel.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\s*\\(\\d+\\)$`);
-      const existingDuplicates = tabs.items.filter(tab => 
+      const existingDuplicates = tabs.items.filter(tab =>
         duplicatePattern.test(tab.label) || tab.label === baseLabel
       );
-      
+
       // Find the highest number used
       let maxNumber = 0;
       existingDuplicates.forEach(tab => {
@@ -166,11 +169,11 @@ const AppContent = () => {
           maxNumber = Math.max(maxNumber, 0); // Original counts as (0) or base
         }
       });
-      
+
       const nextNumber = maxNumber + 1;
       const newKey = `${targetKey}_${nextNumber}_${Date.now()}`;
       const newLabel = `${baseLabel} (${nextNumber})`;
-      
+
       // Store menuData and app info so content can be re-rendered
       addTab(newKey, newLabel, tabToDuplicate.menuData, tabToDuplicate.appKey, tabToDuplicate.appData);
     }
@@ -184,9 +187,9 @@ const AppContent = () => {
     const targetIndex = tabs.items.findIndex(tab => tab.key === targetKey);
     if (targetIndex > 0) {
       const newItems = tabs.items.slice(targetIndex);
-      const newTabs = { 
+      const newTabs = {
         activeKey: tabs.activeKey === targetKey ? targetKey : tabs.activeKey,
-        items: newItems 
+        items: newItems
       };
       updateTabs(newTabs);
     }
@@ -196,9 +199,9 @@ const AppContent = () => {
     const targetIndex = tabs.items.findIndex(tab => tab.key === targetKey);
     if (targetIndex >= 0 && targetIndex < tabs.items.length - 1) {
       const newItems = tabs.items.slice(0, targetIndex + 1);
-      const newTabs = { 
+      const newTabs = {
         activeKey: tabs.activeKey === targetKey ? targetKey : tabs.activeKey,
-        items: newItems 
+        items: newItems
       };
       updateTabs(newTabs);
     }
@@ -257,7 +260,7 @@ const AppContent = () => {
   const handleTabChange = useCallback((key) => {
     const newTabs = { ...tabs, activeKey: key };
     updateTabs(newTabs);
-    
+
     // Switch app/sidebar to match the tab's app
     const tab = tabs.items.find(tab => tab.key === key);
     if (tab && tab.appKey && tab.appKey !== selectedApp) {
@@ -291,10 +294,10 @@ const AppContent = () => {
   // Initialize from URL after apps are loaded
   useEffect(() => {
     if (!appsLoaded) return;
-    
+
     const appFromURL = searchParams.get('app');
     const tabFromURL = searchParams.get('tab');
-    
+
     if (appFromURL && !selectedApp) {
       // Find the app from URL - handle both string and number comparison
       const appData = apps.find(app => {
@@ -302,12 +305,12 @@ const AppContent = () => {
         // Compare as strings to handle both "5" and 5
         return String(appKey) === String(appFromURL) || appKey === appFromURL;
       });
-      
+
       if (appData) {
         const appKey = appData.app_id || appData.app_uuid || appData.app_name;
         setSelectedApp(appKey);
         setSelectedAppData(appData);
-        
+
         setUrlInitialized(true);
       } else {
         setUrlInitialized(true);
@@ -320,7 +323,7 @@ const AppContent = () => {
   // Fetch menus when app is selected
   useEffect(() => {
     if (!selectedApp || !selectedAppData) return;
-    
+
     const fetchMenus = async () => {
       try {
         const { api } = await import('./utils/api');
@@ -339,22 +342,22 @@ const AppContent = () => {
         }));
       }
     };
-    
+
     fetchMenus();
   }, [selectedApp, selectedAppData]);
 
   // Create/activate tab from URL after menus are loaded
   useEffect(() => {
     if (!selectedApp || !urlInitialized) return;
-    
+
     const tabFromURL = searchParams.get('tab');
     if (!tabFromURL) return;
-    
+
     // Decode URL if it was encoded
     const decodedTabKey = decodeURIComponent(tabFromURL);
     const appKey = selectedAppData?.app_id || selectedAppData?.app_uuid || selectedAppData?.app_name || selectedApp;
     const menus = menusByApp[appKey] || [];
-    
+
     // Check if tab already exists globally
     const existingTab = tabs.items.find(tab => tab.key === decodedTabKey || tab.key === tabFromURL);
     if (existingTab) {
@@ -375,13 +378,13 @@ const AppContent = () => {
         const menuUuid = String(menu.menu_uuid || '');
         const routePath = String(menu.route_path || '');
         const menuTitle = menu.menu_title?.toLowerCase().replace(/\s+/g, '_') || '';
-        
+
         return menuId === decodedTabKey || menuId === tabFromURL ||
-               menuUuid === decodedTabKey || menuUuid === tabFromURL ||
-               routePath === decodedTabKey || routePath === tabFromURL ||
-               menuTitle === decodedTabKey.toLowerCase() || menuTitle === tabFromURL.toLowerCase();
+          menuUuid === decodedTabKey || menuUuid === tabFromURL ||
+          routePath === decodedTabKey || routePath === tabFromURL ||
+          menuTitle === decodedTabKey.toLowerCase() || menuTitle === tabFromURL.toLowerCase();
       });
-      
+
       if (menuData) {
         // Found menu data, use menu_id as the tab key (cleaner URL)
         const tabKey = menuData.menu_id || menuData.menu_uuid || decodedTabKey;
@@ -400,12 +403,13 @@ const AppContent = () => {
     <Layout style={{ minHeight: '100vh' }}>
       <Header onAppSelect={handleAppSelect} onMenuSelect={handleSubmenuSelect} />
       <Layout>
-        <Sider 
-          width={selectedApp ? 200 : 0} 
-          className="site-layout-background"
+        <Sider
+          width={selectedApp ? 200 : 0}
+          className="site-layout-background app-sidebar"
           style={{
             transition: 'width 0.2s ease-in-out',
-            overflow: 'hidden'
+            overflow: 'hidden',
+            background: 'var(--sidebar-bg-color, var(--primary-color, #001529))'
           }}
         >
           {selectedApp && (
@@ -418,10 +422,10 @@ const AppContent = () => {
         </Sider>
         <Layout style={{ padding: '0 10px 10px' }}>
           <Content style={{ margin: '5px 0' }}>
-            <AppTabs 
+            <AppTabs
               tabs={tabs}
               renderContent={renderContent}
-              onChange={handleTabChange} 
+              onChange={handleTabChange}
               onEdit={removeTab}
               onDuplicate={duplicateTab}
               onCloseAll={closeAllTabs}

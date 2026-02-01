@@ -19,6 +19,7 @@ export const getIconClass = (iconName) => {
         'safety': 'fas fa-shield-alt',
         'key': 'fas fa-key',
         'setting': 'fas fa-cog',
+        'bgcolors': 'fas fa-palette',
         
         // App Studio icons
         'shop': 'fas fa-store',

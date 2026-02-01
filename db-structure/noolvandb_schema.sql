@@ -1136,6 +1136,35 @@ CREATE TABLE public.settings (
 
 CREATE INDEX idx_settings_tenant ON public.settings(tenant_id);
 CREATE INDEX idx_settings_key ON public.settings(setting_key);
+
+-- ==========================================
+-- 4a. Themes Table (Global/User-scoped theme configs)
+-- ==========================================
+-- Stores theme JSON configs. user_id NULL = global theme. scope: saas | tenant.
+CREATE TABLE public.themes (
+    theme_id SERIAL PRIMARY KEY,
+    theme_uuid UUID DEFAULT gen_random_uuid() NOT NULL UNIQUE,
+    
+    theme_name VARCHAR(100) NOT NULL, -- Display name e.g. "Default Corporate", "My Custom Theme"
+    theme_key VARCHAR(100) NOT NULL,   -- Key for reference e.g. "default", "slate", "custom_1"
+    
+    theme_json JSONB NOT NULL DEFAULT '{}'::jsonb, -- Full theme config (colors, fonts, light/dark palettes)
+    
+    user_id INTEGER REFERENCES public.users(user_id) ON DELETE CASCADE, -- NULL = global
+    scope VARCHAR(20) NOT NULL DEFAULT 'saas' CHECK (scope IN ('saas', 'tenant')),
+    tenant_id INTEGER REFERENCES public.tenants(tenant_id) ON DELETE CASCADE, -- For tenant-scoped themes
+    
+    is_builtin BOOLEAN DEFAULT FALSE, -- default/slate cannot be deleted
+    is_default BOOLEAN DEFAULT FALSE, -- default for scope
+    
+    created_by INTEGER REFERENCES public.users(user_id),
+    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP NOT NULL,
+    last_updated TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP NOT NULL
+);
+
+CREATE INDEX idx_themes_user ON public.themes(user_id);
+CREATE INDEX idx_themes_scope ON public.themes(scope);
+CREATE INDEX idx_themes_tenant ON public.themes(tenant_id);
 -- 08_ai_model.sql
 -- Classification: AI & Knowledge Graph
 -- Description: Schema for the AI Engine: Knowledge Graph nodes, Relationships, Facts (Events), and Vector Embeddings.
