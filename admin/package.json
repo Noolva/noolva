@@ -8,7 +8,7 @@
     "npm": ">=10.0.0"
   },
   "scripts": {
-    "dev": "vite",
+    "dev": "export VITE_APP_SCOPE=saas && vite",
     "build": "vite build",
     "lint": "eslint .",
     "preview": "vite preview"

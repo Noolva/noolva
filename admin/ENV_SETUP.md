@@ -38,6 +38,21 @@ VITE_API_URL=https://api.yourdomain.com
 ```
 - For production or remote API servers
 
+## VITE_APP_SCOPE Configuration
+
+Controls which scope (saas/tenant) the app operates in for theme and scope comparisons:
+
+```
+VITE_APP_SCOPE=saas
+```
+or
+```
+VITE_APP_SCOPE=tenant
+```
+
+- Default: `saas` if not set
+- Used for themes and scope-aware features
+
 ## Notes
 
 - Environment variables must start with `VITE_` to be exposed to the frontend

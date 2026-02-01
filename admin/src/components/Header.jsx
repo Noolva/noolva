@@ -18,7 +18,9 @@ import {
     BellOutlined,
     ShopOutlined,
     DownOutlined,
-    BgColorsOutlined
+    BgColorsOutlined,
+    BulbOutlined,
+    BulbFilled
 } from '@ant-design/icons';
 import { useAuth } from '../contexts/AuthContext';
 import { api } from '../utils/api';
@@ -193,7 +195,7 @@ const Header = ({ onAppSelect, onMenuSelect }) => {
         },
     ];
 
-    const { isDark, primary, secondary } = useTheme();
+    const { isDark, toggleDark, primary, secondary } = useTheme();
     const handleLanguageSelect = ({ key }) => {
         console.log('Selected language:', key);
         // Add your logic to change language here
@@ -259,6 +261,13 @@ const Header = ({ onAppSelect, onMenuSelect }) => {
                             </Option>
                         ))}
                     </Select>
+                    <Space
+                        style={{ cursor: 'pointer' }}
+                        onClick={toggleDark}
+                        title={isDark ? 'Switch to Light' : 'Switch to Dark'}
+                    >
+                        {isDark ? <BulbOutlined className="icon" /> : <BulbFilled className="icon" />}
+                    </Space>
                     <Space
                         style={{ cursor: 'pointer' }}
                         onClick={() => onMenuSelect?.('settings')}
