@@ -1,8 +1,11 @@
 import React, { createContext, useContext, useEffect, useMemo, useState } from 'react';
 import { ConfigProvider, theme as antdTheme } from 'antd';
 import { api } from '../utils/api';
+import { useAuth } from './AuthContext';
 
 const ThemeContext = createContext();
+
+const THEME_MODE_KEY = 'noolva_theme_mode';
 
 export const themes = {
     // Theme 1 (Default): clean corporate neutral
@@ -49,11 +52,17 @@ const DEFAULT_FONT_BASE = 14;
 const DEFAULT_FONT_SMALL = 12;
 const DEFAULT_FONT_LARGE = 16;
 
+const DEFAULT_HEADER_BG = '#2563eb';
+const DEFAULT_SIDEBAR_BG = '#f1f5f9';
+
 export const ThemeProvider = ({ children }) => {
+    const { user } = useAuth();
     const [isDark, setIsDark] = useState(false);
     const [themeKey, setThemeKey] = useState('default');
     const [primary, setPrimary] = useState(DEFAULT_PRIMARY);
     const [secondary, setSecondary] = useState(DEFAULT_SECONDARY);
+    const [headerBgColor, setHeaderBgColor] = useState(DEFAULT_HEADER_BG);
+    const [sidebarBgColor, setSidebarBgColor] = useState(DEFAULT_SIDEBAR_BG);
     const [fontBase, setFontBase] = useState(DEFAULT_FONT_BASE);
     const [fontSmall, setFontSmall] = useState(DEFAULT_FONT_SMALL);
     const [fontLarge, setFontLarge] = useState(DEFAULT_FONT_LARGE);
@@ -62,6 +71,9 @@ export const ThemeProvider = ({ children }) => {
     const toggleDark = () => {
         const newDark = !isDark;
         setIsDark(newDark);
+        try {
+            localStorage.setItem(THEME_MODE_KEY, newDark ? 'dark' : 'light');
+        } catch (e) { }
         document.body.setAttribute('data-theme', newDark ? 'dark' : 'light');
     };
 
@@ -76,34 +88,46 @@ export const ThemeProvider = ({ children }) => {
         }
     };
 
-    // Load settings once (best-effort)
+    // Load theme from themes API (best-effort)
     useEffect(() => {
         let mounted = true;
         const load = async () => {
             try {
-                const res = await api.getSettings({
-                    keys: [
-                        'theme',
-                        'theme_color_primary',
-                        'theme_color_secondary',
-                        'theme_mode',
-                        'font_size_base',
-                        'font_size_small',
-                        'font_size_large',
-                    ],
-                    scope: 'global',
-                });
-                const s = res?.settings || {};
-                if (!mounted) return;
+                // Theme mode from header toggle - persisted in localStorage
+                try {
+                    const stored = localStorage.getItem(THEME_MODE_KEY);
+                    if (stored === 'dark' || stored === 'light') setIsDark(stored === 'dark');
+                } catch (e) { }
 
-                if (typeof s.theme === 'string' && themes[s.theme]) setThemeKey(s.theme);
-                if (typeof s.theme_color_primary === 'string') setPrimary(s.theme_color_primary);
-                if (typeof s.theme_color_secondary === 'string') setSecondary(s.theme_color_secondary);
-                if (typeof s.theme_mode === 'string') setIsDark(s.theme_mode === 'dark');
+                const res = await api.getActiveTheme({ scope: 'saas', user_id: user?.user_id ?? undefined });
+                const t = res?.theme;
+                if (!mounted || !t) {
+                    if (mounted) setSettingsLoaded(true);
+                    return;
+                }
 
-                if (typeof s.font_size_base === 'number') setFontBase(s.font_size_base);
-                if (typeof s.font_size_small === 'number') setFontSmall(s.font_size_small);
-                if (typeof s.font_size_large === 'number') setFontLarge(s.font_size_large);
+                const rawTj = t.theme_json;
+                const tj = (() => {
+                    if (!rawTj) return {};
+                    if (typeof rawTj === 'string') {
+                        try { return JSON.parse(rawTj); } catch { return {}; }
+                    }
+                    return rawTj;
+                })();
+                if (typeof tj.theme === 'string' && themes[tj.theme]) setThemeKey(tj.theme);
+                if (typeof tj.theme_color_primary === 'string') setPrimary(tj.theme_color_primary);
+                if (typeof tj.theme_color_secondary === 'string') setSecondary(tj.theme_color_secondary);
+                if (typeof tj.header_bg_color === 'string') setHeaderBgColor(tj.header_bg_color === 'none' ? '' : tj.header_bg_color);
+                else setHeaderBgColor(DEFAULT_HEADER_BG);
+                if (typeof tj.sidebar_bg_color === 'string') setSidebarBgColor(tj.sidebar_bg_color === 'none' ? '' : tj.sidebar_bg_color);
+                else setSidebarBgColor(DEFAULT_SIDEBAR_BG);
+
+                if (typeof tj.font_size_base === 'number') setFontBase(tj.font_size_base);
+                else if (typeof tj.font_size_base === 'string') setFontBase(parseInt(tj.font_size_base, 10) || DEFAULT_FONT_BASE);
+                if (typeof tj.font_size_small === 'number') setFontSmall(tj.font_size_small);
+                else if (typeof tj.font_size_small === 'string') setFontSmall(parseInt(tj.font_size_small, 10) || DEFAULT_FONT_SMALL);
+                if (typeof tj.font_size_large === 'number') setFontLarge(tj.font_size_large);
+                else if (typeof tj.font_size_large === 'string') setFontLarge(parseInt(tj.font_size_large, 10) || DEFAULT_FONT_LARGE);
             } catch (e) {
                 // ignore - defaults will be used
             } finally {
@@ -112,7 +136,7 @@ export const ThemeProvider = ({ children }) => {
         };
         load();
         return () => { mounted = false; };
-    }, []);
+    }, [user?.user_id]);
 
     // Apply CSS variables globally for custom CSS pieces (header/login/tabs)
     useEffect(() => {
@@ -126,10 +150,14 @@ export const ThemeProvider = ({ children }) => {
         root.style.setProperty('--border-color', palette.border);
         root.style.setProperty('--primary-color', primary);
         root.style.setProperty('--secondary-color', secondary);
+        root.style.setProperty('--header-bg-color', headerBgColor || 'transparent');
+        root.style.setProperty('--sidebar-bg-color', sidebarBgColor || 'transparent');
+        root.style.setProperty('--header-text-color', (headerBgColor && headerBgColor !== 'transparent') ? '#ffffff' : 'var(--text-color)');
+        root.style.setProperty('--sidebar-text-color', (sidebarBgColor && sidebarBgColor !== 'transparent') ? '#ffffff' : 'var(--text-color)');
         root.style.setProperty('--font-size-base', `${fontBase}px`);
         root.style.setProperty('--font-size-small', `${fontSmall}px`);
         root.style.setProperty('--font-size-large', `${fontLarge}px`);
-    }, [isDark, themeKey, primary, secondary, fontBase, fontSmall, fontLarge]);
+    }, [isDark, themeKey, primary, secondary, headerBgColor, sidebarBgColor, fontBase, fontSmall, fontLarge]);
 
     const theme = useMemo(() => {
         const palette = (themes[themeKey] || themes.default)[isDark ? 'dark' : 'light'];
@@ -158,6 +186,10 @@ export const ThemeProvider = ({ children }) => {
             settingsLoaded,
             primary,
             secondary,
+            headerBgColor,
+            sidebarBgColor,
+            setHeaderBgColor,
+            setSidebarBgColor,
             fontBase,
             fontSmall,
             fontLarge,

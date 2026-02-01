@@ -153,6 +153,10 @@ app.include_router(authentication.router, prefix="/auth", tags=["Authentication"
 from routes import settings
 app.include_router(settings.router, tags=["Settings"])
 
+# Import and include themes router
+from routes import themes
+app.include_router(themes.router, tags=["Themes"])
+
 # Import and include database router
 from routes import database
 app.include_router(database.router, tags=["Developer Console - Database"])

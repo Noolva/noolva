@@ -1,29 +1,12 @@
-admin themes, theming settings, parameters,- separate pr
-shortcuts-  separate pr
-test with one more user login. separate pr,
-auto-logout-timout-with relogin  with password protection, only for specific views.
-handle:{"detail": "Token expired"}, and check where we are setting token expiry, allow relogin with password:
-
-side bar, search option, parent_child support, do in a separate pr safety
-auto hide side bar, theme side bar type, fontname in theme, side bar parent child menu support
-branding,logo, url icon, loss of tabs when switching apps,
-db analysis,index suggessions, rows in dangling without parent foreing reference,
-file manager,
-
-transaction password or pin/ on model field use pin/ use mfa
-another s3 storage for backups, another client pc for backups, it will synch automatically when we schedulled.
-debug mode in project->conentrate when developing customer pages.
-
-
-
-
-timeout handling for,HTTP client,DB queries,FastAPI request,Gunicorn workers,Background jobs
-
-
-is ui components, existing views(direct jsx codes) following permissions rules. collect features insert it , and implement permission exists allow it.
-verify vc componentt usage by searchinch "modal" in dir
-
-collections add,edit,page,
+feature/menu-shortcuts-workflow-notification-events-shortcuts
+feature/db-analysis-indexing-recommendation-dangling-tables
+feature/public-private-filemanager
+feature/pin-based-authentication-for-support
+feature/backup-db-s3-to-local-pc-another-s3-automate scheduling
+feature/views-developer-mode-with debuging-actions
+feature/branding-logo-url-icon-settings 
+feature/data-model-encryption-test
+feature/share-options-anything-via-copy-plaintext-excel-whatsapp-email
 
 given PRS:
 NF0001/feature/ui-custom-components-for-inputs-views
@@ -33,19 +16,34 @@ NF0004/feature/data-models-and-collections-page
 NF0005/feature/data-models-create-new-model-drawer-enhancement
 NF0006/feature/data-model-test-each-field-type-json-validation
 NF0007/hotfix/enforce-utc-timestampz-on-all-places
-current,
-======
-
 NF0008/feature/api-endpoints-initiation
 
+current,
+======
+NF0009/feature/theming-global-user-based-theming
+NF0010/feature/users-ui-auto-logout-test-users-action-mfa-protection-token-expired
+NF0011/feature/side-bar-search-parent-child-auto-hide-sidebar-theme
+NF0012/feature/env-based-httpclient-dbquery-fastapi-request-gunicorn-workers-configurations
+NF0013/feature/collecting-existing-module-features-insert-to-db-permissions-management
+NF0014/feature/actions-flow-planning-implementations
 
-encryption testing?
-after models, endpoints, actions,views.
 
+actions->planning pending,
+=========================,
 
-DB-Query->query builder should support join queries or object queries,
-actions may have requirements, eg. client app,runtime environment etc?
-query edit not supporting own queries example distinct;
+separate folder for action_handler scripts,keep those files in s3 bucket public/private path cdn,
+core_fuctions
+is_built_in
+runtime_type=>noolvan Api,Python 3.9,Node 24,Javascript
+action_computing_steps
+order_no
+openwindow,openpage->is may be action in the ui,
+in the server also, we need runtimes separately with specific packages installed, or keep atleast one Runtime.
+and Desktop Agent-act as api,Runtime agent both, in desktop agent we can add additional runtimes.
+runtime agent must have separate logs,
+
+RunTime Agents:
+allow to use my run time agent to all actions,requested byme.
 
 
 
