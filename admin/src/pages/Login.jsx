@@ -28,10 +28,13 @@ const { Text, Title } = Typography;
 const Login = () => {
     const { message } = App.useApp();
     const navigate = useNavigate();
-    const { login, loginWithGoogle, accounts, removeAccount, switchAccount, loading: authLoading, initialized } = useAuth();
+    const { login, loginVerifyTotp, loginWithGoogle, accounts, removeAccount, switchAccount, loading: authLoading, initialized } = useAuth();
 
     // Toggle between account list & add-account form
     const [showForm, setShowForm] = useState(false);
+
+    // 2FA step: after password OK, backend returns requires_totp and we show TOTP code input
+    const [totpStep, setTotpStep] = useState({ active: false, tempToken: null });
 
     // Form loading state
     const [loading, setLoading] = useState(false);
@@ -100,39 +103,40 @@ const Login = () => {
         }
     };
 
-    // Handle new account submission
+    // Handle new account submission (credentials or 2FA code step)
     const onFinish = async (values) => {
         setLoading(true);
         try {
+            if (totpStep.active && totpStep.tempToken) {
+                const result = await loginVerifyTotp(totpStep.tempToken, values.totp_code?.trim() || '');
+                if (result.success) {
+                    setTotpStep({ active: false, tempToken: null });
+                    navigate('/');
+                } else {
+                    setErrorDetails(result.error || { message: 'Invalid code', errorData: { description: 'Invalid or expired code' } });
+                    setErrorModalVisible(true);
+                }
+                setLoading(false);
+                return;
+            }
+
             const result = await login(values.identifier, values.password, values.company_id || null);
 
             if (result.success) {
                 navigate('/');
+            } else if (result.requiresTotp && result.tempToken) {
+                setTotpStep({ active: true, tempToken: result.tempToken });
+                form.setFieldsValue({ totp_code: '' });
             } else {
-                // Show error modal for failed login
-                console.log('Login failed, error details:', {
-                    error: result.error,
-                    hasErrorData: !!result.error?.errorData,
-                    errorData: result.error?.errorData,
-                    hasResponse: !!result.error?.response,
-                    responseData: result.error?.response?.data,
-                    message: result.error?.message,
-                    isApiError: result.error?.isApiError,
-                    isNetworkError: result.error?.isNetworkError
-                });
-                
-                // Ensure we have a valid error object
-                const errorToShow = result.error || { 
+                const errorToShow = result.error || {
                     message: 'Login failed. Please check your credentials.',
                     errorData: { description: 'Login failed. Please check your credentials.' }
                 };
-                
                 setErrorDetails(errorToShow);
                 setErrorModalVisible(true);
             }
         } catch (error) {
             console.error('Login error in onFinish:', error);
-            // Show error modal with error details
             setErrorDetails(error);
             setErrorModalVisible(true);
         } finally {
@@ -203,7 +207,9 @@ const Login = () => {
                 <Card className="login-card">
                     {showForm ? (
                         <>
-                            <Title className="login-card-title">Sign In</Title>
+                            <Title className="login-card-title">
+                                {totpStep.active ? 'Two-factor code' : 'Sign In'}
+                            </Title>
                             <Form
                                 form={form}
                                 name="login_form"
@@ -212,69 +218,77 @@ const Login = () => {
                                 className="login-form"
                                 autoComplete="off"
                             >
-                                <Form.Item
-                                    label="Username, Email, or Phone"
-                                    name="identifier"
-                                    rules={[
-                                        {
-                                            required: true,
-                                            message: 'Please enter your username, email, or phone number',
-                                        },
-                                    ]}
-                                >
-                                    <Input
-                                        placeholder="username, email@example.com, or phone"
-                                        prefix={<UserOutlined />}
-                                    />
-                                </Form.Item>
-
-                                <Form.Item
-                                    label="Password"
-                                    name="password"
-                                    rules={[
-                                        { required: true, message: 'Please enter your password' },
-                                    ]}
-                                >
-                                    <Input.Password placeholder="••••••••" />
-                                </Form.Item>
-
-                                <Form.Item name="company_id" style={{ display: 'none' }}>
-                                    <Input type="hidden" />
-                                </Form.Item>
-
-                                <Form.Item>
-                                    <Button
-                                        type="primary"
-                                        htmlType="submit"
-                                        block
-                                        loading={loading}
-                                    >
-                                        Sign In
-                                    </Button>
-                                </Form.Item>
-
-                                <Divider>Or continue with</Divider>
-
-                                <Button
-                                    icon={<GoogleOutlined />}
-                                    className="social-btn"
-                                    onClick={handleGoogleLogin}
-                                    block
-                                    loading={loading}
-                                >
-                                    Sign in with Google
-                                </Button>
-
-                                {accounts.length > 0 && (
+                                {totpStep.active ? (
                                     <>
-                                        <Divider />
+                                        <Form.Item
+                                            label="Enter the 6-digit code from your authenticator app"
+                                            name="totp_code"
+                                            rules={[
+                                                { required: true, message: 'Please enter the code' },
+                                                { len: 6, message: 'Code must be 6 digits' },
+                                            ]}
+                                        >
+                                            <Input placeholder="000000" maxLength={6} />
+                                        </Form.Item>
+                                        <Form.Item>
+                                            <Button type="primary" htmlType="submit" block loading={loading}>
+                                                Verify
+                                            </Button>
+                                        </Form.Item>
                                         <Text
                                             className="login-back-link"
-                                            onClick={() => setShowForm(false)}
+                                            onClick={() => setTotpStep({ active: false, tempToken: null })}
                                             style={{ cursor: 'pointer', display: 'block', textAlign: 'center' }}
                                         >
-                                            ← Back to my accounts
+                                            ← Back to password
                                         </Text>
+                                    </>
+                                ) : (
+                                    <>
+                                        <Form.Item
+                                            label="Username, Email, or Phone"
+                                            name="identifier"
+                                            rules={[{ required: true, message: 'Please enter your username, email, or phone number' }]}
+                                        >
+                                            <Input placeholder="username, email@example.com, or phone" prefix={<UserOutlined />} />
+                                        </Form.Item>
+                                        <Form.Item
+                                            label="Password"
+                                            name="password"
+                                            rules={[{ required: true, message: 'Please enter your password' }]}
+                                        >
+                                            <Input.Password placeholder="••••••••" />
+                                        </Form.Item>
+                                        <Form.Item name="company_id" style={{ display: 'none' }}>
+                                            <Input type="hidden" />
+                                        </Form.Item>
+                                        <Form.Item>
+                                            <Button type="primary" htmlType="submit" block loading={loading}>
+                                                Sign In
+                                            </Button>
+                                        </Form.Item>
+                                        <Divider>Or continue with</Divider>
+                                        <Button
+                                            icon={<GoogleOutlined />}
+                                            className="social-btn"
+                                            onClick={handleGoogleLogin}
+                                            block
+                                            loading={loading}
+                                        >
+                                            Sign in with Google
+                                        </Button>
+                                        {accounts.length > 0 && (
+                                            <>
+                                                <Divider />
+                                                <Text
+                                                    className="login-back-link"
+                                                    onClick={() => setShowForm(false)}
+                                                    style={{ cursor: 'pointer', display: 'block', textAlign: 'center' }}
+                                                >
+                                                    ← Back to my accounts
+                                                </Text>
+                                            </>
+                                        )}
                                     </>
                                 )}
                             </Form>

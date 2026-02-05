@@ -17,8 +17,11 @@ import DataModels from './pages/DataModels';
 import IconExplorer from './pages/IconExplorer';
 import Collections from './pages/Collections';
 import ApiEndpoints from './pages/ApiEndpoints';
+import OrganizationUsers from './pages/OrganizationUsers';
 import { useAuth } from './contexts/AuthContext';
 import { ThemeProvider } from './contexts/ThemeContext';
+import ReLoginModal from './components/ReLoginModal';
+import IdleTimer from './components/IdleTimer';
 
 const { Content, Sider } = Layout;
 
@@ -60,6 +63,7 @@ const AppContent = () => {
       case 'studio_icons': return <IconExplorer />;
       case 'studio_collections': return <Collections />;
       case 'studio_api_endpoints': return <ApiEndpoints />;
+      case 'org_users': return <OrganizationUsers />;
       default: {
         // Try to match by route_path from menuData (since key might be menu_id)
         if (menuData?.route_path) {
@@ -72,6 +76,7 @@ const AppContent = () => {
           if (routePath === 'studio_api_endpoints') return <ApiEndpoints />;
           if (routePath === 'settings') return <Settings />;
           if (routePath === 'themes') return <Themes />;
+          if (routePath === 'org_users') return <OrganizationUsers />;
         }
         // Try to render based on menu title if available
         if (menuData?.menu_title) {
@@ -459,7 +464,7 @@ const App = () => {
       <Router>
         <Routes>
           <Route path="/login" element={<Login />} />
-          <Route path="/*" element={user ? <AppContent /> : <Navigate to="/login" />} />
+          <Route path="/*" element={user ? <><IdleTimer /><AppContent /><ReLoginModal /></> : <Navigate to="/login" />} />
         </Routes>
       </Router>
     </ThemeProvider>
