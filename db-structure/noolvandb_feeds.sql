@@ -226,6 +226,7 @@ DECLARE
     ft_bool INT;
     ft_image INT;
     ft_single_choice INT;
+    ft_duration INT;
 BEGIN
     SELECT field_type_id INTO ft_text FROM public.field_types WHERE type_code = 'text';
     SELECT field_type_id INTO ft_color FROM public.field_types WHERE type_code = 'color';
@@ -233,6 +234,7 @@ BEGIN
     SELECT field_type_id INTO ft_bool FROM public.field_types WHERE type_code = 'boolean';
     SELECT field_type_id INTO ft_image FROM public.field_types WHERE type_code = 'image';
     SELECT field_type_id INTO ft_single_choice FROM public.field_types WHERE type_code = 'single_choice';
+    SELECT field_type_id INTO ft_duration FROM public.field_types WHERE type_code = 'duration';
 
     -- 1. General Settings
     INSERT INTO public.settings (group_name, setting_key, setting_name, description, field_type_id, default_value, value, scope, is_built_in, field_config_json)
@@ -250,7 +252,8 @@ BEGIN
     
     -- 2. Security
     ('Security', 'password_min_length', 'Minimum Password Length', 'Enforced complexity', ft_number, '8', '8', 'global', true, '{"min":6,"max":64,"step":1}'::jsonb),
-    ('Security', 'enable_2fa', 'Enable 2FA', 'Allow users to enable Two-Factor Auth', ft_bool, 'false', 'false', 'global', true, '{}'::jsonb)
+    ('Security', 'enable_2fa', 'Enable 2FA', 'Allow users to enable Two-Factor Auth', ft_bool, 'false', 'false', 'global', true, '{}'::jsonb),
+    ('Security', 'idle_timeout_minutes', 'Idle session lock (minutes)', 'Lock session after this many minutes of inactivity; user must re-enter password (and 2FA if enabled). Use -1 for no lock.', ft_duration, '15', '15', 'global', true, '{"min":-1,"max":1440,"step":1,"unit":"minutes"}'::jsonb)
     ON CONFLICT DO NOTHING;
 END $$;
 

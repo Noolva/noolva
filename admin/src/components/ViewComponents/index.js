@@ -10,6 +10,7 @@ import { VCCheckbox } from "./inputs/VCCheckbox";
 import { VCRadio } from "./inputs/VCRadio";
 import { VCUpload } from "./inputs/VCUpload";
 import { VCColor } from "./inputs/VCColor";
+import { VCDuration } from "./inputs/VCDuration";
 import { VCIconChooser } from "./inputs/VCIconChooser";
 import { VCJsonEditor } from "./inputs/VCJsonEditor";
 
@@ -54,6 +55,7 @@ export const viewComponentRegistry = {
   radio: VCRadio,
   upload: VCUpload,
   color: VCColor,
+  duration: VCDuration,
   iconchooser: VCIconChooser,
   icon_chooser: VCIconChooser,
   jsoneditor: VCJsonEditor,

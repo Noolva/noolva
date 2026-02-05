@@ -78,6 +78,32 @@ export const getCurrentAccountId = () => {
     return localStorage.getItem('current_account_id');
 };
 
+// Session idle lock: shared across tabs so duplicate tab cannot bypass lock
+const SESSION_LOCKED_KEY = 'session_locked';
+const SESSION_LOCKED_2FA_KEY = 'session_locked_require_2fa';
+
+export const getSessionLocked = () => localStorage.getItem(SESSION_LOCKED_KEY) === '1';
+export const getSessionLockedRequire2FA = () => localStorage.getItem(SESSION_LOCKED_2FA_KEY) === '1';
+export const setSessionLocked = (require2fa = false) => {
+    localStorage.setItem(SESSION_LOCKED_KEY, '1');
+    localStorage.setItem(SESSION_LOCKED_2FA_KEY, require2fa ? '1' : '0');
+};
+export const clearSessionLock = () => {
+    localStorage.removeItem(SESSION_LOCKED_KEY);
+    localStorage.removeItem(SESSION_LOCKED_2FA_KEY);
+};
+
+// Requests that are allowed even when session is locked (so user can log back in / reauth)
+const isAuthAllowedWhenLocked = (config) => {
+    const method = (config.method || 'get').toLowerCase();
+    const url = (config.url || '').replace(/^\//, '');
+    if (method !== 'post') return false;
+    if (url === 'auth/reauth' || url.endsWith('/auth/reauth')) return true;
+    if (url === 'auth/login' || url.endsWith('/auth/login')) return true;
+    if (url === 'auth/login/verify-totp' || url.includes('auth/login/verify-totp')) return true;
+    return false;
+};
+
 /**
  * Set current account ID
  */
@@ -102,9 +128,15 @@ const axiosInstance = axios.create({
     timeout: 30000, // 30 seconds timeout
 });
 
-// Request interceptor to add auth token
+// Request interceptor: block all requests when session is locked (except auth flows like reauth/login)
 axiosInstance.interceptors.request.use(
     (config) => {
+        if (getSessionLocked() && !isAuthAllowedWhenLocked(config)) {
+            try {
+                window.dispatchEvent(new CustomEvent('auth:idleLock', { detail: { enable_2fa: getSessionLockedRequire2FA() } }));
+            } catch (e) { /* ignore */ }
+            return Promise.reject(Object.assign(new Error('Session locked'), { isSessionLocked: true }));
+        }
         const token = getAccessToken();
         if (token) {
             config.headers.Authorization = `Bearer ${token}`;
@@ -137,6 +169,18 @@ axiosInstance.interceptors.response.use(
         if (error.response) {
             // Server responded with error status (4xx, 5xx) - THIS IS NOT A NETWORK ERROR
             const errorData = error.response.data;
+
+            // 401 Token expired: show re-login modal without losing current UI
+            const detail = errorData?.detail ?? errorData?.message ?? '';
+            const isTokenExpired = error.response.status === 401 &&
+                (detail === 'Token expired' || (typeof detail === 'string' && detail.toLowerCase().includes('token expired')));
+            if (isTokenExpired) {
+                try {
+                    window.dispatchEvent(new CustomEvent('auth:tokenExpired', { detail: { error, errorData } }));
+                } catch (e) {
+                    console.warn('auth:tokenExpired dispatch failed', e);
+                }
+            }
 
             // Debug: Log the raw response data to see what we're getting
             console.log('Raw error.response.data:', errorData);
@@ -212,6 +256,14 @@ export const api = {
         return response.data;
     },
 
+    loginVerifyTotp: async (tempToken, totpCode) => {
+        const response = await axiosInstance.post('/auth/login/verify-totp', {
+            temp_token: tempToken,
+            totp_code: totpCode,
+        });
+        return response.data;
+    },
+
     googleLogin: () => {
         // Redirect to Google OAuth
         // For proxy mode (empty API_BASE_URL), use full URL for redirects
@@ -261,6 +313,55 @@ export const api = {
         setAccessToken(null);
         setStoredAccounts([]);
         setCurrentAccountId(null);
+    },
+
+    // Organization Users (list excludes system user)
+    getOrganizationUsers: async () => {
+        const response = await axiosInstance.get('/auth/users');
+        return response.data;
+    },
+
+    createUser: async (data) => {
+        const response = await axiosInstance.post('/auth/create-user', data);
+        return response.data;
+    },
+
+    resetUserPassword: async (userId, newPassword) => {
+        const response = await axiosInstance.post(`/auth/users/${userId}/reset-password`, {
+            new_password: newPassword,
+        });
+        return response.data;
+    },
+
+    // Two-Factor Authentication (Authenticator app)
+    get2FASetup: async () => {
+        const response = await axiosInstance.get('/auth/2fa/setup');
+        return response.data;
+    },
+    verify2FA: async (code) => {
+        const response = await axiosInstance.post('/auth/2fa/verify', { code });
+        return response.data;
+    },
+    disable2FA: async () => {
+        const response = await axiosInstance.post('/auth/2fa/disable');
+        return response.data;
+    },
+
+    // Current user: update own idle timeout (null = use global, -1 = no lock, number = minutes)
+    updateMyIdleTimeout: async (idleTimeoutMinutes) => {
+        const response = await axiosInstance.put('/auth/me/idle-timeout', {
+            idle_timeout_minutes: idleTimeoutMinutes,
+        });
+        return response.data;
+    },
+
+    // Re-auth after idle lock (password + optional TOTP code)
+    reauth: async (password, totpCode = null) => {
+        const response = await axiosInstance.post('/auth/reauth', {
+            password,
+            totp_code: totpCode || null,
+        });
+        return response.data;
     },
 
     // Menus

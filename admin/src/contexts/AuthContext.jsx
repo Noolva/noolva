@@ -1,6 +1,6 @@
 import React, { createContext, useState, useContext, useEffect } from 'react';
 import { App } from 'antd';
-import { api, setAccessToken, getAccessToken, getStoredAccounts, setStoredAccounts, getCurrentAccountId, setCurrentAccountId } from '../utils/api';
+import { api, setAccessToken, getAccessToken, getStoredAccounts, setStoredAccounts, getCurrentAccountId, setCurrentAccountId, clearSessionLock, getSessionLockedRequire2FA } from '../utils/api';
 
 const AuthContext = createContext();
 
@@ -33,7 +33,18 @@ export const AuthProvider = ({ children }) => {
                         );
                         setCurrentAccount(account || storedAccounts[0]);
                     } catch (error) {
-                        // Token is invalid, clear storage
+                        // Session locked: keep token so reauth can use it; show app with unlock modal
+                        if (error.isSessionLocked) {
+                            setUser({
+                                user_id: 0,
+                                username: 'User',
+                                enable_2fa: getSessionLockedRequire2FA(),
+                            });
+                            setAccounts(storedAccounts);
+                            setCurrentAccount(storedAccounts[0] || null);
+                            return;
+                        }
+                        // Token invalid or other error, clear storage
                         setAccessToken(null);
                         setStoredAccounts([]);
                         setCurrentAccountId(null);
@@ -56,6 +67,19 @@ export const AuthProvider = ({ children }) => {
     const login = async (identifier, password, companyId = null) => {
         try {
             const response = await api.login(identifier, password, companyId);
+
+            // New login clears any previous session lock
+            clearSessionLock();
+
+            // If 2FA required, return so the Login page can show TOTP step
+            if (response.requires_totp && response.temp_token) {
+                return {
+                    success: false,
+                    requiresTotp: true,
+                    tempToken: response.temp_token,
+                    user: response.user,
+                };
+            }
 
             // Store token first
             setAccessToken(response.access_token);
@@ -120,7 +144,7 @@ export const AuthProvider = ({ children }) => {
                 isApiError: error.isApiError,
                 isNetworkError: error.isNetworkError
             });
-            
+
             // Return the full error object so the UI can extract proper error messages
             // Ensure error structure is preserved - especially errorData from axios interceptor
             const errorToReturn = {
@@ -132,13 +156,61 @@ export const AuthProvider = ({ children }) => {
                 isApiError: error.isApiError,
                 isNetworkError: error.isNetworkError
             };
-            
+
             console.log('Returning error to UI:', errorToReturn);
-            
-            return { 
-                success: false, 
+
+            return {
+                success: false,
                 error: errorToReturn
             };
+        }
+    };
+
+    /**
+     * Complete login with 2FA code (after login returned requiresTotp).
+     */
+    const loginVerifyTotp = async (tempToken, totpCode) => {
+        try {
+            const response = await api.loginVerifyTotp(tempToken, totpCode);
+            setAccessToken(response.access_token);
+            setUser(response.user);
+
+            let context;
+            try {
+                context = await api.getUserContext();
+            } catch (e) {
+                context = { user: response.user, company: null };
+            }
+
+            const accountData = {
+                id: Date.now(),
+                userId: response.user.user_id,
+                username: response.user.username,
+                companyId: response.user.company_id,
+                companyName: context.company?.company_name || null,
+                accessToken: response.access_token,
+                sessionId: response.session_id,
+                lastLogin: new Date().toISOString(),
+            };
+
+            const storedAccounts = getStoredAccounts();
+            const existingAccountIndex = storedAccounts.findIndex(
+                acc => acc.userId === accountData.userId && acc.companyId === accountData.companyId
+            );
+            const updatedAccounts = existingAccountIndex >= 0
+                ? storedAccounts.map((acc, i) => (i === existingAccountIndex ? accountData : acc))
+                : [...storedAccounts, accountData];
+
+            setStoredAccounts(updatedAccounts);
+            setCurrentAccountId(accountData.id);
+            setAccounts(updatedAccounts);
+            setCurrentAccount(accountData);
+
+            message.success('Login successful');
+            return { success: true };
+        } catch (error) {
+            const msg = error?.response?.data?.description ?? error?.response?.data?.detail ?? error?.message ?? 'Verification failed';
+            return { success: false, error: { ...error, message: msg, errorData: { description: msg } } };
         }
     };
 
@@ -249,6 +321,40 @@ export const AuthProvider = ({ children }) => {
     };
 
     /**
+     * Refresh current user from server (e.g. after updating profile/settings like idle timeout).
+     */
+    const refreshUser = async () => {
+        try {
+            const context = await api.getUserContext();
+            setUser(context.user);
+        } catch (e) {
+            console.warn('refreshUser failed', e);
+        }
+    };
+
+    /**
+     * Re-authenticate after idle lock (password + optional 2FA code). Updates token and user.
+     */
+    const reauth = async (password, totpCode = null) => {
+        try {
+            const result = await api.reauth(password, totpCode);
+            setAccessToken(result.access_token);
+            setUser(result.user);
+            try {
+                const context = await api.getUserContext();
+                setUser(context.user);
+            } catch (e) {
+                // Keep result.user if context fails
+            }
+            message.success('Welcome back. You can continue.');
+            return { success: true };
+        } catch (error) {
+            const msg = error?.response?.data?.description ?? error?.response?.data?.detail ?? error?.message ?? 'Re-authentication failed';
+            return { success: false, error: { ...error, message: msg, errorData: { description: msg } } };
+        }
+    };
+
+    /**
      * Logout
      */
     const logout = async () => {
@@ -257,6 +363,7 @@ export const AuthProvider = ({ children }) => {
         } catch (error) {
             console.error('Logout error:', error);
         }
+        clearSessionLock();
         setUser(null);
         setAccounts([]);
         setCurrentAccount(null);
@@ -270,9 +377,12 @@ export const AuthProvider = ({ children }) => {
         loading,
         initialized,
         login,
+        loginVerifyTotp,
         loginWithGoogle,
         switchAccount,
         removeAccount,
+        reauth,
+        refreshUser,
         logout,
     };
 

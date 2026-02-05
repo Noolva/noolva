@@ -5,8 +5,8 @@ feature/pin-based-authentication-for-support
 feature/backup-db-s3-to-local-pc-another-s3-automate scheduling
 feature/views-developer-mode-with debuging-actions
 feature/branding-logo-url-icon-settings 
-feature/data-model-encryption-test
 feature/share-options-anything-via-copy-plaintext-excel-whatsapp-email
+feature/restart-increment-serial-on-year-month-field-type-autonumber
 
 given PRS:
 NF0001/feature/ui-custom-components-for-inputs-views
@@ -17,16 +17,21 @@ NF0005/feature/data-models-create-new-model-drawer-enhancement
 NF0006/feature/data-model-test-each-field-type-json-validation
 NF0007/hotfix/enforce-utc-timestampz-on-all-places
 NF0008/feature/api-endpoints-initiation
+NF0009/feature/theming-global-user-based-theming
 
 current,
 ======
-NF0009/feature/theming-global-user-based-theming
+
 NF0010/feature/users-ui-auto-logout-test-users-action-mfa-protection-token-expired
+
+
+
 NF0011/feature/side-bar-search-parent-child-auto-hide-sidebar-theme
+
 NF0012/feature/env-based-httpclient-dbquery-fastapi-request-gunicorn-workers-configurations
 NF0013/feature/collecting-existing-module-features-insert-to-db-permissions-management
 NF0014/feature/actions-flow-planning-implementations
-
+NF0015/feature/data-model-encryption-test
 
 actions->planning pending,
 =========================,

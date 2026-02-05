@@ -33,6 +33,7 @@ PyMySQL==1.1.1
 # Authentication and security
 PyJWT==2.10.1
 passlib[bcrypt]==1.7.4
+pyotp==2.9.0
 bcrypt==3.2.2
 itsdangerous>=2.1.2
 authlib>=1.2.1
