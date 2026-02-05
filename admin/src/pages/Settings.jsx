@@ -1,13 +1,15 @@
 import React, { useEffect, useMemo, useState } from "react";
-import { Button, Card, Col, Form, Row, Typography, message } from "antd";
+import { Button, Card, Col, Form, Input, InputNumber, Modal, Row, Space, Typography, message, App } from "antd";
+import { SafetyCertificateOutlined, MobileOutlined, ClockCircleOutlined } from "@ant-design/icons";
 import { viewComponentRegistry } from "../components/ViewComponents";
 import { getComponentKey, coerceNumber, coerceBoolean, normalizeOptions } from "../components/ViewComponents/vcTypes";
 import { api } from "../utils/api";
+import { useAuth } from "../contexts/AuthContext";
 
 // Convert color value to hex string format
 function convertColorToHex(colorValue) {
   if (!colorValue) return colorValue;
-  
+
   // If it's already a string (hex), return it
   if (typeof colorValue === "string") {
     // Remove quotes if present
@@ -18,7 +20,7 @@ function convertColorToHex(colorValue) {
     }
     return cleaned;
   }
-  
+
   // If it's an object with color properties, convert to hex
   if (typeof colorValue === "object" && colorValue !== null) {
     // Handle metaColor object
@@ -31,7 +33,7 @@ function convertColorToHex(colorValue) {
         return `#${r}${g}${b}`;
       }
     }
-    
+
     // Handle direct color object with r, g, b properties
     if (colorValue.r !== undefined && colorValue.g !== undefined && colorValue.b !== undefined) {
       const r = Math.round(colorValue.r).toString(16).padStart(2, '0');
@@ -39,32 +41,32 @@ function convertColorToHex(colorValue) {
       const b = Math.round(colorValue.b).toString(16).padStart(2, '0');
       return `#${r}${g}${b}`;
     }
-    
+
     // If object has a toHexString method, use it
     if (typeof colorValue.toHexString === 'function') {
       return colorValue.toHexString();
     }
-    
+
     // If object has a hex property
     if (colorValue.hex) {
       return colorValue.hex;
     }
   }
-  
+
   return colorValue;
 }
 
 // Parse a value that might be JSON-stringified (handles double-encoded JSON strings)
 function parseValue(value, fieldType) {
   if (value == null || value === "") return value;
-  
+
   // If it's a string, try to parse it as JSON (handles cases like "\"Noolva SaaS\"")
   if (typeof value === "string") {
     let trimmed = value.trim();
-    
+
     // Skip if empty after trim
     if (!trimmed) return value;
-    
+
     // Try JSON.parse first (handles double-encoded strings)
     try {
       const parsed = JSON.parse(trimmed);
@@ -81,29 +83,29 @@ function parseValue(value, fieldType) {
     } catch (e) {
       // JSON.parse failed, clean manually
     }
-    
+
     // Manual cleaning: Remove surrounding quotes (single or double)
     let cleaned = trimmed.replace(/^["']+|["']+$/g, '');
-    
+
     // Replace escaped quotes
     cleaned = cleaned.replace(/\\"/g, '"').replace(/\\'/g, "'");
-    
+
     // Remove any remaining surrounding quotes after unescaping
     cleaned = cleaned.replace(/^["']+|["']+$/g, '');
-    
+
     // If cleaned is different, return it
     if (cleaned !== trimmed) {
       return cleaned;
     }
   }
-  
+
   return value;
 }
 
 function mapSettingToVC(setting) {
   const fieldType = setting.field_type_code || "text";
   let cfg = setting.field_config_json || {};
-  
+
   // If field_config_json is a string, try to parse it as JSON
   if (typeof cfg === "string") {
     try {
@@ -132,6 +134,12 @@ function mapSettingToVC(setting) {
     vcType = "number";
     if (cfg?.min != null) input_values.min = cfg.min;
     if (cfg?.max != null) input_values.max = cfg.max;
+  } else if (fieldType === "duration") {
+    vcType = "duration";
+    if (cfg?.min != null) input_values.min = cfg.min;
+    if (cfg?.max != null) input_values.max = cfg.max;
+    if (cfg?.step != null) input_values.step = cfg.step;
+    if (cfg?.unit) input_values.unit = cfg.unit;
   } else if (fieldType === "boolean") {
     vcType = "switch";
   } else if (fieldType === "color") {
@@ -152,11 +160,11 @@ function mapSettingToVC(setting) {
       }
       input_values.default_props_json = defaultProps;
     }
-    
+
     // Legacy support: if options_mode is not set, use old behavior
     if (!cfg?.options_mode && !setting.default_props_json?.options_mode) {
       let rawOptions = cfg?.options;
-      
+
       // Handle different formats of options
       if (rawOptions && typeof rawOptions === "string") {
         try {
@@ -165,11 +173,11 @@ function mapSettingToVC(setting) {
           rawOptions = rawOptions.split(",").map(s => s.trim()).filter(Boolean);
         }
       }
-      
+
       if (!Array.isArray(rawOptions)) {
         rawOptions = [];
       }
-      
+
       input_values.options = normalizeOptions(rawOptions);
     }
   } else if (fieldType === "multi_choice") {
@@ -189,11 +197,11 @@ function mapSettingToVC(setting) {
       }
       input_values.default_props_json = defaultProps;
     }
-    
+
     // Legacy support: if options_mode is not set, use old behavior
     if (!cfg?.options_mode && !setting.default_props_json?.options_mode) {
       let rawOptions = cfg?.options;
-      
+
       // Handle different formats of options
       if (rawOptions && typeof rawOptions === "string") {
         try {
@@ -202,11 +210,11 @@ function mapSettingToVC(setting) {
           rawOptions = rawOptions.split(",").map(s => s.trim()).filter(Boolean);
         }
       }
-      
+
       if (!Array.isArray(rawOptions)) {
         rawOptions = [];
       }
-      
+
       input_values.options = normalizeOptions(rawOptions);
     }
   } else if (fieldType === "date" || fieldType === "datetime" || fieldType === "time") {
@@ -236,6 +244,21 @@ export default function Settings() {
   const [initialValues, setInitialValues] = useState({});
   const [form] = Form.useForm();
 
+  // Session idle lock (current user's override)
+  const [userIdle, setUserIdle] = useState({ idle_timeout_minutes: null, effective_idle_timeout_minutes: 15 });
+  const [idleInputValue, setIdleInputValue] = useState(null);
+  const [idleSaveLoading, setIdleSaveLoading] = useState(false);
+  const { refreshUser } = useAuth();
+
+  // Two-Factor Authentication state
+  const [user2FA, setUser2FA] = useState({ enable_2fa: false });
+  const [twoFALoading, setTwoFALoading] = useState(false);
+  const [twoFASetupModalOpen, setTwoFASetupModalOpen] = useState(false);
+  const [twoFASetupData, setTwoFASetupData] = useState(null);
+  const [twoFAVerifyLoading, setTwoFAVerifyLoading] = useState(false);
+  const [twoFACode, setTwoFACode] = useState("");
+  const { message: messageApi } = App.useApp();
+
   useEffect(() => {
     let mounted = true;
     const load = async () => {
@@ -254,11 +277,11 @@ export default function Settings() {
         for (const r of rows) {
           const fieldType = r.field_type_code || "text";
           let parsedValue = parseValue(r.value, fieldType);
-          
+
           // For select fields, ensure value matches option format
           if (fieldType === "single_choice" || fieldType === "multi_choice") {
             let cfg = r.field_config_json || {};
-            
+
             // If field_config_json is a string, try to parse it as JSON
             if (typeof cfg === "string") {
               try {
@@ -267,7 +290,7 @@ export default function Settings() {
                 cfg = {};
               }
             }
-            
+
             // Handle options in different formats
             let rawOptions = cfg?.options;
             if (rawOptions && typeof rawOptions === "string") {
@@ -277,17 +300,17 @@ export default function Settings() {
                 rawOptions = rawOptions.split(",").map(s => s.trim()).filter(Boolean);
               }
             }
-            
+
             if (!Array.isArray(rawOptions)) {
               rawOptions = [];
             }
-            
+
             const normalizedOptions = normalizeOptions(rawOptions);
-            
+
             // Aggressively clean the value - remove all quotes and escaped quotes
             if (parsedValue != null) {
               let cleanedValue = parsedValue;
-              
+
               // If it's a string, clean it more aggressively - always remove quotes
               if (typeof cleanedValue === "string") {
                 // First try JSON.parse to handle double-encoded strings
@@ -302,7 +325,7 @@ export default function Settings() {
                 } catch (e) {
                   // JSON.parse failed, continue with manual cleaning
                 }
-                
+
                 // Always remove surrounding quotes (single or double) from string
                 if (typeof cleanedValue === "string") {
                   // Remove all surrounding quotes (single or double)
@@ -313,7 +336,7 @@ export default function Settings() {
                   cleanedValue = cleanedValue.replace(/^["']+|["']+$/g, '');
                 }
               }
-              
+
               // Now try to match with options
               if (normalizedOptions.length > 0) {
                 const matched = normalizedOptions.find(opt => {
@@ -329,7 +352,7 @@ export default function Settings() {
                     optLabel.toLowerCase() === cleanedStr.toLowerCase()
                   );
                 });
-                
+
                 if (matched) {
                   parsedValue = matched.value;
                 } else {
@@ -347,9 +370,9 @@ export default function Settings() {
               }
             }
           }
-          
+
           // Coerce to appropriate type
-          if (fieldType === "number" || fieldType === "currency" || fieldType === "percentage" || fieldType === "rating") {
+          if (fieldType === "number" || fieldType === "currency" || fieldType === "percentage" || fieldType === "rating" || fieldType === "duration") {
             parsedValue = coerceNumber(parsedValue, parsedValue);
           } else if (fieldType === "boolean") {
             parsedValue = coerceBoolean(parsedValue, false);
@@ -357,7 +380,7 @@ export default function Settings() {
             // Convert color object to hex string if needed
             parsedValue = convertColorToHex(parsedValue);
           }
-          
+
           formValues[r.setting_key] = parsedValue;
           defaults[r.setting_key] = parseValue(r.default_value, fieldType);
         }
@@ -375,6 +398,119 @@ export default function Settings() {
       mounted = false;
     };
   }, [form, msgApi]);
+
+  // Load user context for 2FA and idle timeout
+  useEffect(() => {
+    let mounted = true;
+    const load = async () => {
+      try {
+        const ctx = await api.getUserContext();
+        if (mounted && ctx?.user) {
+          setUser2FA({ enable_2fa: !!ctx.user.enable_2fa });
+          const effective = ctx.user.effective_idle_timeout_minutes ?? 15;
+          const userOverride = ctx.user.idle_timeout_minutes;
+          setUserIdle({
+            idle_timeout_minutes: userOverride,
+            effective_idle_timeout_minutes: effective,
+          });
+          setIdleInputValue(userOverride ?? null);
+        }
+      } catch (e) {
+        // Ignore; user may not be logged in
+      }
+    };
+    load();
+    return () => { mounted = false; };
+  }, [twoFASetupModalOpen]); // Refetch when setup modal closes (after verify)
+
+  const handleIdleSave = async () => {
+    setIdleSaveLoading(true);
+    try {
+      await api.updateMyIdleTimeout(idleInputValue);
+      await refreshUser();
+      const ctx = await api.getUserContext();
+      if (ctx?.user) {
+        const effective = ctx.user.effective_idle_timeout_minutes ?? 15;
+        setUserIdle({
+          idle_timeout_minutes: ctx.user.idle_timeout_minutes,
+          effective_idle_timeout_minutes: effective,
+        });
+        setIdleInputValue(ctx.user.idle_timeout_minutes ?? null);
+      }
+      messageApi.success("Idle lock setting saved");
+    } catch (e) {
+      messageApi.error(e?.response?.data?.detail || e?.message || "Failed to save");
+    } finally {
+      setIdleSaveLoading(false);
+    }
+  };
+
+  const handleIdleResetDefault = async () => {
+    setIdleSaveLoading(true);
+    try {
+      await api.updateMyIdleTimeout(null);
+      await refreshUser();
+      const ctx = await api.getUserContext();
+      if (ctx?.user) {
+        const effective = ctx.user.effective_idle_timeout_minutes ?? 15;
+        setUserIdle({ idle_timeout_minutes: null, effective_idle_timeout_minutes: effective });
+        setIdleInputValue(null);
+      }
+      messageApi.success("Reset to global default");
+    } catch (e) {
+      messageApi.error(e?.response?.data?.detail || e?.message || "Failed to reset");
+    } finally {
+      setIdleSaveLoading(false);
+    }
+  };
+
+  const handleEnable2FAClick = async () => {
+    setTwoFALoading(true);
+    try {
+      const data = await api.get2FASetup();
+      setTwoFASetupData(data);
+      setTwoFACode("");
+      setTwoFASetupModalOpen(true);
+    } catch (e) {
+      messageApi.error(e?.message || "Failed to start 2FA setup");
+    } finally {
+      setTwoFALoading(false);
+    }
+  };
+
+  const handle2FAVerify = async () => {
+    const code = twoFACode.trim();
+    if (!code || code.length !== 6) {
+      messageApi.warning("Please enter the 6-digit code from your authenticator app");
+      return;
+    }
+    setTwoFAVerifyLoading(true);
+    try {
+      await api.verify2FA(code);
+      messageApi.success("Two-factor authentication enabled");
+      setTwoFASetupModalOpen(false);
+      setTwoFASetupData(null);
+      const ctx = await api.getUserContext();
+      if (ctx?.user) setUser2FA({ enable_2fa: true });
+    } catch (e) {
+      messageApi.error(e?.response?.data?.detail || e?.message || "Invalid code");
+    } finally {
+      setTwoFAVerifyLoading(false);
+    }
+  };
+
+  const handleDisable2FA = async () => {
+    setTwoFALoading(true);
+    try {
+      await api.disable2FA();
+      messageApi.success("Two-factor authentication disabled");
+      setUser2FA({ enable_2fa: false });
+    } catch (e) {
+      messageApi.error(e?.message || "Failed to disable 2FA");
+    } finally {
+      setTwoFALoading(false);
+    }
+  };
 
   const groups = useMemo(() => {
     const map = new Map();
@@ -419,14 +555,14 @@ export default function Settings() {
       group.rows.forEach(row => {
         const fieldType = row.field_type_code || "text";
         let defaultValue = defaultValues[row.setting_key];
-        
+
         // If default value is not set, parse from row.default_value
         if (defaultValue === undefined) {
           defaultValue = parseValue(row.default_value, fieldType);
         }
-        
+
         // Coerce to appropriate type
-        if (fieldType === "number" || fieldType === "currency" || fieldType === "percentage" || fieldType === "rating") {
+        if (fieldType === "number" || fieldType === "currency" || fieldType === "percentage" || fieldType === "rating" || fieldType === "duration") {
           defaultValue = coerceNumber(defaultValue, defaultValue);
         } else if (fieldType === "boolean") {
           defaultValue = coerceBoolean(defaultValue, false);
@@ -434,7 +570,7 @@ export default function Settings() {
           defaultValue = convertColorToHex(defaultValue);
         } else if (fieldType === "single_choice" || fieldType === "multi_choice") {
           let cfg = row.field_config_json || {};
-          
+
           // If field_config_json is a string, try to parse it as JSON
           if (typeof cfg === "string") {
             try {
@@ -443,7 +579,7 @@ export default function Settings() {
               cfg = {};
             }
           }
-          
+
           // Handle options in different formats
           let rawOptions = cfg?.options;
           if (rawOptions && typeof rawOptions === "string") {
@@ -453,20 +589,20 @@ export default function Settings() {
               rawOptions = rawOptions.split(",").map(s => s.trim()).filter(Boolean);
             }
           }
-          
+
           if (!Array.isArray(rawOptions)) {
             rawOptions = [];
           }
-          
+
           const normalizedOptions = normalizeOptions(rawOptions);
           if (normalizedOptions.length > 0 && defaultValue) {
-            const matched = normalizedOptions.find(opt => 
+            const matched = normalizedOptions.find(opt =>
               opt.value === defaultValue || opt.label === defaultValue || String(opt.value) === String(defaultValue)
             );
             if (matched) defaultValue = matched.value;
           }
         }
-        
+
         groupDefaults[row.setting_key] = defaultValue;
       });
       form.setFieldsValue(groupDefaults);
@@ -477,7 +613,7 @@ export default function Settings() {
   const tabComponent = useMemo(() => {
     const VCTab = viewComponentRegistry.tab;
     if (!VCTab) return null;
-    
+
     const tabs = groups.map((g) => ({
       key: g.groupName,
       label: g.groupName,
@@ -491,16 +627,16 @@ export default function Settings() {
             return <Cmp key={key} component={component} />;
           })}
           <div style={{ marginTop: 24, display: "flex", justifyContent: "flex-end", gap: 8 }}>
-            <Button 
+            <Button
               onClick={() => resetGroup(g.groupName)}
               disabled={loading || saving[g.groupName]}
             >
               Reset to Default
             </Button>
-            <Button 
-              type="primary" 
-              onClick={() => saveGroup(g.groupName)} 
-              loading={saving[g.groupName]} 
+            <Button
+              type="primary"
+              onClick={() => saveGroup(g.groupName)}
+              loading={saving[g.groupName]}
               disabled={loading}
             >
               Save {g.groupName}
@@ -537,6 +673,92 @@ export default function Settings() {
           </Typography.Text>
         </Col>
 
+        {/* Session idle lock (current user) */}
+        <Col span={24}>
+          <Card title="Session idle lock" size="small" style={{ marginBottom: 16 }}>
+            <Space direction="vertical" size="middle" style={{ width: "100%" }}>
+              <div>
+                <Space align="center">
+                  <ClockCircleOutlined style={{ fontSize: 18 }} />
+                  <Typography.Text strong>Idle session lock (minutes)</Typography.Text>
+                </Space>
+                <Typography.Text type="secondary" style={{ display: "block", marginTop: 4 }}>
+                  Lock session after this many minutes of inactivity; re-enter password (and 2FA if enabled) to continue. -1 = no lock. Leave default to use global setting.
+                </Typography.Text>
+                <div style={{ marginTop: 12 }}>
+                  <Typography.Text type="secondary">Current: </Typography.Text>
+                  {userIdle.idle_timeout_minutes === null || userIdle.idle_timeout_minutes === undefined ? (
+                    <Typography.Text>Using default ({userIdle.effective_idle_timeout_minutes} min)</Typography.Text>
+                  ) : userIdle.idle_timeout_minutes === -1 ? (
+                    <Typography.Text>No lock</Typography.Text>
+                  ) : (
+                    <Typography.Text>{userIdle.idle_timeout_minutes} minutes</Typography.Text>
+                  )}
+                </div>
+                <Space style={{ marginTop: 12 }} wrap>
+                  <InputNumber
+                    min={-1}
+                    max={1440}
+                    value={idleInputValue ?? undefined}
+                    onChange={(v) => setIdleInputValue(v !== undefined && v !== null ? Number(v) : null)}
+                    placeholder="Use global default"
+                    addonAfter="minutes"
+                    style={{ width: 160 }}
+                  />
+                  <Button type="primary" size="small" onClick={handleIdleSave} loading={idleSaveLoading}>
+                    Save
+                  </Button>
+                  <Button size="small" onClick={handleIdleResetDefault} loading={idleSaveLoading}>
+                    Reset to default
+                  </Button>
+                </Space>
+              </div>
+            </Space>
+          </Card>
+        </Col>
+
+        {/* Two-Factor Authentication */}
+        <Col span={24}>
+          <Card title="Two-Factor Authentication" size="small" style={{ marginBottom: 16 }}>
+            <Space direction="vertical" size="middle" style={{ width: "100%" }}>
+              <div>
+                <Space align="center">
+                  <SafetyCertificateOutlined style={{ fontSize: 18 }} />
+                  <Typography.Text strong>Authenticator app</Typography.Text>
+                  {user2FA.enable_2fa ? (
+                    <Typography.Text type="success">Enabled</Typography.Text>
+                  ) : (
+                    <Typography.Text type="secondary">Not enabled</Typography.Text>
+                  )}
+                </Space>
+                <div style={{ marginTop: 8 }}>
+                  {user2FA.enable_2fa ? (
+                    <Button danger size="small" onClick={handleDisable2FA} loading={twoFALoading}>
+                      Disable
+                    </Button>
+                  ) : (
+                    <Button type="primary" size="small" onClick={handleEnable2FAClick} loading={twoFALoading}>
+                      Enable authenticator app
+                    </Button>
+                  )}
+                </div>
+              </div>
+              <div>
+                <Space align="center">
+                  <MobileOutlined style={{ fontSize: 18 }} />
+                  <Typography.Text strong>SMS</Typography.Text>
+                  <Typography.Text type="secondary">Coming soon (AWS SES)</Typography.Text>
+                </Space>
+                <div style={{ marginTop: 8 }}>
+                  <Button size="small" disabled>
+                    Enable SMS
+                  </Button>
+                </div>
+              </div>
+            </Space>
+          </Card>
+        </Col>
+
         <Col span={24}>
           <Form form={form} layout="vertical" disabled={loading}>
             {tabComponent && VCTab && (
@@ -545,6 +767,66 @@ export default function Settings() {
           </Form>
         </Col>
       </Row>
+
+      {/* 2FA Setup Modal: show QR + secret + verify code */}
+      <Modal
+        title="Set up authenticator app"
+        open={twoFASetupModalOpen}
+        onCancel={() => {
+          setTwoFASetupModalOpen(false);
+          setTwoFASetupData(null);
+        }}
+        footer={null}
+        destroyOnClose
+        width={400}
+      >
+        {twoFASetupData && (
+          <Space direction="vertical" size="middle" style={{ width: "100%" }}>
+            <Typography.Text type="secondary">
+              Scan the QR code with your authenticator app (e.g. Google Authenticator, Authy), or enter the secret manually.
+            </Typography.Text>
+            <div style={{ textAlign: "center" }}>
+              <img
+                src={`https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(twoFASetupData.provisioning_uri || "")}`}
+                alt="QR code for authenticator"
+                style={{ border: "1px solid #f0f0f0", borderRadius: 8 }}
+              />
+            </div>
+            <div>
+              <Typography.Text type="secondary" style={{ fontSize: 12 }}>Manual entry secret:</Typography.Text>
+              <Input.TextArea
+                readOnly
+                value={twoFASetupData.secret || ""}
+                rows={2}
+                style={{ marginTop: 4, fontFamily: "monospace" }}
+              />
+            </div>
+            <div>
+              <Typography.Text>Enter the 6-digit code from your app:</Typography.Text>
+              <Input
+                placeholder="000000"
+                maxLength={6}
+                value={twoFACode}
+                onChange={(e) => setTwoFACode(e.target.value.replace(/\D/g, ""))}
+                style={{ marginTop: 8 }}
+              />
+            </div>
+            <Space>
+              <Button type="primary" onClick={handle2FAVerify} loading={twoFAVerifyLoading}>
+                Verify and enable
+              </Button>
+              <Button
+                onClick={() => {
+                  setTwoFASetupModalOpen(false);
+                  setTwoFASetupData(null);
+                }}
+              >
+                Cancel
+              </Button>
+            </Space>
+          </Space>
+        )}
+      </Modal>
     </>
   );
 }

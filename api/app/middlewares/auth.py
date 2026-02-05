@@ -13,6 +13,11 @@ def create_jwt_token(data: Dict, expires_delta: Optional[timedelta] = None) -> s
     payload.update({"exp": expire})
     return jwt.encode(payload, SECRET_KEY, algorithm=ALGORITHM)
 
+
+def decode_jwt_payload(token: str) -> Dict:
+    """Decode JWT and return payload; raises on invalid/expired."""
+    return jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
+
 # Function to verify JWT token from Authorization header
 def verify_jwt_token(allowed_user_types: Optional[List[str]] = None):
     """Dependency function to verify JWT and check allowed user types.

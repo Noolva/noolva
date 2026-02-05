@@ -37,6 +37,13 @@ CREATE TABLE public.users (
     active_status SMALLINT DEFAULT 1 NOT NULL CHECK (active_status IN (0, 1, 2)), -- 0:Inactive, 1:Active, 2:Suspended
     last_login TIMESTAMPTZ,
     
+    -- Two-Factor Authentication (per-user; global enable_2fa in settings table)
+    enable_2fa BOOLEAN DEFAULT FALSE,
+    mfa_secret VARCHAR(255), -- TOTP secret for authenticator app (stored encrypted in production)
+    
+    -- Session idle lock: NULL = use global setting; -1 = no lock; >0 = lock after N minutes of inactivity
+    idle_timeout_minutes INTEGER DEFAULT NULL,
+    
     -- Auditing
     deleted_at TIMESTAMPTZ, -- Soft delete support
     created_by INTEGER REFERENCES public.users(user_id),
