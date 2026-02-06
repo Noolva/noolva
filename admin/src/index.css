@@ -68,6 +68,11 @@ body[data-theme="light"] {
   background: transparent !important;
 }
 
+/* Hide expand arrow for submenus (compact; click title to expand/collapse) */
+.ant-layout-sider.app-sidebar .ant-menu-submenu-expand-icon {
+  display: none !important;
+}
+
 .custom-window-tabs .ant-tabs-nav {
   margin-bottom: 2px !important;
 }

@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Modal, Form, Input, Button, Typography, App } from 'antd';
 import { UserOutlined, LockOutlined } from '@ant-design/icons';
 import { useAuth } from '../contexts/AuthContext';
-import { getSessionLocked, getSessionLockedRequire2FA, clearSessionLock } from '../utils/api';
+import { getSessionLocked, getSessionLockedRequire2FA, clearSessionLock } from '../utils/sessionLock';
 
 const { Text } = Typography;
 
@@ -63,7 +63,12 @@ const ReLoginModal = () => {
         setLoading(true);
         try {
             if (mode === 'idleLock') {
-                const result = await reauth(values.password, values.totp_code?.trim() || null);
+                const doReauth = typeof reauth === 'function' ? reauth : null;
+                if (!doReauth) {
+                    message.error('Re-authentication is not available. Please refresh the page and sign in again.');
+                    return;
+                }
+                const result = await doReauth(values.password, values.totp_code?.trim() || null);
                 if (result.success) {
                     clearSessionLock();
                     form.resetFields();
@@ -103,7 +108,7 @@ const ReLoginModal = () => {
             footer={null}
             closable={!isIdleLock}
             maskClosable={!isIdleLock}
-            destroyOnClose
+            destroyOnHidden
             width={400}
         >
             <Text type="secondary" style={{ display: 'block', marginBottom: 16 }}>

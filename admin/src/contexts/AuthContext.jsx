@@ -1,4 +1,4 @@
-import React, { createContext, useState, useContext, useEffect } from 'react';
+import React, { createContext, useState, useContext, useEffect, useCallback } from 'react';
 import { App } from 'antd';
 import { api, setAccessToken, getAccessToken, getStoredAccounts, setStoredAccounts, getCurrentAccountId, setCurrentAccountId, clearSessionLock, getSessionLockedRequire2FA } from '../utils/api';
 
@@ -335,7 +335,7 @@ export const AuthProvider = ({ children }) => {
     /**
      * Re-authenticate after idle lock (password + optional 2FA code). Updates token and user.
      */
-    const reauth = async (password, totpCode = null) => {
+    const reauth = useCallback(async (password, totpCode = null) => {
         try {
             const result = await api.reauth(password, totpCode);
             setAccessToken(result.access_token);
@@ -352,7 +352,7 @@ export const AuthProvider = ({ children }) => {
             const msg = error?.response?.data?.description ?? error?.response?.data?.detail ?? error?.message ?? 'Re-authentication failed';
             return { success: false, error: { ...error, message: msg, errorData: { description: msg } } };
         }
-    };
+    }, [message]);
 
     /**
      * Logout

@@ -1,6 +1,6 @@
 import React, { useRef, useEffect, useCallback } from 'react';
 import { useAuth } from '../contexts/AuthContext';
-import { setSessionLocked } from '../utils/api';
+import { setSessionLocked } from '../utils/sessionLock';
 
 const IDLE_EVENTS = ['mousedown', 'mousemove', 'keydown', 'scroll', 'touchstart'];
 
