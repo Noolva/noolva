@@ -30,6 +30,8 @@ const AppContent = () => {
   const [searchParams] = useSearchParams();
   const [selectedApp, setSelectedApp] = useState(null);
   const [selectedAppData, setSelectedAppData] = useState(null);
+  const [autoHideSidebar, setAutoHideSidebar] = useState(false);
+  const [sidebarHoverExpanded, setSidebarHoverExpanded] = useState(false);
   // Store all tabs globally - each tab knows which app it belongs to
   // { activeKey, items: [{ key, label, menuData, appKey, appData }] }
   const [tabs, setTabs] = useState({ activeKey: '', items: [] });
@@ -63,6 +65,7 @@ const AppContent = () => {
       case 'studio_icons': return <IconExplorer />;
       case 'studio_collections': return <Collections />;
       case 'studio_api_endpoints': return <ApiEndpoints />;
+      case 'studio_asset_gallery': return <IconExplorer />;
       case 'org_users': return <OrganizationUsers />;
       default: {
         // Try to match by route_path from menuData (since key might be menu_id)
@@ -74,6 +77,7 @@ const AppContent = () => {
           if (routePath === 'studio_icons') return <IconExplorer />;
           if (routePath === 'studio_collections') return <Collections />;
           if (routePath === 'studio_api_endpoints') return <ApiEndpoints />;
+          if (routePath === 'studio_asset_gallery') return <IconExplorer />;
           if (routePath === 'settings') return <Settings />;
           if (routePath === 'themes') return <Themes />;
           if (routePath === 'org_users') return <OrganizationUsers />;
@@ -296,6 +300,34 @@ const AppContent = () => {
     fetchApps();
   }, []);
 
+  // Load "Auto Hide Sidebar" setting for layout
+  useEffect(() => {
+    let mounted = true;
+    const load = async () => {
+      try {
+        const { api } = await import('./utils/api');
+        const res = await api.getSettings({ keys: 'auto_hide_sidebar', scope: 'global' });
+        const val = res?.settings?.auto_hide_sidebar;
+        if (mounted) setAutoHideSidebar(val === true || val === 'true' || val === 'yes');
+      } catch (e) {
+        // ignore
+      }
+    };
+    load();
+    return () => { mounted = false; };
+  }, []);
+
+  // Update auto_hide_sidebar (persist to settings and local state)
+  const updateAutoHideSidebar = useCallback(async (value) => {
+    setAutoHideSidebar(!!value);
+    try {
+      const { api } = await import('./utils/api');
+      await api.updateSettings({ scope: 'global', settings: { auto_hide_sidebar: !!value } });
+    } catch (e) {
+      console.warn('Failed to persist auto_hide_sidebar', e);
+    }
+  }, []);
+
   // Initialize from URL after apps are loaded
   useEffect(() => {
     if (!appsLoaded) return;
@@ -408,23 +440,34 @@ const AppContent = () => {
     <Layout style={{ minHeight: '100vh' }}>
       <Header onAppSelect={handleAppSelect} onMenuSelect={handleSubmenuSelect} />
       <Layout>
-        <Sider
-          width={selectedApp ? 200 : 0}
-          className="site-layout-background app-sidebar"
-          style={{
-            transition: 'width 0.2s ease-in-out',
-            overflow: 'hidden',
-            background: 'var(--sidebar-bg-color, var(--primary-color, #001529))'
-          }}
+        <div
+          onMouseEnter={selectedApp && autoHideSidebar ? () => setSidebarHoverExpanded(true) : undefined}
+          onMouseLeave={selectedApp && autoHideSidebar ? () => setSidebarHoverExpanded(false) : undefined}
+          style={{ position: 'relative' }}
         >
-          {selectedApp && (
-            <Sidebar
-              selectedApp={selectedApp}
-              selectedAppData={selectedAppData}
-              onSelect={handleSubmenuSelect}
-            />
-          )}
-        </Sider>
+          <Sider
+            width={selectedApp ? 200 : 0}
+            collapsed={selectedApp && autoHideSidebar ? !sidebarHoverExpanded : false}
+            collapsedWidth={selectedApp ? 48 : 0}
+            className="site-layout-background app-sidebar"
+            style={{
+              transition: 'width 0.2s ease-in-out, min-width 0.2s ease-in-out',
+              overflow: 'hidden',
+              background: 'var(--sidebar-bg-color, var(--primary-color, #001529))'
+            }}
+          >
+            {selectedApp && (
+              <Sidebar
+                selectedApp={selectedApp}
+                selectedAppData={selectedAppData}
+                onSelect={handleSubmenuSelect}
+                autoHideSidebar={autoHideSidebar}
+                onAutoHideSidebarChange={updateAutoHideSidebar}
+                collapsed={selectedApp && autoHideSidebar ? !sidebarHoverExpanded : false}
+              />
+            )}
+          </Sider>
+        </div>
         <Layout style={{ padding: '0 10px 10px' }}>
           <Content style={{ margin: '5px 0' }}>
             <AppTabs
