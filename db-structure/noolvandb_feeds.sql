@@ -253,7 +253,8 @@ BEGIN
     -- 2. Security
     ('Security', 'password_min_length', 'Minimum Password Length', 'Enforced complexity', ft_number, '8', '8', 'global', true, '{"min":6,"max":64,"step":1}'::jsonb),
     ('Security', 'enable_2fa', 'Enable 2FA', 'Allow users to enable Two-Factor Auth', ft_bool, 'false', 'false', 'global', true, '{}'::jsonb),
-    ('Security', 'idle_timeout_minutes', 'Idle session lock (minutes)', 'Lock session after this many minutes of inactivity; user must re-enter password (and 2FA if enabled). Use -1 for no lock.', ft_duration, '15', '15', 'global', true, '{"min":-1,"max":1440,"step":1,"unit":"minutes"}'::jsonb)
+    ('Security', 'idle_timeout_minutes', 'Idle session lock (minutes)', 'Lock session after this many minutes of inactivity; user must re-enter password (and 2FA if enabled). Use -1 for no lock.', ft_duration, '15', '15', 'global', true, '{"min":-1,"max":1440,"step":1,"unit":"minutes"}'::jsonb),
+    ('UI', 'auto_hide_sidebar', 'Auto Hide Sidebar', 'When Yes, the app sidebar is hidden by default.', ft_bool, 'false', 'false', 'global', true, '{}'::jsonb)
     ON CONFLICT DO NOTHING;
 END $$;
 
@@ -297,6 +298,7 @@ DECLARE
     appstudio_app_id INT;
     settings_app_id INT;
     dev_console_app_id INT;
+    assets_menu_id INT;
 BEGIN
     SELECT user_id INTO system_user_id FROM public.users WHERE user_type = 'system' LIMIT 1;
 
@@ -440,6 +442,12 @@ BEGIN
     IF NOT EXISTS (SELECT 1 FROM public.menus WHERE app_id=appstudio_app_id AND parent_id IS NULL AND menu_title='Assets') THEN
         INSERT INTO public.menus (menu_title,parent_id,type,route_path,icon,app_id,scope,is_builtin,order_no,created_by)
         VALUES ('Assets',NULL,'item','studio_assets','picture',appstudio_app_id,'saas',TRUE,100,system_user_id);
+    END IF;
+    -- Asset Gallery as child of Assets (two-level menu)
+    SELECT menu_id INTO assets_menu_id FROM public.menus WHERE app_id=appstudio_app_id AND menu_title='Assets' AND parent_id IS NULL LIMIT 1;
+    IF assets_menu_id IS NOT NULL AND NOT EXISTS (SELECT 1 FROM public.menus WHERE app_id=appstudio_app_id AND parent_id=assets_menu_id AND menu_title='Asset Gallery') THEN
+        INSERT INTO public.menus (menu_title,parent_id,type,route_path,icon,app_id,scope,is_builtin,order_no,created_by)
+        VALUES ('Asset Gallery',assets_menu_id,'item','studio_asset_gallery','picture',appstudio_app_id,'saas',TRUE,1,system_user_id);
     END IF;
     IF NOT EXISTS (SELECT 1 FROM public.menus WHERE app_id=appstudio_app_id AND parent_id IS NULL AND menu_title='UI Components') THEN
         INSERT INTO public.menus (menu_title,parent_id,type,route_path,icon,app_id,scope,is_builtin,order_no,created_by)
