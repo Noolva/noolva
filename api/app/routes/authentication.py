@@ -1,5 +1,5 @@
 from fastapi import APIRouter, Depends, Request, HTTPException, Header
-from fastapi.responses import JSONResponse
+from fastapi.responses import JSONResponse, RedirectResponse
 from pydantic import BaseModel
 from typing import Optional, List, Dict
 from models.authentication.login_service import LoginService
@@ -180,8 +180,11 @@ async def google_login(request: Request):
 @router.get("/google-callback", name="google_auth_callback")
 async def google_auth_callback(request: Request, db=Depends(get_db)):
     """
-    Handles Google OAuth Callback.
+    Handles Google OAuth Callback and redirects to React app with token.
     """
+    import os
+    import urllib.parse
+    
     try:
         token = await request.app.state.oauth.google.authorize_access_token(request)
         user_info = token.get('userinfo')
@@ -196,15 +199,44 @@ async def google_auth_callback(request: Request, db=Depends(get_db)):
         client_info = get_client_info(request)
         company_id = request.query_params.get('company_id', type=int) if request.query_params.get('company_id') else None
         
-        return await LoginService.google_login(
+        # Get login response with token
+        login_response = await LoginService.google_login(
             email=email,
             company_id=company_id,
             device_info=client_info["device_info"],
             ip_address=client_info["ip_address"],
             user_agent=client_info["user_agent"]
         )
+        
+        # Get frontend URL from environment or default to localhost:3000
+        frontend_url = os.getenv("FRONTEND_URL", "http://localhost:3000")
+        
+        # Build redirect URL with token and user data
+        params = {
+            "access_token": login_response["access_token"],
+            "user_id": str(login_response["user"]["user_id"]),
+            "username": login_response["user"]["username"],
+            "user_type": login_response["user"]["user_type"],
+            "is_super_admin": str(login_response["user"]["is_super_admin"]).lower(),
+            "session_id": str(login_response.get("session_id", "")),
+            "session_uuid": login_response.get("session_uuid", ""),
+        }
+        
+        if login_response["user"].get("company_id"):
+            params["company_id"] = str(login_response["user"]["company_id"])
+        
+        # Redirect to React app OAuth callback page
+        redirect_url = f"{frontend_url}/oauth/google-callback?{urllib.parse.urlencode(params)}"
+        
+        return RedirectResponse(url=redirect_url)
     except Exception as e:
-        raise HTTPException(status_code=400, detail=f"Google OAuth failed: {str(e)}")
+        # On error, redirect to login page with error message
+        import os
+        import urllib.parse
+        frontend_url = os.getenv("FRONTEND_URL", "http://localhost:3000")
+        error_msg = urllib.parse.quote(f"Google OAuth failed: {str(e)}")
+        redirect_url = f"{frontend_url}/login?error={error_msg}"
+        return RedirectResponse(url=redirect_url)
 
 @router.get("/me")
 async def get_current_user(request: Request, db=Depends(get_db), user: Dict = Depends(verify_jwt_token(["saas_admin", "saas_employee", "tenant_admin", "tenant_user"]))):

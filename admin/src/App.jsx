@@ -6,6 +6,7 @@ import Footer from './components/Footer';
 import Sidebar from './components/Sidebar';
 import AppTabs from './components/AppTabs';
 import Login from './pages/Login';
+import GoogleOAuthCallback from './pages/GoogleOAuthCallback';
 import Dashboard from './pages/Dashboard';
 import ListPage from './pages/ListPage';
 import AddForm from './pages/AddForm';
@@ -507,6 +508,7 @@ const App = () => {
       <Router>
         <Routes>
           <Route path="/login" element={<Login />} />
+          <Route path="/oauth/google-callback" element={<GoogleOAuthCallback />} />
           <Route path="/*" element={user ? <><IdleTimer /><AppContent /><ReLoginModal /></> : <Navigate to="/login" />} />
         </Routes>
       </Router>
