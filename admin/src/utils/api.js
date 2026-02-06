@@ -78,20 +78,9 @@ export const getCurrentAccountId = () => {
     return localStorage.getItem('current_account_id');
 };
 
-// Session idle lock: shared across tabs so duplicate tab cannot bypass lock
-const SESSION_LOCKED_KEY = 'session_locked';
-const SESSION_LOCKED_2FA_KEY = 'session_locked_require_2fa';
-
-export const getSessionLocked = () => localStorage.getItem(SESSION_LOCKED_KEY) === '1';
-export const getSessionLockedRequire2FA = () => localStorage.getItem(SESSION_LOCKED_2FA_KEY) === '1';
-export const setSessionLocked = (require2fa = false) => {
-    localStorage.setItem(SESSION_LOCKED_KEY, '1');
-    localStorage.setItem(SESSION_LOCKED_2FA_KEY, require2fa ? '1' : '0');
-};
-export const clearSessionLock = () => {
-    localStorage.removeItem(SESSION_LOCKED_KEY);
-    localStorage.removeItem(SESSION_LOCKED_2FA_KEY);
-};
+// Session idle lock: re-export from dedicated module (single source of truth)
+import { getSessionLocked, getSessionLockedRequire2FA } from './sessionLock.js';
+export { getSessionLocked, getSessionLockedRequire2FA, setSessionLocked, clearSessionLock } from './sessionLock.js';
 
 // Requests that are allowed even when session is locked (so user can log back in / reauth)
 const isAuthAllowedWhenLocked = (config) => {
