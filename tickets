@@ -22,9 +22,12 @@ NF0007/hotfix/enforce-utc-timestampz-on-all-places
 NF0008/feature/api-endpoints-initiation
 NF0009/feature/theming-global-user-based-theming
 NF0010/feature/users-ui-auto-logout-test-users-action-mfa-protection-token-expired
+NF0011/feature/side-bar-search-parent-child-auto-hide-sidebar-theme-google-auth
 current,
 ======
-NF0011/feature/side-bar-search-parent-child-auto-hide-sidebar-theme
+NF0012/feature/two-user-switch-testing-and-fixes
+
+
 
 NF0012/feature/env-based-httpclient-dbquery-fastapi-request-gunicorn-workers-configurations
 NF0013/feature/collecting-existing-module-features-insert-to-db-permissions-management
