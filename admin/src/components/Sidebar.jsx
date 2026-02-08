@@ -89,6 +89,11 @@ const Sidebar = memo(({ selectedApp, selectedAppData, onSelect, onOpenInNewTab, 
         const params = new URLSearchParams();
         params.set('app', String(selectedApp));
         params.set('tab', String(menuKey));
+        // Preserve account parameter when opening in new tab
+        const accountId = new URLSearchParams(window.location.search).get('account');
+        if (accountId) {
+            params.set('account', accountId);
+        }
         const url = `${window.location.origin}${window.location.pathname}?${params.toString()}`;
         setContextMenu({ visible: true, x: e.clientX, y: e.clientY, url });
     };

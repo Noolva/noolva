@@ -3,6 +3,7 @@ import { Dropdown, Avatar, Typography, Button, Space, Divider } from 'antd';
 import { UserOutlined, LogoutOutlined, SwapOutlined, DeleteOutlined, PlusOutlined } from '@ant-design/icons';
 import { useAuth } from '../contexts/AuthContext';
 import { useNavigate } from 'react-router-dom';
+import { getAccountIdFromUrl } from '../utils/api';
 
 const { Text } = Typography;
 
@@ -13,7 +14,7 @@ const AccountSwitcher = () => {
 
     const handleSwitchAccount = async (account) => {
         if (account.id === currentAccount?.id) return;
-        
+
         setLoading(true);
         try {
             await switchAccount(account);
@@ -29,6 +30,7 @@ const AccountSwitcher = () => {
 
     const handleLogout = async () => {
         await logout();
+        // Don't preserve account on logout - user is logging out
         navigate('/login');
     };
 
@@ -104,7 +106,13 @@ const AccountSwitcher = () => {
         label: 'Add Account',
         icon: <PlusOutlined />,
         onClick: () => {
-            navigate('/login');
+            // Preserve current account when adding new account
+            const accountId = getAccountIdFromUrl();
+            if (accountId) {
+                navigate(`/login?account=${accountId}`);
+            } else {
+                navigate('/login');
+            }
         },
     });
 
@@ -128,7 +136,7 @@ const AccountSwitcher = () => {
             arrow
         >
             <Space style={{ cursor: 'pointer' }}>
-                <Avatar 
+                <Avatar
                     icon={<UserOutlined />}
                     src={user?.avatar_url}
                     style={{ backgroundColor: '#1890ff' }}
@@ -137,9 +145,11 @@ const AccountSwitcher = () => {
                 </Avatar>
                 <div style={{ display: 'flex', flexDirection: 'column', lineHeight: 1.2 }}>
                     <Text strong style={{ fontSize: '14px' }}>
-                        {user?.first_name && user?.last_name 
-                            ? `${user.first_name} ${user.last_name}` 
-                            : user?.username || 'User'}
+                        {currentAccount?.username
+                            || (user?.first_name && user?.last_name
+                                ? `${user.first_name} ${user.last_name}`
+                                : user?.username)
+                            || 'User'}
                     </Text>
                     {currentAccount?.companyName && (
                         <Text type="secondary" style={{ fontSize: '12px' }}>

@@ -34,6 +34,7 @@ const { Header: AntHeader } = Layout;
 
 const Header = ({ onAppSelect, onMenuSelect }) => {
     const [dropdownOpen, setDropdownOpen] = useState(false);
+    const { currentAccount } = useAuth();
     const { Option } = Select;
     const NineDotIcon = ({ size = 24, color = 'white', onClick }) => (
         <svg
@@ -60,7 +61,7 @@ const Header = ({ onAppSelect, onMenuSelect }) => {
     const [apps, setApps] = useState([]);
     const [appsLoading, setAppsLoading] = useState(true);
 
-    // Fetch apps on component mount
+    // Fetch apps on mount and whenever account changes (so 9-dot menu shows correct apps)
     useEffect(() => {
         const fetchApps = async () => {
             try {
@@ -75,7 +76,8 @@ const Header = ({ onAppSelect, onMenuSelect }) => {
             }
         };
         fetchApps();
-    }, []);
+        setDropdownOpen(false); // close dropdown when account changes
+    }, [currentAccount?.id]);
 
     const AppGridMenu = ({ onAppSelect, closeDropdown }) => {
         const { isDark, color } = useTheme();
@@ -212,6 +214,7 @@ const Header = ({ onAppSelect, onMenuSelect }) => {
 
                 <div className="header-middle">
                     <Dropdown
+                        key={currentAccount?.id ?? 'no-account'}
                         popupRender={() => (
                             <AppGridMenu
                                 onAppSelect={onAppSelect}
@@ -222,14 +225,31 @@ const Header = ({ onAppSelect, onMenuSelect }) => {
                         placement="bottomLeft"
                         open={dropdownOpen}
                         onOpenChange={(flag) => setDropdownOpen(flag)}
-                        overlayStyle={{ marginTop: -4 }} // Adjust the popup dropdown position slightly upward
+                        classNames={{ root: 'header-apps-dropdown-overlay' }}
+                        styles={{ root: { marginTop: -4, zIndex: 10001 } }}
                     >
                         <div
+                            role="button"
+                            tabIndex={0}
+                            aria-haspopup="menu"
+                            aria-expanded={dropdownOpen}
                             style={{
                                 cursor: 'pointer',
                                 display: 'flex',
                                 alignItems: 'center',
-                                height: '100%', // aligns it with header height
+                                height: '100%',
+                                outline: 'none',
+                            }}
+                            onClick={(e) => {
+                                e.preventDefault();
+                                e.stopPropagation();
+                                setDropdownOpen(true);
+                            }}
+                            onKeyDown={(e) => {
+                                if (e.key === 'Enter' || e.key === ' ') {
+                                    e.preventDefault();
+                                    setDropdownOpen(true);
+                                }
                             }}
                         >
                             <NineDotIcon size={22} color="currentColor" />
