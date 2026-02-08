@@ -215,6 +215,15 @@ except Exception as e:
     logger.error(f"Failed to register api_endpoints router: {e}")
     raise
 
+# Import and include personal_access_tokens router
+try:
+    from routes import personal_access_tokens
+    app.include_router(personal_access_tokens.router, prefix="/personal-access-tokens", tags=["Personal Access Tokens"])
+    logger.info("Personal Access Tokens router registered successfully at /personal-access-tokens")
+except Exception as e:
+    logger.error(f"Failed to register personal_access_tokens router: {e}")
+    raise
+
 
 @app.get("/")
 def home():

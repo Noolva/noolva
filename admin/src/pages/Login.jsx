@@ -23,6 +23,15 @@ import * as apiUtils from '../utils/api';
 import ErrorModal from '../components/ErrorModal';
 import '../index.css';
 
+// Helper to navigate with account parameter preserved
+const navigateWithAccount = (navigate, path, accountId) => {
+    if (accountId) {
+        navigate(`${path}${path.includes('?') ? '&' : '?'}account=${accountId}`);
+    } else {
+        navigate(path);
+    }
+};
+
 const { Text, Title } = Typography;
 
 const Login = () => {
@@ -59,15 +68,16 @@ const Login = () => {
             if (account.accessToken) {
                 // Set the token and try to get user context
                 apiUtils.setAccessToken(account.accessToken);
-                
+
                 try {
                     const context = await apiUtils.api.getUserContext();
-                    
+
                     // Token is valid, switch to this account
                     const result = await switchAccount(account);
-                    
+
                     if (result.success) {
-                        navigate('/');
+                        const accountId = apiUtils.getCurrentAccountId();
+                        navigateWithAccount(navigate, '/', accountId);
                         return;
                     }
                 } catch (tokenError) {
@@ -75,17 +85,17 @@ const Login = () => {
                     console.log('Token validation failed, prompting for password');
                     // Clear invalid token
                     const storedAccounts = apiUtils.getStoredAccounts();
-                    const updatedAccounts = storedAccounts.map(acc => 
+                    const updatedAccounts = storedAccounts.map(acc =>
                         acc.id === account.id ? { ...acc, accessToken: null } : acc
                     );
                     apiUtils.setStoredAccounts(updatedAccounts);
                 }
             }
-            
+
             // If no token or token invalid, prompt for password
             message.info('Please enter your password to continue');
             setShowForm(true);
-            form.setFieldsValue({ 
+            form.setFieldsValue({
                 identifier: account.username,
                 company_id: account.companyId || null
             });
@@ -94,7 +104,7 @@ const Login = () => {
             setErrorDetails(error);
             setErrorModalVisible(true);
             setShowForm(true);
-            form.setFieldsValue({ 
+            form.setFieldsValue({
                 identifier: account.username,
                 company_id: account.companyId || null
             });
@@ -111,7 +121,8 @@ const Login = () => {
                 const result = await loginVerifyTotp(totpStep.tempToken, values.totp_code?.trim() || '');
                 if (result.success) {
                     setTotpStep({ active: false, tempToken: null });
-                    navigate('/');
+                    const accountId = apiUtils.getCurrentAccountId();
+                    navigateWithAccount(navigate, '/', accountId);
                 } else {
                     setErrorDetails(result.error || { message: 'Invalid code', errorData: { description: 'Invalid or expired code' } });
                     setErrorModalVisible(true);
@@ -123,7 +134,8 @@ const Login = () => {
             const result = await login(values.identifier, values.password, values.company_id || null);
 
             if (result.success) {
-                navigate('/');
+                const accountId = apiUtils.getCurrentAccountId();
+                navigateWithAccount(navigate, '/', accountId);
             } else if (result.requiresTotp && result.tempToken) {
                 setTotpStep({ active: true, tempToken: result.tempToken });
                 form.setFieldsValue({ totp_code: '' });

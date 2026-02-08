@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { Layout } from 'antd';
 import { BrowserRouter as Router, Routes, Route, Navigate, useNavigate, useSearchParams } from 'react-router-dom';
 import Header from './components/Header';
@@ -19,10 +19,21 @@ import IconExplorer from './pages/IconExplorer';
 import Collections from './pages/Collections';
 import ApiEndpoints from './pages/ApiEndpoints';
 import OrganizationUsers from './pages/OrganizationUsers';
+import PersonalAccessTokens from './pages/PersonalAccessTokens';
 import { useAuth } from './contexts/AuthContext';
 import { ThemeProvider } from './contexts/ThemeContext';
 import ReLoginModal from './components/ReLoginModal';
 import IdleTimer from './components/IdleTimer';
+import { getAccountIdFromUrl } from './utils/api';
+
+/**
+ * Helper component to preserve account parameter when navigating
+ */
+const NavigateWithAccount = ({ to, ...props }) => {
+  const accountId = getAccountIdFromUrl();
+  const targetPath = accountId ? `${to}${to.includes('?') ? '&' : '?'}account=${accountId}` : to;
+  return <Navigate to={targetPath} {...props} />;
+};
 
 const { Content, Sider } = Layout;
 
@@ -37,15 +48,25 @@ const AppContent = () => {
   // { activeKey, items: [{ key, label, menuData, appKey, appData }] }
   const [tabs, setTabs] = useState({ activeKey: '', items: [] });
 
-  // Update browser URL when tab changes
+  // Update browser URL when tab changes - preserve account parameter
   const updateURL = useCallback((appKey, tabKey) => {
-    const params = new URLSearchParams();
+    const params = new URLSearchParams(window.location.search);
+    // Preserve account parameter if it exists
+    const accountId = params.get('account');
+
+    // Clear and rebuild params
+    params.delete('app');
+    params.delete('tab');
+
     if (appKey) params.set('app', String(appKey));
     if (tabKey) {
-      // Use the tab key directly (should be menu_id which is clean)
-      // Don't double-encode, URLSearchParams handles encoding automatically
       params.set('tab', String(tabKey));
     }
+    // Preserve account parameter
+    if (accountId) {
+      params.set('account', accountId);
+    }
+
     const newURL = `${window.location.pathname}?${params.toString()}`;
     window.history.replaceState({}, '', newURL);
   }, []);
@@ -68,6 +89,7 @@ const AppContent = () => {
       case 'studio_api_endpoints': return <ApiEndpoints />;
       case 'studio_asset_gallery': return <IconExplorer />;
       case 'org_users': return <OrganizationUsers />;
+      case 'personal_access_tokens': return <PersonalAccessTokens />;
       default: {
         // Try to match by route_path from menuData (since key might be menu_id)
         if (menuData?.route_path) {
@@ -82,6 +104,7 @@ const AppContent = () => {
           if (routePath === 'settings') return <Settings />;
           if (routePath === 'themes') return <Themes />;
           if (routePath === 'org_users') return <OrganizationUsers />;
+          if (routePath === 'personal_access_tokens') return <PersonalAccessTokens />;
         }
         // Try to render based on menu title if available
         if (menuData?.menu_title) {
@@ -236,6 +259,11 @@ const AppContent = () => {
       const params = new URLSearchParams();
       params.set('app', String(tab.appKey));
       params.set('tab', String(targetKey));
+      // Preserve account parameter from current URL
+      const currentAccountId = getAccountIdFromUrl();
+      if (currentAccountId) {
+        params.set('account', currentAccountId);
+      }
       const url = `${window.location.origin}${window.location.pathname}?${params.toString()}`;
       window.open(url, '_blank');
     }
@@ -384,12 +412,18 @@ const AppContent = () => {
     fetchMenus();
   }, [selectedApp, selectedAppData]);
 
+  // Track which URL tab we've already synced to avoid re-running when our own updateTabs/addTab updates state
+  const urlTabSyncedRef = useRef(null);
+
   // Create/activate tab from URL after menus are loaded
   useEffect(() => {
     if (!selectedApp || !urlInitialized) return;
 
     const tabFromURL = searchParams.get('tab');
     if (!tabFromURL) return;
+
+    const syncKey = `${selectedApp}-${tabFromURL}`;
+    if (urlTabSyncedRef.current === syncKey) return;
 
     // Decode URL if it was encoded
     const decodedTabKey = decodeURIComponent(tabFromURL);
@@ -404,13 +438,15 @@ const AppContent = () => {
         const newTabs = { ...tabs, activeKey: existingTab.key };
         updateTabs(newTabs);
       }
+      urlTabSyncedRef.current = syncKey;
       if (existingTab.appKey && existingTab.appKey !== selectedApp) {
         setSelectedApp(existingTab.appKey);
         setSelectedAppData(existingTab.appData);
       }
     } else {
       // Tab doesn't exist - find menu data and create it
-      // Try to find menu by menu_id first (preferred), then menu_uuid, then route_path, then menu_title
+      if (menus.length === 0) return; // wait for menus to load, don't set ref so we retry when menusByApp updates
+
       const menuData = menus.find(menu => {
         const menuId = String(menu.menu_id || '');
         const menuUuid = String(menu.menu_uuid || '');
@@ -424,16 +460,14 @@ const AppContent = () => {
       });
 
       if (menuData) {
-        // Found menu data, use menu_id as the tab key (cleaner URL)
         const tabKey = menuData.menu_id || menuData.menu_uuid || decodedTabKey;
         const label = menuData.menu_title || decodedTabKey.charAt(0).toUpperCase() + decodedTabKey.slice(1).replace(/_/g, ' ');
         addTab(tabKey, label, menuData, appKey, selectedAppData);
-      } else if (menus.length > 0) {
-        // Menus loaded but menu not found - create with basic data
+      } else {
         const label = decodedTabKey.charAt(0).toUpperCase() + decodedTabKey.slice(1).replace(/_/g, ' ');
         addTab(decodedTabKey, label, null, appKey, selectedAppData);
       }
-      // If menus not loaded yet, wait for them
+      urlTabSyncedRef.current = syncKey;
     }
   }, [selectedApp, selectedAppData, urlInitialized, searchParams, menusByApp, tabs, updateTabs, addTab]);
 
@@ -509,7 +543,7 @@ const App = () => {
         <Routes>
           <Route path="/login" element={<Login />} />
           <Route path="/oauth/google-callback" element={<GoogleOAuthCallback />} />
-          <Route path="/*" element={user ? <><IdleTimer /><AppContent /><ReLoginModal /></> : <Navigate to="/login" />} />
+          <Route path="/*" element={user ? <><IdleTimer /><AppContent /><ReLoginModal /></> : <NavigateWithAccount to="/login" />} />
         </Routes>
       </Router>
     </ThemeProvider>
