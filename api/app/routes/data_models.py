@@ -6,18 +6,16 @@ Provides CRUD operations for data_models and data_model_fields
 from fastapi import APIRouter, Depends, HTTPException, Query, Header, Request
 from pydantic import BaseModel
 from typing import Any, Dict, List, Optional, Tuple
-from middlewares.auth import verify_jwt_token
+from middlewares.auth import verify_jwt_token, resolve_bearer_to_user
 from utils.db import get_db
 from classes.postgres_db import PostgresDB
 from datetime import datetime
 import json
 import re
 import base64
-import jwt
 import time
 import logging
 
-from middlewares.auth import SECRET_KEY, ALGORITHM
 from utils.encryption_service import get_encryption_service
 
 router = APIRouter()
@@ -32,21 +30,6 @@ ACTION_DELETE = 8
 
 def _is_safe_identifier(value: str) -> bool:
     return bool(re.fullmatch(r"[A-Za-z_][A-Za-z0-9_]*", value or ""))
-
-
-def _decode_optional_user(authorization: Optional[str]) -> Optional[Dict[str, Any]]:
-    """
-    Decode JWT if present. Returns user payload dict or None.
-    """
-    if not authorization or not authorization.startswith("Bearer "):
-        return None
-    token = authorization.split(" ", 1)[1].strip()
-    if not token:
-        return None
-    try:
-        return jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
-    except Exception:
-        return None
 
 
 async def _get_user_role_ids(user_id: int, company_id: Optional[int]) -> List[int]:
@@ -1677,12 +1660,25 @@ def _assert_user_type_allowed(user: Dict[str, Any]) -> None:
         raise HTTPException(status_code=403, detail="Access denied")
 
 
+def _user_bypasses_row_and_field_policies(user: Optional[Dict[str, Any]]) -> bool:
+    """
+    saas_admin and tenant_admin have no row_policy or field_permissions restrictions.
+    Other users (tenant_user, saas_employee, etc.) are subject to those restrictions.
+    """
+    if not user:
+        return False
+    ut = user.get("user_type")
+    return ut in ("saas_admin", "tenant_admin")
+
+
 async def _build_row_policy_where(
     model_id: int,
     action_bit: int,
     user: Optional[Dict[str, Any]],
     request: Request,
 ) -> Tuple[str, List[Any]]:
+    if _user_bypasses_row_and_field_policies(user):
+        return ("", [])
     policies = await _get_row_access_policies(model_id, action_bit)
     if not policies:
         return ("", [])
@@ -1787,7 +1783,7 @@ async def auto_list_records(
     if not model:
         raise HTTPException(status_code=404, detail="Model not found")
 
-    user = _decode_optional_user(authorization)
+    user = await resolve_bearer_to_user(authorization)
     if not model.get("is_public") and not user:
         raise HTTPException(status_code=401, detail="Authentication required")
     if user:
@@ -1812,12 +1808,12 @@ async def auto_list_records(
         if not _is_safe_identifier(f) or f not in all_fields:
             raise HTTPException(status_code=400, detail=f"Invalid field requested: {f}")
 
-    # Row-level policies
+    # Row-level policies (saas_admin, tenant_admin bypass)
     where_sql, where_args = await _build_row_policy_where(model_id, ACTION_READ, user, request)
 
-    # Field-level permissions (public requests without token can read all fields)
+    # Field-level permissions (public requests without token can read all fields; admins bypass)
     readable_fields = set(requested_fields)
-    if user:
+    if user and not _user_bypasses_row_and_field_policies(user):
         role_ids = await _get_user_role_ids(user["user_id"], user.get("company_id"))
         masks = await _get_field_permission_masks(model_id, role_ids)
         readable_fields = {f for f in requested_fields if (masks.get(f, 0) & ACTION_READ) != 0}
@@ -1867,7 +1863,7 @@ async def auto_create_record(
     if not model:
         raise HTTPException(status_code=404, detail="Model not found")
 
-    user = _decode_optional_user(authorization)
+    user = await resolve_bearer_to_user(authorization)
     if not user:
         raise HTTPException(status_code=401, detail="Authentication required")
     _assert_user_type_allowed(user)
@@ -1890,45 +1886,46 @@ async def auto_create_record(
         if not _is_safe_identifier(k) or k not in all_fields:
             raise HTTPException(status_code=400, detail=f"Invalid field: {k}")
 
-    # Enforce row policies for WRITE (scope fields on insert)
-    policies = await _get_row_access_policies(model_id, ACTION_WRITE)
-    for p in policies or []:
-        scope_field = p.get("scope_field")
-        scope_source = p.get("scope_source")
-        required = bool(p.get("required"))
+    # Enforce row policies for WRITE (scope fields on insert); saas_admin/tenant_admin bypass
+    if not _user_bypasses_row_and_field_policies(user):
+        policies = await _get_row_access_policies(model_id, ACTION_WRITE)
+        for p in policies or []:
+            scope_field = p.get("scope_field")
+            scope_source = p.get("scope_source")
+            required = bool(p.get("required"))
 
-        if not scope_field or not _is_safe_identifier(scope_field):
-            raise HTTPException(status_code=500, detail="Invalid row access policy configuration")
+            if not scope_field or not _is_safe_identifier(scope_field):
+                raise HTTPException(status_code=500, detail="Invalid row access policy configuration")
 
-        if scope_source == "AUTH_CONTEXT":
-            allowed_vals = _resolve_auth_scope_values(user, scope_field)
-            if required and not allowed_vals:
-                raise HTTPException(status_code=403, detail=f"Missing required scope: {scope_field}")
+            if scope_source == "AUTH_CONTEXT":
+                allowed_vals = _resolve_auth_scope_values(user, scope_field)
+                if required and not allowed_vals:
+                    raise HTTPException(status_code=403, detail=f"Missing required scope: {scope_field}")
 
-            if len(allowed_vals) == 1:
-                # Server-enforced scope
-                data[scope_field] = allowed_vals[0]
-            elif len(allowed_vals) > 1:
-                # Must pick one within allowed set
-                if scope_field not in data:
+                if len(allowed_vals) == 1:
+                    # Server-enforced scope
+                    data[scope_field] = allowed_vals[0]
+                elif len(allowed_vals) > 1:
+                    # Must pick one within allowed set
+                    if scope_field not in data:
+                        raise HTTPException(status_code=403, detail=f"Scope required in request: {scope_field}")
+                    if data[scope_field] not in allowed_vals:
+                        raise HTTPException(status_code=403, detail=f"Invalid scope value for {scope_field}")
+                else:
+                    # not required and no auth scope -> leave as is
+                    pass
+            elif scope_source == "USER":
+                if required and scope_field not in data:
                     raise HTTPException(status_code=403, detail=f"Scope required in request: {scope_field}")
-                if data[scope_field] not in allowed_vals:
-                    raise HTTPException(status_code=403, detail=f"Invalid scope value for {scope_field}")
             else:
-                # not required and no auth scope -> leave as is
-                pass
-        elif scope_source == "USER":
-            if required and scope_field not in data:
-                raise HTTPException(status_code=403, detail=f"Scope required in request: {scope_field}")
-        else:
-            raise HTTPException(status_code=500, detail="Invalid row access policy configuration")
+                raise HTTPException(status_code=500, detail="Invalid row access policy configuration")
 
-    # Field-level permissions (WRITE)
-    role_ids = await _get_user_role_ids(user["user_id"], user.get("company_id"))
-    masks = await _get_field_permission_masks(model_id, role_ids)
-    for k in data.keys():
-        if (masks.get(k, 0) & ACTION_WRITE) == 0:
-            raise HTTPException(status_code=403, detail=f"Write not allowed for field: {k}")
+        # Field-level permissions (WRITE)
+        role_ids = await _get_user_role_ids(user["user_id"], user.get("company_id"))
+        masks = await _get_field_permission_masks(model_id, role_ids)
+        for k in data.keys():
+            if (masks.get(k, 0) & ACTION_WRITE) == 0:
+                raise HTTPException(status_code=403, detail=f"Write not allowed for field: {k}")
 
     # Apply encryption
     xor_key = "noolva"
@@ -1974,7 +1971,7 @@ async def auto_update_record(
     if not model:
         raise HTTPException(status_code=404, detail="Model not found")
 
-    user = _decode_optional_user(authorization)
+    user = await resolve_bearer_to_user(authorization)
     if not user:
         raise HTTPException(status_code=401, detail="Authentication required")
     _assert_user_type_allowed(user)
@@ -2000,13 +1997,14 @@ async def auto_update_record(
         if not _is_safe_identifier(k) or k not in all_fields:
             raise HTTPException(status_code=400, detail=f"Invalid field: {k}")
 
-    role_ids = await _get_user_role_ids(user["user_id"], user.get("company_id"))
-    masks = await _get_field_permission_masks(model_id, role_ids)
-    for k in updates.keys():
-        if (masks.get(k, 0) & ACTION_UPDATE) == 0:
-            raise HTTPException(status_code=403, detail=f"Update not allowed for field: {k}")
+    if not _user_bypasses_row_and_field_policies(user):
+        role_ids = await _get_user_role_ids(user["user_id"], user.get("company_id"))
+        masks = await _get_field_permission_masks(model_id, role_ids)
+        for k in updates.keys():
+            if (masks.get(k, 0) & ACTION_UPDATE) == 0:
+                raise HTTPException(status_code=403, detail=f"Update not allowed for field: {k}")
 
-    # Enforce row policies for UPDATE
+    # Enforce row policies for UPDATE (saas_admin/tenant_admin bypass)
     policy_where, policy_args = await _build_row_policy_where(model_id, ACTION_UPDATE, user, request)
     where = f'WHERE "{pk_col}" = $1'
     if policy_where:
@@ -2040,7 +2038,12 @@ async def auto_update_record(
         raise HTTPException(status_code=404, detail="Record not found (or not permitted)")
 
     requested_fields = all_fields
-    readable_fields = {f for f in requested_fields if (masks.get(f, 0) & ACTION_READ) != 0}
+    if _user_bypasses_row_and_field_policies(user):
+        readable_fields = set(requested_fields)
+    else:
+        role_ids = await _get_user_role_ids(user["user_id"], user.get("company_id"))
+        masks = await _get_field_permission_masks(model_id, role_ids)
+        readable_fields = {f for f in requested_fields if (masks.get(f, 0) & ACTION_READ) != 0}
     masked = _apply_field_masking([updated], requested_fields, readable_fields, encryption_by_field)
     return {"model_name": model_name, "record": masked[0] if masked else {}}
 
@@ -2060,7 +2063,7 @@ async def auto_delete_record(
     if not model:
         raise HTTPException(status_code=404, detail="Model not found")
 
-    user = _decode_optional_user(authorization)
+    user = await resolve_bearer_to_user(authorization)
     if not user:
         raise HTTPException(status_code=401, detail="Authentication required")
     _assert_user_type_allowed(user)
@@ -2214,7 +2217,7 @@ async def custom_endpoint_get(
     Applies model_row_access_policies for reference_model_ids.
     Pagination is compulsory (limit, offset).
     """
-    user = _decode_optional_user(authorization)
+    user = await resolve_bearer_to_user(authorization)
     if not user:
         raise HTTPException(status_code=401, detail="Authentication required")
     _assert_user_type_allowed(user)
@@ -2253,7 +2256,7 @@ async def custom_endpoint_get(
         ref_ids = []
 
     policy_clauses: List[Tuple[str, List[Any]]] = []
-    if ref_ids:
+    if ref_ids and not _user_bypasses_row_and_field_policies(user):
         models = await PostgresDB.fetch(
             """
             SELECT model_id, table_name, table_alias

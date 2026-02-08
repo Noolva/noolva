@@ -152,6 +152,9 @@ export const ThemeProvider = ({ children }) => {
         root.style.setProperty('--secondary-color', secondary);
         root.style.setProperty('--header-bg-color', headerBgColor || 'transparent');
         root.style.setProperty('--sidebar-bg-color', sidebarBgColor || 'transparent');
+        // Sidebar right border: dark border in light mode, light border in dark mode so it's always visible
+        const sidebarBorderColor = isDark ? 'rgba(255, 255, 255, 0.2)' : 'rgba(0, 0, 0, 0.18)';
+        root.style.setProperty('--sidebar-border-color', sidebarBorderColor);
         root.style.setProperty('--header-text-color', (headerBgColor && headerBgColor !== 'transparent') ? '#ffffff' : 'var(--text-color)');
         root.style.setProperty('--sidebar-text-color', (sidebarBgColor && sidebarBgColor !== 'transparent') ? '#ffffff' : 'var(--text-color)');
         root.style.setProperty('--font-size-base', `${fontBase}px`);

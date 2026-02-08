@@ -1,6 +1,6 @@
 import React, { createContext, useState, useContext, useEffect, useCallback } from 'react';
 import { App } from 'antd';
-import { api, setAccessToken, getAccessToken, getStoredAccounts, setStoredAccounts, getCurrentAccountId, setCurrentAccountId, clearSessionLock, getSessionLockedRequire2FA } from '../utils/api';
+import { api, setAccessToken, getAccessToken, getStoredAccounts, setStoredAccounts, getCurrentAccountId, setCurrentAccountId, clearSessionLock, getSessionLockedRequire2FA, getAccountIdFromUrl, updateUrlWithAccount } from '../utils/api';
 
 const AuthContext = createContext();
 
@@ -12,12 +12,11 @@ export const AuthProvider = ({ children }) => {
     const [loading, setLoading] = useState(true);
     const [initialized, setInitialized] = useState(false);
 
-    // Initialize auth state from localStorage
+    // Initialize auth state from URL/sessionStorage/localStorage
     useEffect(() => {
         const initAuth = async () => {
             try {
                 const storedAccounts = getStoredAccounts();
-                const currentAccountId = getCurrentAccountId();
                 const token = getAccessToken();
 
                 if (token && storedAccounts.length > 0) {
@@ -27,11 +26,34 @@ export const AuthProvider = ({ children }) => {
                         setUser(context.user);
                         setAccounts(storedAccounts);
 
-                        const account = storedAccounts.find(acc =>
-                            acc.userId === context.user.user_id &&
-                            (currentAccountId ? acc.id === parseInt(currentAccountId) : true)
-                        );
-                        setCurrentAccount(account || storedAccounts[0]);
+                        // Get account ID from URL (highest priority), then sessionStorage/localStorage
+                        let currentAccountId = getCurrentAccountId();
+
+                        // If URL has account param, use it; otherwise use stored value
+                        const accountFromUrl = getAccountIdFromUrl();
+                        if (accountFromUrl) {
+                            currentAccountId = accountFromUrl;
+                            // Sync to sessionStorage
+                            if (typeof sessionStorage !== 'undefined') {
+                                sessionStorage.setItem('current_account_id', currentAccountId);
+                            }
+                        }
+
+                        // Find account by ID, or default to first account
+                        let account = null;
+                        if (currentAccountId) {
+                            account = storedAccounts.find(acc => acc.id === parseInt(currentAccountId));
+                        }
+
+                        // If account not found or no account ID, use first account
+                        if (!account && storedAccounts.length > 0) {
+                            account = storedAccounts[0];
+                            currentAccountId = account.id.toString();
+                            // Update URL and storage with default account
+                            setCurrentAccountId(account.id);
+                        }
+
+                        setCurrentAccount(account || null);
                     } catch (error) {
                         // Session locked: keep token so reauth can use it; show app with unlock modal
                         if (error.isSessionLocked) {
@@ -41,7 +63,19 @@ export const AuthProvider = ({ children }) => {
                                 enable_2fa: getSessionLockedRequire2FA(),
                             });
                             setAccounts(storedAccounts);
-                            setCurrentAccount(storedAccounts[0] || null);
+
+                            // Try to get account from URL/storage
+                            let currentAccountId = getCurrentAccountId();
+                            const accountFromUrl = getAccountIdFromUrl();
+                            if (accountFromUrl) {
+                                currentAccountId = accountFromUrl;
+                            }
+
+                            const account = currentAccountId
+                                ? storedAccounts.find(acc => acc.id === parseInt(currentAccountId))
+                                : (storedAccounts[0] || null);
+
+                            setCurrentAccount(account);
                             return;
                         }
                         // Token invalid or other error, clear storage
@@ -243,7 +277,7 @@ export const AuthProvider = ({ children }) => {
                         acc.id === account.id ? updatedAccount : acc
                     );
                     setStoredAccounts(updatedAccounts);
-                    setCurrentAccountId(account.id);
+                    setCurrentAccountId(account.id); // This now updates URL and sessionStorage
 
                     setUser(context.user);
                     setAccounts(updatedAccounts);
@@ -277,7 +311,7 @@ export const AuthProvider = ({ children }) => {
                 acc.id === account.id ? updatedAccount : acc
             );
             setStoredAccounts(updatedAccounts);
-            setCurrentAccountId(account.id);
+            setCurrentAccountId(account.id); // This now updates URL and sessionStorage
 
             setUser(response.user);
             setAccounts(updatedAccounts);

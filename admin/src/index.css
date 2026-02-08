@@ -58,11 +58,11 @@ body[data-theme="light"] {
   --font-size-large: 16px;
 }
 
-/* Sidebar background and right border - override Ant Design Sider */
+/* Sidebar background and light right border so it's clear where the sidebar ends */
 .ant-layout-sider.app-sidebar,
 .ant-layout-sider.app-sidebar.ant-layout-sider-dark {
   background: var(--sidebar-bg-color, #f1f5f9) !important;
-  border-right: 1px solid var(--border-color, rgba(0, 0, 0, 0.06)) !important;
+  border-right: 1px solid var(--sidebar-border-color, rgba(0, 0, 0, 0.12)) !important;
 }
 
 .ant-layout-sider.app-sidebar .ant-menu {

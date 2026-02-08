@@ -192,6 +192,26 @@ CREATE INDEX idx_user_account_profiles_company ON public.user_account_profiles(c
 CREATE INDEX idx_user_account_profiles_default ON public.user_account_profiles(user_id, is_default) WHERE is_default = TRUE;
 
 -- ==========================================
+-- 2c. Personal Access Tokens (PAT)
+-- ==========================================
+-- Long-lived tokens for API access (scripts, integrations). Stored as hash only; plaintext shown once on create.
+CREATE TABLE public.personal_access_tokens (
+    pat_id SERIAL PRIMARY KEY,
+    pat_uuid UUID DEFAULT gen_random_uuid() NOT NULL UNIQUE,
+    user_id INTEGER NOT NULL REFERENCES public.users(user_id) ON DELETE CASCADE,
+    company_id INTEGER REFERENCES public.companies(company_id) ON DELETE SET NULL,
+    name VARCHAR(200) NOT NULL,
+    token_hash VARCHAR(64) NOT NULL UNIQUE,
+    scopes_json JSONB DEFAULT '[]'::jsonb,
+    expires_at TIMESTAMPTZ NOT NULL,
+    last_used_at TIMESTAMPTZ,
+    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP NOT NULL
+);
+CREATE INDEX idx_personal_access_tokens_user ON public.personal_access_tokens(user_id);
+CREATE INDEX idx_personal_access_tokens_token_hash ON public.personal_access_tokens(token_hash);
+CREATE INDEX idx_personal_access_tokens_expires ON public.personal_access_tokens(expires_at);
+
+-- ==========================================
 -- 3. User Groups
 -- ==========================================
 CREATE TABLE public.user_groups (

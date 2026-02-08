@@ -9,7 +9,7 @@ feature/share-options-anything-via-copy-plaintext-excel-whatsapp-email
 feature/restart-increment-serial-on-year-month-field-type-autonumber
 new build cache issue handling and random number on build js files.
 what about cache systems introduce with s3.
-add new user and test it.
+
 
 given PRS:
 NF0001/feature/ui-custom-components-for-inputs-views
@@ -23,14 +23,26 @@ NF0008/feature/api-endpoints-initiation
 NF0009/feature/theming-global-user-based-theming
 NF0010/feature/users-ui-auto-logout-test-users-action-mfa-protection-token-expired
 NF0011/feature/side-bar-search-parent-child-auto-hide-sidebar-theme-google-auth
+NF0012/feature/two-user-switch-testing-and-fixes
 current,
 ======
-NF0012/feature/two-user-switch-testing-and-fixes
+NF0013/feature/url-based-account-tracking-pat-allow-all-to-saas-admin-tenant-admin
+
+default-company logic- and header-finishings=>done
+NF0013/feature/collecting-existing-module-features-insert-to-db-permissions-management
+module-permissions-validation-testing,
+
+start-notes-handling-shedule crons work as separate project, but use the same db? by introducing models,
+deploy live to access live for mobile apps.
+we can create application-service-users with specific permissions, and allow api to respond some data,
+tenant app- connect TenantId,Tenant secret, return approved app or approved website. check the security inside react?
+helix-work directly connect db, take list of works, notes,crons,python functions for the activities or PAT.
+
 
 
 
 NF0012/feature/env-based-httpclient-dbquery-fastapi-request-gunicorn-workers-configurations
-NF0013/feature/collecting-existing-module-features-insert-to-db-permissions-management
+
 NF0014/feature/actions-flow-planning-implementations
 NF0015/feature/data-model-encryption-test
 
