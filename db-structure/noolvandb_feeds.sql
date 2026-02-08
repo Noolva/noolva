@@ -401,6 +401,10 @@ BEGIN
         INSERT INTO public.menus (menu_title,parent_id,type,route_path,icon,app_id,scope,is_builtin,order_no,created_by)
         VALUES ('Themes',NULL,'item','themes','bgcolors',organization_app_id,'saas',TRUE,85,system_user_id);
     END IF;
+    IF NOT EXISTS (SELECT 1 FROM public.menus WHERE app_id=organization_app_id AND parent_id IS NULL AND menu_title='Personal Access Tokens') THEN
+        INSERT INTO public.menus (menu_title,parent_id,type,route_path,icon,app_id,scope,is_builtin,order_no,created_by)
+        VALUES ('Personal Access Tokens',NULL,'item','personal_access_tokens','key',organization_app_id,'saas',TRUE,86,system_user_id);
+    END IF;
 
     -- Menus for App Studio app (all direct children, parent_id = NULL)
     IF NOT EXISTS (SELECT 1 FROM public.menus WHERE app_id=appstudio_app_id AND parent_id IS NULL AND menu_title='App Store') THEN

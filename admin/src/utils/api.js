@@ -72,10 +72,86 @@ export const setStoredAccounts = (accounts) => {
 };
 
 /**
- * Get current account ID
+ * Get current account ID - checks URL first, then sessionStorage, then localStorage
+ * This ensures each browser tab maintains its own account context
  */
 export const getCurrentAccountId = () => {
+    // 1. Check URL parameter (highest priority - for tab-specific context)
+    if (typeof window !== 'undefined') {
+        const urlParams = new URLSearchParams(window.location.search);
+        const accountFromUrl = urlParams.get('account');
+        if (accountFromUrl) {
+            // Store in sessionStorage for this tab
+            sessionStorage.setItem('current_account_id', accountFromUrl);
+            return accountFromUrl;
+        }
+
+        // 2. Check sessionStorage (tab-specific)
+        const accountFromSession = sessionStorage.getItem('current_account_id');
+        if (accountFromSession) {
+            return accountFromSession;
+        }
+    }
+
+    // 3. Fall back to localStorage (backward compatibility)
     return localStorage.getItem('current_account_id');
+};
+
+/**
+ * Set current account ID - updates URL, sessionStorage, and localStorage
+ */
+export const setCurrentAccountId = (accountId) => {
+    if (typeof window === 'undefined') return;
+
+    if (accountId) {
+        const accountIdStr = accountId.toString();
+        // Update sessionStorage (tab-specific)
+        sessionStorage.setItem('current_account_id', accountIdStr);
+        // Update localStorage (for backward compatibility)
+        localStorage.setItem('current_account_id', accountIdStr);
+
+        // Update URL parameter without page reload
+        const url = new URL(window.location.href);
+        url.searchParams.set('account', accountIdStr);
+        window.history.replaceState({}, '', url.toString());
+    } else {
+        sessionStorage.removeItem('current_account_id');
+        localStorage.removeItem('current_account_id');
+
+        // Remove account from URL
+        const url = new URL(window.location.href);
+        url.searchParams.delete('account');
+        window.history.replaceState({}, '', url.toString());
+    }
+};
+
+/**
+ * Get account ID from URL without side effects
+ */
+export const getAccountIdFromUrl = () => {
+    if (typeof window === 'undefined') return null;
+    const urlParams = new URLSearchParams(window.location.search);
+    return urlParams.get('account');
+};
+
+/**
+ * Update URL with account parameter while preserving other params
+ */
+export const updateUrlWithAccount = (accountId, replace = true) => {
+    if (typeof window === 'undefined') return;
+
+    const url = new URL(window.location.href);
+    if (accountId) {
+        url.searchParams.set('account', accountId.toString());
+    } else {
+        url.searchParams.delete('account');
+    }
+
+    if (replace) {
+        window.history.replaceState({}, '', url.toString());
+    } else {
+        window.history.pushState({}, '', url.toString());
+    }
 };
 
 // Session idle lock: re-export from dedicated module (single source of truth)
@@ -91,17 +167,6 @@ const isAuthAllowedWhenLocked = (config) => {
     if (url === 'auth/login' || url.endsWith('/auth/login')) return true;
     if (url === 'auth/login/verify-totp' || url.includes('auth/login/verify-totp')) return true;
     return false;
-};
-
-/**
- * Set current account ID
- */
-export const setCurrentAccountId = (accountId) => {
-    if (accountId) {
-        localStorage.setItem('current_account_id', accountId.toString());
-    } else {
-        localStorage.removeItem('current_account_id');
-    }
 };
 
 /**
@@ -350,6 +415,20 @@ export const api = {
             password,
             totp_code: totpCode || null,
         });
+        return response.data;
+    },
+
+    // Personal Access Tokens
+    listPersonalAccessTokens: async () => {
+        const response = await axiosInstance.get('/personal-access-tokens/list');
+        return response.data;
+    },
+    createPersonalAccessToken: async (data) => {
+        const response = await axiosInstance.post('/personal-access-tokens/create', data);
+        return response.data;
+    },
+    revokePersonalAccessToken: async (patId) => {
+        const response = await axiosInstance.delete(`/personal-access-tokens/${patId}`);
         return response.data;
     },
 

@@ -1,0 +1,7 @@
+Keep your core React app unchanged. Store in DB whether a page is dynamic or custom.
+For custom pages, create a separate React app, run npm run build, and host/copy the built JS & CSS (S3, CDN, Nginx, or core app public folder).
+When core app reads a custom page config from DB, it dynamically loads the bundle and mounts it inside a div in the main panel, passing inputs as JSON props.
+The custom app exposes a global mount() function and can also send data back via callbacks.
+
+
+custom moduels,->config with db sturcture , views pages, endpoints. enpoint actions, models, all were in separate, migratable,exportable?

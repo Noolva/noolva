@@ -108,3 +108,8 @@
 .clickable {
     cursor: pointer;
 }
+
+/* Apps 9-dot dropdown: render in body so it appears above tab content when URL has ?tab= */
+.header-apps-dropdown-overlay {
+    z-index: 10001 !important;
+}

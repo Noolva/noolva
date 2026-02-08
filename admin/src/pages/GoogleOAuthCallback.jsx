@@ -90,14 +90,14 @@ const GoogleOAuthCallback = () => {
                 }
 
                 apiUtils.setStoredAccounts(updatedAccounts);
-                apiUtils.setCurrentAccountId(accountData.id);
+                apiUtils.setCurrentAccountId(accountData.id); // This updates URL with account parameter
 
                 // Clear any session lock
                 apiUtils.clearSessionLock();
 
                 // Reload the page to trigger AuthContext re-initialization with new token
-                // This ensures all auth state is properly set
-                window.location.href = '/';
+                // Account parameter is already in URL from setCurrentAccountId
+                window.location.href = `/?account=${accountData.id}`;
             } catch (err) {
                 console.error('Google OAuth callback error:', err);
                 setError({
@@ -113,10 +113,10 @@ const GoogleOAuthCallback = () => {
 
     if (loading) {
         return (
-            <div style={{ 
-                display: 'flex', 
-                justifyContent: 'center', 
-                alignItems: 'center', 
+            <div style={{
+                display: 'flex',
+                justifyContent: 'center',
+                alignItems: 'center',
                 height: '100vh',
                 flexDirection: 'column',
                 gap: '16px'
@@ -130,10 +130,10 @@ const GoogleOAuthCallback = () => {
     if (error) {
         return (
             <>
-                <div style={{ 
-                    display: 'flex', 
-                    justifyContent: 'center', 
-                    alignItems: 'center', 
+                <div style={{
+                    display: 'flex',
+                    justifyContent: 'center',
+                    alignItems: 'center',
                     height: '100vh',
                     flexDirection: 'column',
                     gap: '16px'
