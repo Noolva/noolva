@@ -241,6 +241,7 @@ class DataModelCreate(BaseModel):
     is_active: bool = True
     description: Optional[str] = None
     id_field_name: Optional[str] = "id"  # ID field name for the primary key
+    id_field_type_code: Optional[str] = "auto_number"  # 'auto_number' (SERIAL) or 'auto_uuid' (UUID)
     fields: Optional[List[DataModelFieldCreate]] = []
 
 
@@ -576,15 +577,21 @@ async def create_data_model(
         
         model_id = model_result["model_id"]
         
-        # Get auto_number field_type_id for ID field
-        auto_number_type = await PostgresDB.fetchrow(
-            "SELECT field_type_id FROM public.field_types WHERE type_code = 'auto_number' LIMIT 1"
-        )
-        if not auto_number_type:
+        # Get ID field type (auto_number or auto_uuid)
+        id_field_type_code = (payload.id_field_type_code or "auto_number").strip().lower()
+        if id_field_type_code not in ("auto_number", "auto_uuid"):
             await PostgresDB.execute("DELETE FROM public.data_models WHERE model_id = $1", model_id)
-            raise HTTPException(status_code=500, detail="Auto number field type not found")
+            raise HTTPException(status_code=400, detail="id_field_type_code must be 'auto_number' or 'auto_uuid'")
         
-        auto_number_field_type_id = auto_number_type["field_type_id"]
+        id_field_type = await PostgresDB.fetchrow(
+            f"SELECT field_type_id FROM public.field_types WHERE type_code = $1 LIMIT 1",
+            id_field_type_code,
+        )
+        if not id_field_type:
+            await PostgresDB.execute("DELETE FROM public.data_models WHERE model_id = $1", model_id)
+            raise HTTPException(status_code=500, detail=f"Field type '{id_field_type_code}' not found")
+        
+        pk_field_type_id = id_field_type["field_type_id"]
         # Use id_field_name from payload, default to "id" if not provided
         id_field_name = (payload.id_field_name or "id").strip()
         if not _is_safe_identifier(id_field_name):
@@ -595,7 +602,11 @@ async def create_data_model(
         try:
             # Build CREATE TABLE statement
             # Start with the ID field (primary key)
-            columns = [f'"{id_field_name}" SERIAL PRIMARY KEY']
+            if id_field_type_code == "auto_uuid":
+                pk_col_def = f'"{id_field_name}" UUID DEFAULT gen_random_uuid() PRIMARY KEY'
+            else:
+                pk_col_def = f'"{id_field_name}" SERIAL PRIMARY KEY'
+            columns = [pk_col_def]
             
             # Add fields from payload
             for field in payload.fields:
@@ -656,7 +667,7 @@ async def create_data_model(
             model_id,
             id_field_name,
             "ID",
-            auto_number_field_type_id,
+            pk_field_type_id,
             "{}",
             False,
             False,
@@ -1115,6 +1126,7 @@ async def check_model_deletion(
             other_references.append({
                 "type": "app_views",
                 "count": len(app_views),
+                "reason": "App views that use this model. Remove or reassign them in Studio before deleting the model.",
                 "items": [{"id": v["app_view_id"], "name": v["view_name"]} for v in app_views]
             })
         
@@ -1127,6 +1139,7 @@ async def check_model_deletion(
             other_references.append({
                 "type": "archival_policies",
                 "count": len(archival_policies),
+                "reason": "Archival policies are configured for this model. Remove them before deleting the model.",
                 "items": []
             })
         
@@ -1139,26 +1152,45 @@ async def check_model_deletion(
             other_references.append({
                 "type": "data_flattening_rules",
                 "count": len(flattening_rules),
+                "reason": "Flattened view rules use this model as source. Remove or update them before deleting the model.",
                 "items": [{"id": r["rule_id"], "name": r["rule_name"]} for r in flattening_rules]
             })
         
         # Check api_endpoints (related_model_id or model_id in reference_model_ids)
         api_endpoints = await PostgresDB.fetch(
             """
-            SELECT endpoint_id, path FROM public.api_endpoints
+            SELECT endpoint_id, path, type FROM public.api_endpoints
             WHERE related_model_id = $1 OR $1 = ANY(reference_model_ids)
             """,
             model_id
         )
         if api_endpoints:
+            auto_crud_count = sum(1 for e in api_endpoints if e.get("type") == "auto_crud")
+            if auto_crud_count == len(api_endpoints):
+                reason = (
+                    f"{len(api_endpoints)} auto CRUD endpoint(s) (GET/POST/PUT/DELETE) are linked to this model. "
+                    "They will be removed automatically when you delete the model."
+                )
+            else:
+                reason = (
+                    f"{len(api_endpoints)} API endpoint(s) reference this model. "
+                    "Auto CRUD endpoints will be removed when you delete the model; others may need to be updated or removed in API Endpoints."
+                )
             other_references.append({
                 "type": "api_endpoints",
                 "count": len(api_endpoints),
+                "reason": reason,
                 "items": [{"id": e["endpoint_id"], "name": e["path"]} for e in api_endpoints]
             })
         
-        can_delete = row_count == 0 and len(relation_list) == 0 and len(other_references) == 0
-        
+        # Allow delete when: no data, no relation fields, and either no other refs or only api_endpoints (those are removed on delete)
+        only_api_endpoints = all(ref["type"] == "api_endpoints" for ref in other_references) if other_references else True
+        can_delete = (
+            row_count == 0
+            and len(relation_list) == 0
+            and (len(other_references) == 0 or only_api_endpoints)
+        )
+
         return {
             "can_delete": can_delete,
             "row_count": row_count,
@@ -1299,6 +1331,15 @@ async def delete_data_model(
             if table_check:
                 await PostgresDB.execute(f'DROP TABLE IF EXISTS public."{table_name}" CASCADE')
         
+        # Delete auto CRUD api_endpoints for this model (they reference related_model_id)
+        await PostgresDB.execute(
+            """
+            DELETE FROM public.api_endpoints
+            WHERE type = 'auto_crud' AND related_model_id = $1
+            """,
+            model_id,
+        )
+        
         # Delete model (fields, permissions, policies, views will be deleted via CASCADE)
         # The following tables have ON DELETE CASCADE:
         # - data_model_fields
@@ -1355,9 +1396,9 @@ async def add_field(
                 detail=f"Field '{field.field_name}' already exists in this model"
             )
         
-        # Get field type
+        # Get field type (actual_db_type and type_code for special handling)
         field_type = await PostgresDB.fetchrow(
-            "SELECT actual_db_type FROM public.field_types WHERE field_type_id = $1",
+            "SELECT actual_db_type, type_code FROM public.field_types WHERE field_type_id = $1",
             field.field_type_id
         )
         
@@ -1400,6 +1441,7 @@ async def add_field(
         # Add column to actual table
         table_name = model["table_name"]
         db_type = field_type["actual_db_type"]
+        type_code = (field_type.get("type_code") or "").lower()
         
         col_def = f'"{field.field_name}"'
         
@@ -1409,10 +1451,14 @@ async def add_field(
         else:
             col_def += f" {db_type}"
         
+        # Auto UUID: add DEFAULT gen_random_uuid()
+        if type_code == "auto_uuid":
+            col_def += " DEFAULT gen_random_uuid()"
+        
         if field.is_required and not field.is_primary_key:
             col_def += " NOT NULL"
         
-        if field.default_value:
+        if field.default_value and type_code != "auto_uuid":
             col_def += f" DEFAULT '{field.default_value}'"
         
         alter_sql = f'ALTER TABLE public."{table_name}" ADD COLUMN {col_def}'
@@ -1437,6 +1483,58 @@ async def add_field(
         raise
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to add field: {str(e)}")
+
+
+class ReorderFieldsRequest(BaseModel):
+    field_ids: List[int]
+
+
+@router.put("/model/{model_id}/fields/reorder")
+async def reorder_fields(
+    model_id: int,
+    payload: ReorderFieldsRequest,
+    user: Dict = Depends(verify_jwt_token(["saas_admin", "saas_employee", "tenant_admin"])),
+    db=Depends(get_db),
+):
+    """
+    Reorder fields in a model by updating order_no.
+    """
+    if not user:
+        raise HTTPException(status_code=401, detail="Authentication required")
+
+    if not payload.field_ids:
+        raise HTTPException(status_code=400, detail="field_ids cannot be empty")
+
+    try:
+        # Ensure all fields belong to this model
+        rows = await PostgresDB.fetch(
+            """
+            SELECT field_id
+            FROM public.data_model_fields
+            WHERE model_id = $1 AND field_id = ANY($2::int[])
+            """,
+            model_id,
+            payload.field_ids,
+        )
+        found_ids = {r["field_id"] for r in rows} if rows else set()
+        requested_ids = set(payload.field_ids)
+        if found_ids != requested_ids:
+            missing = sorted(list(requested_ids - found_ids))
+            raise HTTPException(status_code=400, detail=f"Invalid field_ids for this model: {missing}")
+
+        # Apply new order sequentially (1..n) based on payload order
+        for idx, field_id in enumerate(payload.field_ids, start=1):
+            await PostgresDB.execute(
+                "UPDATE public.data_model_fields SET order_no = $1 WHERE field_id = $2",
+                idx,
+                field_id,
+            )
+
+        return {"message": "Fields reordered successfully"}
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to reorder fields: {str(e)}")
 
 
 @router.put("/model/{model_id}/fields/{field_id}")
@@ -1596,58 +1694,6 @@ async def delete_field(
         raise
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to delete field: {str(e)}")
-
-
-class ReorderFieldsRequest(BaseModel):
-    field_ids: List[int]
-
-
-@router.put("/model/{model_id}/fields/reorder")
-async def reorder_fields(
-    model_id: int,
-    payload: ReorderFieldsRequest,
-    user: Dict = Depends(verify_jwt_token(["saas_admin", "saas_employee", "tenant_admin"])),
-    db=Depends(get_db),
-):
-    """
-    Reorder fields in a model by updating order_no.
-    """
-    if not user:
-        raise HTTPException(status_code=401, detail="Authentication required")
-
-    if not payload.field_ids:
-        raise HTTPException(status_code=400, detail="field_ids cannot be empty")
-
-    try:
-        # Ensure all fields belong to this model
-        rows = await PostgresDB.fetch(
-            """
-            SELECT field_id
-            FROM public.data_model_fields
-            WHERE model_id = $1 AND field_id = ANY($2::int[])
-            """,
-            model_id,
-            payload.field_ids,
-        )
-        found_ids = {r["field_id"] for r in rows} if rows else set()
-        requested_ids = set(payload.field_ids)
-        if found_ids != requested_ids:
-            missing = sorted(list(requested_ids - found_ids))
-            raise HTTPException(status_code=400, detail=f"Invalid field_ids for this model: {missing}")
-
-        # Apply new order sequentially (1..n) based on payload order
-        for idx, field_id in enumerate(payload.field_ids, start=1):
-            await PostgresDB.execute(
-                "UPDATE public.data_model_fields SET order_no = $1 WHERE field_id = $2",
-                idx,
-                field_id,
-            )
-
-        return {"message": "Fields reordered successfully"}
-    except HTTPException:
-        raise
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Failed to reorder fields: {str(e)}")
 
 
 class AutoRecordPayload(BaseModel):
@@ -1926,6 +1972,8 @@ async def auto_create_record(
         for k in data.keys():
             if (masks.get(k, 0) & ACTION_WRITE) == 0:
                 raise HTTPException(status_code=403, detail=f"Write not allowed for field: {k}")
+    else:
+        masks = None  # User bypasses; all fields readable in response
 
     # Apply encryption
     xor_key = "noolva"
@@ -1950,7 +1998,7 @@ async def auto_create_record(
     # Mask response using READ rules
     fields_param = ",".join(all_fields)
     requested_fields = [x.strip() for x in fields_param.split(",") if x.strip()]
-    readable_fields = {f for f in requested_fields if (masks.get(f, 0) & ACTION_READ) != 0}
+    readable_fields = set(requested_fields) if masks is None else {f for f in requested_fields if (masks.get(f, 0) & ACTION_READ) != 0}
     masked = _apply_field_masking([inserted or {}], requested_fields, readable_fields, encryption_by_field)
     return {"model_name": model_name, "record": masked[0] if masked else {}}
 

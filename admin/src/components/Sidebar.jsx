@@ -251,7 +251,12 @@ const Sidebar = memo(({ selectedApp, selectedAppData, onSelect, onOpenInNewTab, 
                             window.open(contextMenu.url, '_blank');
                             closeContextMenu();
                         }}
-                        onKeyDown={(e) => e.key === 'Enter' && window.open(contextMenu.url, '_blank')}
+                        onKeyDown={(e) => {
+                            if (e.key === 'Enter') {
+                                window.open(contextMenu.url, '_blank');
+                                closeContextMenu();
+                            }
+                        }}
                     >
                         Open in new browser tab
                     </div>

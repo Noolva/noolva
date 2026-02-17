@@ -898,6 +898,11 @@ export const api = {
         return response.data;
     },
 
+    getOrphanedAutoCrudEndpoints: async () => {
+        const response = await axiosInstance.get("/api-endpoints/orphaned-auto-crud");
+        return response.data;
+    },
+
     // API Tester - call custom endpoint (GET with pagination)
     callCustomEndpoint: async (endpointId, { limit = 10, offset = 0 } = {}) => {
         const response = await axiosInstance.get(`/data-models/custom-endpoint/${endpointId}`, {
