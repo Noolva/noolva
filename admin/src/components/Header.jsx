@@ -286,7 +286,7 @@ const Header = ({ onAppSelect, onMenuSelect }) => {
                         onClick={toggleDark}
                         title={isDark ? 'Switch to Light' : 'Switch to Dark'}
                     >
-                        {isDark ? <BulbOutlined className="icon" /> : <BulbFilled className="icon" />}
+                        {isDark ? (<BulbOutlined className="icon" />) : (<BulbFilled className="icon" />)}
                     </Space>
                     <Space
                         style={{ cursor: 'pointer' }}

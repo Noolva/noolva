@@ -51,6 +51,7 @@ INSERT INTO public.field_types (type_name, type_code, category, actual_db_type, 
 -- Numbers
 ('Number', 'number', 'basic', 'NUMERIC', '{"precision": 10, "scale": 2}', (SELECT component_type_id FROM public.ui_component_types WHERE type_code = 'number')),
 ('Auto Number', 'auto_number', 'advanced', 'SERIAL', '{}', (SELECT component_type_id FROM public.ui_component_types WHERE type_code = 'label')),
+('Auto UUID', 'auto_uuid', 'advanced', 'UUID', '{}', (SELECT component_type_id FROM public.ui_component_types WHERE type_code = 'label')),
 ('Currency', 'currency', 'advanced', 'NUMERIC', '{"currency_symbol": "₹", "precision": 10, "scale": 2}', (SELECT component_type_id FROM public.ui_component_types WHERE type_code = 'number')),
 ('Percentage', 'percentage', 'advanced', 'NUMERIC', '{"precision": 5, "scale": 2}', (SELECT component_type_id FROM public.ui_component_types WHERE type_code = 'number')),
 ('Rating', 'rating', 'advanced', 'INTEGER', '{"max_stars": 5}', (SELECT component_type_id FROM public.ui_component_types WHERE type_code = 'number')),
@@ -100,6 +101,7 @@ UPDATE public.field_types SET input_type_image = 'field_types/field_type_text.sv
 UPDATE public.field_types SET input_type_image = 'field_types/field_type_paragraph.svg' WHERE type_code = 'paragraph';
 UPDATE public.field_types SET input_type_image = 'field_types/field_type_number.svg' WHERE type_code = 'number';
 UPDATE public.field_types SET input_type_image = 'field_types/field_type_auto_number.svg' WHERE type_code = 'auto_number';
+UPDATE public.field_types SET input_type_image = 'field_types/field_type_auto_number.svg' WHERE type_code = 'auto_uuid';
 UPDATE public.field_types SET input_type_image = 'field_types/field_type_currency.svg' WHERE type_code = 'currency';
 UPDATE public.field_types SET input_type_image = 'field_types/field_type_percentage.svg' WHERE type_code = 'percentage';
 UPDATE public.field_types SET input_type_image = 'field_types/field_type_rating.svg' WHERE type_code = 'rating';
@@ -132,32 +134,59 @@ UPDATE public.field_types SET order_no = 1 WHERE type_code = 'text';
 UPDATE public.field_types SET order_no = 2 WHERE type_code = 'paragraph';
 UPDATE public.field_types SET order_no = 3 WHERE type_code = 'number';
 UPDATE public.field_types SET order_no = 4 WHERE type_code = 'auto_number';
-UPDATE public.field_types SET order_no = 5 WHERE type_code = 'currency';
-UPDATE public.field_types SET order_no = 6 WHERE type_code = 'percentage';
-UPDATE public.field_types SET order_no = 7 WHERE type_code = 'rating';
-UPDATE public.field_types SET order_no = 8 WHERE type_code = 'date';
-UPDATE public.field_types SET order_no = 9 WHERE type_code = 'datetime';
-UPDATE public.field_types SET order_no = 10 WHERE type_code = 'time';
-UPDATE public.field_types SET order_no = 11 WHERE type_code = 'duration';
-UPDATE public.field_types SET order_no = 12 WHERE type_code = 'boolean';
-UPDATE public.field_types SET order_no = 13 WHERE type_code = 'single_choice';
-UPDATE public.field_types SET order_no = 14 WHERE type_code = 'multi_choice';
-UPDATE public.field_types SET order_no = 15 WHERE type_code = 'auto_code';
-UPDATE public.field_types SET order_no = 16 WHERE type_code = 'email';
-UPDATE public.field_types SET order_no = 17 WHERE type_code = 'phone';
-UPDATE public.field_types SET order_no = 18 WHERE type_code = 'url';
-UPDATE public.field_types SET order_no = 19 WHERE type_code = 'password';
-UPDATE public.field_types SET order_no = 20 WHERE type_code = 'color';
-UPDATE public.field_types SET order_no = 21 WHERE type_code = 'image';
-UPDATE public.field_types SET order_no = 22 WHERE type_code = 'file';
-UPDATE public.field_types SET order_no = 23 WHERE type_code = 'video';
-UPDATE public.field_types SET order_no = 24 WHERE type_code = 'audio';
-UPDATE public.field_types SET order_no = 25 WHERE type_code = 'address';
-UPDATE public.field_types SET order_no = 26 WHERE type_code = 'location';
-UPDATE public.field_types SET order_no = 27 WHERE type_code = 'relation';
-UPDATE public.field_types SET order_no = 28 WHERE type_code = 'rich_text';
-UPDATE public.field_types SET order_no = 29 WHERE type_code = 'json';
-UPDATE public.field_types SET order_no = 30 WHERE type_code = 'icon';
+UPDATE public.field_types SET order_no = 5 WHERE type_code = 'auto_uuid';
+UPDATE public.field_types SET order_no = 6 WHERE type_code = 'currency';
+UPDATE public.field_types SET order_no = 7 WHERE type_code = 'percentage';
+UPDATE public.field_types SET order_no = 8 WHERE type_code = 'rating';
+UPDATE public.field_types SET order_no = 9 WHERE type_code = 'date';
+UPDATE public.field_types SET order_no = 10 WHERE type_code = 'datetime';
+UPDATE public.field_types SET order_no = 11 WHERE type_code = 'time';
+UPDATE public.field_types SET order_no = 12 WHERE type_code = 'duration';
+UPDATE public.field_types SET order_no = 13 WHERE type_code = 'boolean';
+UPDATE public.field_types SET order_no = 14 WHERE type_code = 'single_choice';
+UPDATE public.field_types SET order_no = 15 WHERE type_code = 'multi_choice';
+UPDATE public.field_types SET order_no = 16 WHERE type_code = 'auto_code';
+UPDATE public.field_types SET order_no = 17 WHERE type_code = 'email';
+UPDATE public.field_types SET order_no = 18 WHERE type_code = 'phone';
+UPDATE public.field_types SET order_no = 19 WHERE type_code = 'url';
+UPDATE public.field_types SET order_no = 20 WHERE type_code = 'password';
+UPDATE public.field_types SET order_no = 21 WHERE type_code = 'color';
+UPDATE public.field_types SET order_no = 22 WHERE type_code = 'image';
+UPDATE public.field_types SET order_no = 23 WHERE type_code = 'file';
+UPDATE public.field_types SET order_no = 24 WHERE type_code = 'video';
+UPDATE public.field_types SET order_no = 25 WHERE type_code = 'audio';
+UPDATE public.field_types SET order_no = 26 WHERE type_code = 'address';
+UPDATE public.field_types SET order_no = 27 WHERE type_code = 'location';
+UPDATE public.field_types SET order_no = 28 WHERE type_code = 'relation';
+UPDATE public.field_types SET order_no = 29 WHERE type_code = 'rich_text';
+UPDATE public.field_types SET order_no = 30 WHERE type_code = 'json';
+UPDATE public.field_types SET order_no = 31 WHERE type_code = 'icon';
+
+-- ==========================================
+-- 2.0. Priorities and Job Areas (Life OS / Tasks)
+-- ==========================================
+INSERT INTO public.priorities (code, label, description, sort_order, is_active) VALUES
+('P1', 'Critical', 'Critical priority', 1, TRUE),
+('P2', 'High', 'High priority', 2, TRUE),
+('P3', 'Normal', 'Normal priority', 3, TRUE),
+('P4', 'Low', 'Low priority', 4, TRUE)
+ON CONFLICT (code) DO NOTHING;
+
+DO $$
+BEGIN
+    IF NOT EXISTS (SELECT 1 FROM public.job_areas WHERE name = 'Work' LIMIT 1) THEN
+        INSERT INTO public.job_areas (name, description, area_type, is_active) VALUES ('Work', 'Professional and work-related', 'work', TRUE);
+    END IF;
+    IF NOT EXISTS (SELECT 1 FROM public.job_areas WHERE name = 'Personal' LIMIT 1) THEN
+        INSERT INTO public.job_areas (name, description, area_type, is_active) VALUES ('Personal', 'Personal life and family', 'personal', TRUE);
+    END IF;
+    IF NOT EXISTS (SELECT 1 FROM public.job_areas WHERE name = 'Learning' LIMIT 1) THEN
+        INSERT INTO public.job_areas (name, description, area_type, is_active) VALUES ('Learning', 'Learning and skill development', 'learning', TRUE);
+    END IF;
+    IF NOT EXISTS (SELECT 1 FROM public.job_areas WHERE name = 'Family' LIMIT 1) THEN
+        INSERT INTO public.job_areas (name, description, area_type, is_active) VALUES ('Family', 'Family and home', 'life', TRUE);
+    END IF;
+END $$;
 
 -- ==========================================
 -- 2.1. Assets for Field Type Images
@@ -1664,3 +1693,89 @@ BEGIN
         ON CONFLICT (icon_code) DO NOTHING;
 
 END $$;
+
+-- ==========================================
+-- Persons, Jobs, Tasks: Data Models and Fields (for auto CRUD)
+-- ==========================================
+-- Registers Life OS / Contacts tables in data_models and data_model_fields so
+-- /data-models/auto/{model_name}/records works. Idempotent (ON CONFLICT / WHERE NOT EXISTS).
+
+INSERT INTO public.data_models (app_id, model_name, display_name, table_name, model_scope, is_system_model, is_active)
+VALUES (NULL, 'priorities', 'Priorities', 'priorities', 'saas', FALSE, TRUE)
+ON CONFLICT (app_id, model_name) DO NOTHING;
+INSERT INTO public.data_models (app_id, model_name, display_name, table_name, model_scope, is_system_model, is_active)
+VALUES (NULL, 'job_areas', 'Job Areas', 'job_areas', 'saas', FALSE, TRUE)
+ON CONFLICT (app_id, model_name) DO NOTHING;
+INSERT INTO public.data_models (app_id, model_name, display_name, table_name, model_scope, is_system_model, is_active)
+VALUES (NULL, 'jobs', 'Jobs', 'jobs', 'saas', FALSE, TRUE)
+ON CONFLICT (app_id, model_name) DO NOTHING;
+INSERT INTO public.data_models (app_id, model_name, display_name, table_name, model_scope, is_system_model, is_active)
+VALUES (NULL, 'persons', 'Persons', 'persons', 'saas', FALSE, TRUE)
+ON CONFLICT (app_id, model_name) DO NOTHING;
+INSERT INTO public.data_models (app_id, model_name, display_name, table_name, model_scope, is_system_model, is_active)
+VALUES (NULL, 'person_attachments', 'Person Attachments', 'person_attachments', 'saas', FALSE, TRUE)
+ON CONFLICT (app_id, model_name) DO NOTHING;
+INSERT INTO public.data_models (app_id, model_name, display_name, table_name, model_scope, is_system_model, is_active)
+VALUES (NULL, 'person_relationships', 'Person Relationships', 'person_relationships', 'saas', FALSE, TRUE)
+ON CONFLICT (app_id, model_name) DO NOTHING;
+INSERT INTO public.data_models (app_id, model_name, display_name, table_name, model_scope, is_system_model, is_active)
+VALUES (NULL, 'person_contacts', 'Person Contacts', 'person_contacts', 'saas', FALSE, TRUE)
+ON CONFLICT (app_id, model_name) DO NOTHING;
+INSERT INTO public.data_models (app_id, model_name, display_name, table_name, model_scope, is_system_model, is_active)
+VALUES (NULL, 'person_addresses', 'Person Addresses', 'person_addresses', 'saas', FALSE, TRUE)
+ON CONFLICT (app_id, model_name) DO NOTHING;
+INSERT INTO public.data_models (app_id, model_name, display_name, table_name, model_scope, is_system_model, is_active)
+VALUES (NULL, 'businesses', 'Businesses', 'businesses', 'saas', FALSE, TRUE)
+ON CONFLICT (app_id, model_name) DO NOTHING;
+INSERT INTO public.data_models (app_id, model_name, display_name, table_name, model_scope, is_system_model, is_active)
+VALUES (NULL, 'person_business_roles', 'Person Business Roles', 'person_business_roles', 'saas', FALSE, TRUE)
+ON CONFLICT (app_id, model_name) DO NOTHING;
+INSERT INTO public.data_models (app_id, model_name, display_name, table_name, model_scope, is_system_model, is_active)
+VALUES (NULL, 'business_contact_methods', 'Business Contact Methods', 'business_contact_methods', 'saas', FALSE, TRUE)
+ON CONFLICT (app_id, model_name) DO NOTHING;
+INSERT INTO public.data_models (app_id, model_name, display_name, table_name, model_scope, is_system_model, is_active)
+VALUES (NULL, 'business_addresses', 'Business Addresses', 'business_addresses', 'saas', FALSE, TRUE)
+ON CONFLICT (app_id, model_name) DO NOTHING;
+INSERT INTO public.data_models (app_id, model_name, display_name, table_name, model_scope, is_system_model, is_active)
+VALUES (NULL, 'lessons_learned', 'Lessons Learned', 'lessons_learned', 'saas', FALSE, TRUE)
+ON CONFLICT (app_id, model_name) DO NOTHING;
+INSERT INTO public.data_models (app_id, model_name, display_name, table_name, model_scope, is_system_model, is_active)
+VALUES (NULL, 'tasks', 'Tasks', 'tasks', 'saas', FALSE, TRUE)
+ON CONFLICT (app_id, model_name) DO NOTHING;
+INSERT INTO public.data_models (app_id, model_name, display_name, table_name, model_scope, is_system_model, is_active)
+VALUES (NULL, 'task_recurrence', 'Task Recurrence', 'task_recurrence', 'saas', FALSE, TRUE)
+ON CONFLICT (app_id, model_name) DO NOTHING;
+INSERT INTO public.data_models (app_id, model_name, display_name, table_name, model_scope, is_system_model, is_active)
+VALUES (NULL, 'sprints', 'Sprints', 'sprints', 'saas', FALSE, TRUE)
+ON CONFLICT (app_id, model_name) DO NOTHING;
+INSERT INTO public.data_models (app_id, model_name, display_name, table_name, model_scope, is_system_model, is_active)
+VALUES (NULL, 'sprint_tasks', 'Sprint Tasks', 'sprint_tasks', 'saas', FALSE, TRUE)
+ON CONFLICT (app_id, model_name) DO NOTHING;
+INSERT INTO public.data_models (app_id, model_name, display_name, table_name, model_scope, is_system_model, is_active)
+VALUES (NULL, 'task_references', 'Task References', 'task_references', 'saas', FALSE, TRUE)
+ON CONFLICT (app_id, model_name) DO NOTHING;
+INSERT INTO public.data_models (app_id, model_name, display_name, table_name, model_scope, is_system_model, is_active)
+VALUES (NULL, 'task_notes', 'Task Notes', 'task_notes', 'saas', FALSE, TRUE)
+ON CONFLICT (app_id, model_name) DO NOTHING;
+INSERT INTO public.data_models (app_id, model_name, display_name, table_name, model_scope, is_system_model, is_active)
+VALUES (NULL, 'task_attachments', 'Task Attachments', 'task_attachments', 'saas', FALSE, TRUE)
+ON CONFLICT (app_id, model_name) DO NOTHING;
+INSERT INTO public.data_models (app_id, model_name, display_name, table_name, model_scope, is_system_model, is_active)
+VALUES (NULL, 'backlogs', 'Backlogs', 'backlogs', 'saas', FALSE, TRUE)
+ON CONFLICT (app_id, model_name) DO NOTHING;
+INSERT INTO public.data_models (app_id, model_name, display_name, table_name, model_scope, is_system_model, is_active)
+VALUES (NULL, 'backlog_items', 'Backlog Items', 'backlog_items', 'saas', FALSE, TRUE)
+ON CONFLICT (app_id, model_name) DO NOTHING;
+INSERT INTO public.data_models (app_id, model_name, display_name, table_name, model_scope, is_system_model, is_active)
+VALUES (NULL, 'notes', 'Notes', 'notes', 'saas', FALSE, TRUE)
+ON CONFLICT (app_id, model_name) DO NOTHING;
+INSERT INTO public.data_models (app_id, model_name, display_name, table_name, model_scope, is_system_model, is_active)
+VALUES (NULL, 'note_attachments', 'Note Attachments', 'note_attachments', 'saas', FALSE, TRUE)
+ON CONFLICT (app_id, model_name) DO NOTHING;
+INSERT INTO public.data_models (app_id, model_name, display_name, table_name, model_scope, is_system_model, is_active)
+VALUES (NULL, 'password_vault', 'Password Vault', 'password_vault', 'saas', FALSE, TRUE)
+ON CONFLICT (app_id, model_name) DO NOTHING;
+
+-- To register field definitions (data_model_fields) for these models so auto CRUD works, run:
+--   db-structure/update_old_db_persons_jobs_tasks.sql
+-- (Idempotent; safe to run after feeds.)

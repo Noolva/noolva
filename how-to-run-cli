@@ -1,2 +1,2 @@
 python version : Python 3.9.6
-/Users/karan/Desktop/noolva.com/noolva/api/app/noolva-venv/bin/python3 api/app/cli.py runserver
+/Users/karan/Desktop/noolva.com/noolva/api/app/noolva-venv/bin/python3 /Users/karan/Desktop/noolva.com/noolva/api/app/cli.py runserver
