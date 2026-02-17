@@ -109,6 +109,36 @@ async def get_api_endpoints(
         raise HTTPException(status_code=500, detail=f"Failed to fetch api endpoints: {str(e)}")
 
 
+@router.get("/orphaned-auto-crud")
+async def get_orphaned_auto_crud_endpoints(
+    user: Dict = Depends(verify_jwt_token(["saas_admin", "saas_employee", "tenant_admin", "tenant_user"])),
+    db=Depends(get_db),
+):
+    """
+    Return auto_crud api_endpoints whose related_model_id is not in data_models
+    (e.g. model was deleted but endpoints were not cleaned up).
+    """
+    if not user:
+        raise HTTPException(status_code=401, detail="Authentication required")
+
+    try:
+        rows = await PostgresDB.fetch(
+            """
+            SELECT ae.endpoint_id, ae.endpoint_uuid, ae.path, ae.method, ae.type,
+                   ae.related_model_id, ae.idate
+            FROM public.api_endpoints ae
+            WHERE ae.type = 'auto_crud'
+              AND (ae.related_model_id IS NULL
+                   OR ae.related_model_id NOT IN (SELECT model_id FROM public.data_models))
+            ORDER BY ae.path, ae.method
+            """
+        )
+        data = [dict(r) for r in rows] if rows else []
+        return {"orphaned": data, "count": len(data)}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to fetch orphaned endpoints: {str(e)}")
+
+
 @router.get("/{endpoint_id}")
 async def get_api_endpoint(
     endpoint_id: int,

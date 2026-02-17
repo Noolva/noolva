@@ -18,7 +18,9 @@ import {
     Col,
     Tabs,
     Alert,
-    Image
+    Image,
+    Dropdown,
+    Segmented,
 } from 'antd';
 import {
     PlusOutlined,
@@ -28,11 +30,17 @@ import {
     FieldTimeOutlined,
     OrderedListOutlined,
     ExclamationCircleOutlined,
-    ReloadOutlined
+    ReloadOutlined,
+    ImportOutlined,
+    DownloadOutlined,
+    CopyOutlined,
+    UnorderedListOutlined,
 } from '@ant-design/icons';
 import { api } from '../utils/api';
 import { VCDragSortList } from '../components/ViewComponents/displays/VCDragSortList';
 import { FieldConfigJsonEditor } from '../components/ViewComponents/inputs/FieldConfigJsonEditor';
+import { FieldsImportModal } from '../components/ViewComponents/inputs/FieldsImportModal';
+import yaml from 'js-yaml';
 
 const { Option } = Select;
 const { TextArea } = Input;
@@ -62,6 +70,10 @@ const DataModels = () => {
     const [deleteCheckModalVisible, setDeleteCheckModalVisible] = useState(false);
     const [deleteCheckInfo, setDeleteCheckInfo] = useState(null);
     const [pendingDeleteModelId, setPendingDeleteModelId] = useState(null);
+    const [selectedFieldRowKeys, setSelectedFieldRowKeys] = useState([]);
+    const [importModalVisible, setImportModalVisible] = useState(false);
+    const [fieldTypesRefVisible, setFieldTypesRefVisible] = useState(false);
+    const [fieldTypesRefFormat, setFieldTypesRefFormat] = useState('yaml');
 
     // Helper function to get asset URL
     const getAssetUrl = (assetPath) => {
@@ -399,13 +411,14 @@ const DataModels = () => {
     const handleEditField = (record) => {
         setEditingField(record);
         fieldForm.resetFields();
-        // Parse field_config_json
+        // Parse field_config_json (API may return it as JSON string) and pass a deep clone so the editor always gets options
         let config = {};
-        if (record.field_config_json) {
+        if (record.field_config_json != null) {
             try {
-                config = typeof record.field_config_json === 'string'
+                const raw = typeof record.field_config_json === 'string'
                     ? JSON.parse(record.field_config_json)
                     : record.field_config_json;
+                config = JSON.parse(JSON.stringify(raw || {}));
             } catch (e) {
                 console.error('Failed to parse field_config_json:', e);
             }
@@ -430,14 +443,179 @@ const DataModels = () => {
     const saveOrdering = async () => {
         try {
             if (!selectedModel) return;
-            const fieldIds = orderingItems.map((i) => i.id);
+            const fieldIds = orderingItems.map((i) => Number(i.id)).filter((n) => !Number.isNaN(n));
+            if (fieldIds.length === 0) {
+                message.warning('No valid field order to save');
+                return;
+            }
             await api.reorderDataModelFields(selectedModel.model_id, fieldIds);
             message.success('Field ordering updated');
             await loadModelFields(selectedModel.model_id);
             setFieldOrderingDrawerVisible(false);
         } catch (error) {
-            message.error('Failed to update ordering: ' + (error.message || 'Unknown error'));
+            const raw = error.response?.data?.detail ?? error.errorData?.description ?? error.message;
+            const msg = Array.isArray(raw) ? raw.map((e) => e?.msg ?? e).join(', ') : (raw ?? (typeof error === 'object' ? JSON.stringify(error) : String(error)));
+            message.error('Failed to update ordering: ' + (msg || 'Unknown error'));
         }
+    };
+
+    // Flattened field_config keys used in Excel/CSV export and rehydrated on import
+    const FIELD_CONFIG_FLAT_KEYS = [
+        'max_length', 'maximum_digits', 'allowed_decimal_places', 'precision', 'scale',
+        'target_model', 'target_field', 'target_model_id', 'relation_type', 'display_field_name',
+        'max_line_counts', 'min_value', 'max_value', 'multiple', 'fields',
+    ];
+
+    // Export: build array of field objects; useForeignKeyId = include field_type_id, else use type_name/type_code
+    const getExportFields = (useForeignKeyId) => {
+        const list = fields.map((f) => {
+            const cfg = typeof f.field_config_json === 'string' ? (() => { try { return JSON.parse(f.field_config_json); } catch { return {}; } })() : (f.field_config_json || {});
+            const base = {
+                field_name: f.field_name,
+                display_name: f.display_name,
+                is_required: !!f.is_required,
+                is_unique: !!f.is_unique,
+                is_primary_key: !!f.is_primary_key,
+                default_value: f.default_value || null,
+                encryption_method: f.encryption_method || 'none',
+                order_no: f.order_no ?? 0,
+                field_config_json: cfg,
+            };
+            if (useForeignKeyId) base.field_type_id = f.field_type_id;
+            else {
+                base.type_name = f.type_name;
+                base.type_code = f.type_code;
+            }
+            return base;
+        });
+        return list;
+    };
+
+    // Flat export for Excel/CSV: base columns + flattened field_config_json keys
+    const getExportFieldsFlat = (useForeignKeyId) => {
+        const list = getExportFields(useForeignKeyId);
+        const allConfigKeys = new Set(FIELD_CONFIG_FLAT_KEYS);
+        list.forEach((r) => {
+            const cfg = r.field_config_json || {};
+            Object.keys(cfg).forEach((k) => allConfigKeys.add(k));
+        });
+        const configKeys = [...allConfigKeys].sort();
+        return list.map((r) => {
+            const flat = { ...r };
+            delete flat.field_config_json;
+            const cfg = r.field_config_json || {};
+            configKeys.forEach((k) => {
+                const v = cfg[k];
+                flat[k] = v === undefined || v === null ? '' : (typeof v === 'object' ? JSON.stringify(v) : v);
+            });
+            return flat;
+        });
+    };
+
+    const handleExportDownload = (format, useForeignKeyId) => {
+        const modelName = (selectedModel?.model_name || selectedModel?.display_name || 'fields').replace(/[^a-z0-9_-]/gi, '_');
+        let blob; let filename;
+        if (format === 'json') {
+            const data = getExportFields(useForeignKeyId);
+            blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+            filename = `${modelName}_fields.json`;
+        } else if (format === 'yaml') {
+            const data = getExportFields(useForeignKeyId);
+            blob = new Blob([yaml.dump(data)], { type: 'text/yaml' });
+            filename = `${modelName}_fields.yaml`;
+        } else if (format === 'csv' || format === 'excel') {
+            const dataFlat = getExportFieldsFlat(useForeignKeyId);
+            const delimiter = format === 'csv' ? ',' : '\t';
+            const headers = dataFlat.length ? Object.keys(dataFlat[0]) : [];
+            const rows = dataFlat.map((r) => headers.map((h) => (r[h] != null ? String(r[h]) : '')));
+            const body = format === 'csv'
+                ? [headers.map(escapeCsvValue).join(delimiter), ...rows.map((row) => row.map(escapeCsvValue).join(delimiter))].join('\n')
+                : [headers.join(delimiter), ...rows.map((row) => row.join(delimiter))].join('\n');
+            blob = new Blob([body], { type: format === 'csv' ? 'text/csv' : 'text/tab-separated-values' });
+            filename = format === 'csv' ? `${modelName}_fields.csv` : `${modelName}_fields.txt`;
+        } else {
+            const data = getExportFields(useForeignKeyId);
+            blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+            filename = `${modelName}_fields.json`;
+        }
+        const a = document.createElement('a');
+        a.href = URL.createObjectURL(blob);
+        a.download = filename;
+        a.click();
+        URL.revokeObjectURL(a.href);
+        message.success('Download started');
+    };
+
+    const escapeCsvValue = (v) => {
+        const s = v == null ? '' : String(v);
+        if (s.includes(',') || s.includes('"') || s.includes('\n') || s.includes('\r')) return '"' + s.replace(/"/g, '""') + '"';
+        return s;
+    };
+
+    const handleCopyAs = (as) => {
+        const selected = selectedFieldRowKeys.length ? fields.filter((f) => selectedFieldRowKeys.includes(f.field_id)) : fields;
+        if (!selected.length) {
+            message.warning('Select at least one field or leave none selected to copy all.');
+            return;
+        }
+        const data = getExportFields(false);
+        const dataFlat = getExportFieldsFlat(false);
+        const subset = selected.map((f) => data.find((d) => d.field_name === f.field_name)).filter(Boolean);
+        const subsetFlat = selected.map((f) => dataFlat.find((d) => d.field_name === f.field_name)).filter(Boolean);
+        const tableName = selectedModel?.table_name || 'table_name';
+        let text = '';
+        if (as === 'excel' || as === 'csv') {
+            const delimiter = as === 'csv' ? ',' : '\t';
+            const headers = subsetFlat.length ? Object.keys(subsetFlat[0]) : [];
+            const rows = subsetFlat.map((r) => headers.map((h) => (r[h] != null ? String(r[h]) : '')));
+            if (as === 'csv') {
+                text = [headers.map(escapeCsvValue).join(delimiter), ...rows.map((row) => row.map(escapeCsvValue).join(delimiter))].join('\n');
+            } else {
+                text = [headers.join(delimiter), ...rows.map((row) => row.join(delimiter))].join('\n');
+            }
+        } else if (as === 'json') {
+            text = JSON.stringify(subset, null, 2);
+        } else if (as === 'yaml') {
+            text = yaml.dump(subset);
+        } else if (as === 'sql') {
+            const lines = selected.map((f) => {
+                const dbType = f.actual_db_type || (fieldTypes.find((ft) => ft.field_type_id === f.field_type_id)?.actual_db_type) || 'TEXT';
+                let col = `"${f.field_name}" ${dbType}`;
+                if (f.is_required && !f.is_primary_key) col += ' NOT NULL';
+                if (f.default_value) col += ` DEFAULT '${String(f.default_value).replace(/'/g, "''")}'`;
+                return `ALTER TABLE public."${tableName}" ADD COLUMN ${col};`;
+            });
+            text = lines.join('\n');
+        }
+        navigator.clipboard.writeText(text).then(() => message.success(`Copied as ${as.toUpperCase()}`)).catch(() => message.error('Clipboard copy failed'));
+    };
+
+    const getFieldTypesReferenceText = (format) => {
+        const list = (fieldTypes || []).map((ft) => ({
+            field_type_id: ft.field_type_id,
+            type_name: ft.type_name,
+            type_code: ft.type_code,
+            actual_db_type: ft.actual_db_type,
+            category: ft.category || '',
+        }));
+        if (format === 'yaml') return yaml.dump(list);
+        if (format === 'tab') {
+            const headers = ['field_type_id', 'type_name', 'type_code', 'actual_db_type', 'category'];
+            const rows = list.map((r) => headers.map((h) => (r[h] != null ? String(r[h]) : '')).join('\t'));
+            return [headers.join('\t'), ...rows].join('\n');
+        }
+        if (format === 'csv') {
+            const headers = ['field_type_id', 'type_name', 'type_code', 'actual_db_type', 'category'];
+            const rows = list.map((r) => headers.map((h) => escapeCsvValue(r[h] != null ? String(r[h]) : '')).join(','));
+            return [headers.map(escapeCsvValue).join(','), ...rows].join('\n');
+        }
+        return '';
+    };
+
+    const handleCopyFieldTypesRef = () => {
+        const text = getFieldTypesReferenceText(fieldTypesRefFormat);
+        if (!text) return;
+        navigator.clipboard.writeText(text).then(() => message.success('Field types list copied')).catch(() => message.error('Copy failed'));
     };
 
     const columns = [
@@ -445,41 +623,52 @@ const DataModels = () => {
             title: 'Model Name',
             dataIndex: 'model_name',
             key: 'model_name',
+            width: 140,
+            ellipsis: true,
             sorter: (a, b) => a.model_name.localeCompare(b.model_name),
         },
         {
             title: 'Display Name',
             dataIndex: 'display_name',
             key: 'display_name',
+            width: 140,
+            ellipsis: true,
         },
         {
             title: 'Table Name',
             dataIndex: 'table_name',
             key: 'table_name',
+            width: 120,
+            ellipsis: true,
             render: (text) => <Tag color="blue">{text}</Tag>,
         },
         {
             title: 'Model Scope',
             dataIndex: 'model_scope',
             key: 'model_scope',
+            width: 100,
             render: (text) => <Tag>{text}</Tag>,
         },
         {
             title: 'Alias',
             dataIndex: 'table_alias',
             key: 'table_alias',
+            width: 80,
+            ellipsis: true,
             render: (text) => text ? <Tag color="purple">{text}</Tag> : <Text type="secondary">—</Text>,
         },
         {
             title: 'Fields',
             dataIndex: 'field_count',
             key: 'field_count',
+            width: 70,
             render: (count) => <Text>{count || 0}</Text>,
         },
         {
             title: 'Status',
             dataIndex: 'is_active',
             key: 'is_active',
+            width: 80,
             render: (isActive) => (
                 <Tag color={isActive ? 'green' : 'red'}>
                     {isActive ? 'Active' : 'Inactive'}
@@ -489,6 +678,8 @@ const DataModels = () => {
         {
             title: 'Actions',
             key: 'actions',
+            fixed: 'right',
+            width: 200,
             render: (_, record) => (
                 <Space>
                     <Button
@@ -626,7 +817,7 @@ const DataModels = () => {
     }, [dataModels, searchText]);
 
     return (
-        <div style={{ padding: '24px' }}>
+        <div style={{ padding: 0 }}>
             <Card>
                 <div style={{ marginBottom: 16, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                     <Title level={4} style={{ margin: 0 }}>
@@ -663,6 +854,7 @@ const DataModels = () => {
                     rowKey="model_id"
                     loading={loading}
                     pagination={false}
+                    scroll={{ x: 830 }}
                 />
             </Card>
 
@@ -875,10 +1067,13 @@ const DataModels = () => {
                     setFields([]);
                     setOrderingItems([]);
                     setEditingField(null);
+                    setSelectedFieldRowKeys([]);
+                    setImportModalVisible(false);
+                    setFieldTypesRefVisible(false);
                 }}
             >
                 <div style={{ marginBottom: 16 }}>
-                    <Space>
+                    <Space wrap>
                         <Button
                             type="primary"
                             icon={<PlusOutlined />}
@@ -893,16 +1088,101 @@ const DataModels = () => {
                         >
                             Ordering
                         </Button>
+                        <Button icon={<ImportOutlined />} onClick={() => setImportModalVisible(true)}>
+                            Import
+                        </Button>
+                        <Dropdown
+                            menu={{
+                                items: [
+                                    { key: 'json-label', label: 'Download JSON (type name)', onClick: () => handleExportDownload('json', false) },
+                                    { key: 'json-fk', label: 'Download JSON (foreign key id)', onClick: () => handleExportDownload('json', true) },
+                                    { key: 'yaml-label', label: 'Download YAML (type name)', onClick: () => handleExportDownload('yaml', false) },
+                                    { key: 'yaml-fk', label: 'Download YAML (foreign key id)', onClick: () => handleExportDownload('yaml', true) },
+                                    { key: 'csv-label', label: 'Download CSV (type name, flattened)', onClick: () => handleExportDownload('csv', false) },
+                                    { key: 'excel-label', label: 'Download Excel / tab (type name, flattened)', onClick: () => handleExportDownload('excel', false) },
+                                ],
+                            }}
+                        >
+                            <Button icon={<DownloadOutlined />}>Export / Download</Button>
+                        </Dropdown>
+                        <Dropdown
+                            menu={{
+                                items: [
+                                    { key: 'excel', label: 'Excel friendly (tab-separated)', onClick: () => handleCopyAs('excel') },
+                                    { key: 'csv', label: 'Comma separated (CSV)', onClick: () => handleCopyAs('csv') },
+                                    { key: 'json', label: 'JSON', onClick: () => handleCopyAs('json') },
+                                    { key: 'yaml', label: 'YAML', onClick: () => handleCopyAs('yaml') },
+                                    { key: 'sql', label: 'SQL (ALTER TABLE)', onClick: () => handleCopyAs('sql') },
+                                ],
+                            }}
+                        >
+                            <Button icon={<CopyOutlined />}>
+                                Copy {selectedFieldRowKeys.length ? `(${selectedFieldRowKeys.length})` : ''}
+                            </Button>
+                        </Dropdown>
+                        <Button
+                            icon={<UnorderedListOutlined />}
+                            onClick={() => setFieldTypesRefVisible(true)}
+                            title="View or copy the list of field types (for import/export reference)"
+                        >
+                            Field types reference
+                        </Button>
                     </Space>
                 </div>
 
+                <Modal
+                    title="Field types reference"
+                    open={fieldTypesRefVisible}
+                    onCancel={() => setFieldTypesRefVisible(false)}
+                    width={640}
+                    footer={[
+                        <Button key="close" onClick={() => setFieldTypesRefVisible(false)}>Close</Button>,
+                        <Button key="copy" type="primary" icon={<CopyOutlined />} onClick={handleCopyFieldTypesRef}>
+                            Copy to clipboard
+                        </Button>,
+                    ]}
+                >
+                    <div style={{ marginBottom: 12 }}>
+                        <Segmented
+                            options={[
+                                { label: 'YAML', value: 'yaml' },
+                                { label: 'Tab-separated', value: 'tab' },
+                                { label: 'Comma-separated', value: 'csv' },
+                            ]}
+                            value={fieldTypesRefFormat}
+                            onChange={setFieldTypesRefFormat}
+                        />
+                    </div>
+                    <Input.TextArea
+                        readOnly
+                        value={getFieldTypesReferenceText(fieldTypesRefFormat)}
+                        rows={14}
+                        style={{ fontFamily: 'monospace', fontSize: 12 }}
+                    />
+                </Modal>
+
                 <Table
+                    rowSelection={{
+                        selectedRowKeys: selectedFieldRowKeys,
+                        onChange: (keys) => setSelectedFieldRowKeys(keys),
+                    }}
                     columns={fieldColumns}
                     dataSource={fields}
                     rowKey="field_id"
                     pagination={false}
                     size="small"
                     scroll={{ x: 970 }}
+                />
+
+                <FieldsImportModal
+                    visible={importModalVisible}
+                    onClose={() => setImportModalVisible(false)}
+                    modelId={selectedModel?.model_id}
+                    modelName={selectedModel?.display_name || selectedModel?.model_name}
+                    fieldTypes={fieldTypes}
+                    dataModels={dataModels}
+                    existingFields={fields}
+                    onImportDone={() => selectedModel && loadModelFields(selectedModel.model_id)}
                 />
             </Drawer>
 
@@ -1030,6 +1310,7 @@ const DataModels = () => {
                     {selectedFieldType && (
                         <Form.Item label="Field Configuration">
                             <FieldConfigJsonEditor
+                                key={editingField ? `field-${editingField.field_id}` : 'field-new'}
                                 fieldTypeId={selectedFieldType.field_type_id}
                                 fieldTypeCode={selectedFieldType.type_code}
                                 defaultPropsJson={selectedFieldType.default_props_json}
@@ -1205,12 +1486,17 @@ const DataModels = () => {
                         {/* Other References */}
                         {deleteCheckInfo.other_references && deleteCheckInfo.other_references.length > 0 && (
                             <div style={{ marginBottom: 16 }}>
-                                <Text strong>Other References:</Text>
+                                <Text strong>Other references</Text>
                                 <div style={{ marginTop: 8 }}>
                                     {deleteCheckInfo.other_references.map((ref, idx) => (
-                                        <Tag key={idx} color="orange" style={{ marginBottom: 4 }}>
-                                            {ref.type}: {ref.count}
-                                        </Tag>
+                                        <div key={idx} style={{ marginBottom: 12 }}>
+                                            <Tag color="orange">{ref.type}: {ref.count}</Tag>
+                                            {ref.reason && (
+                                                <div style={{ marginTop: 4, color: 'rgba(0,0,0,0.65)', fontSize: 13 }}>
+                                                    {ref.reason}
+                                                </div>
+                                            )}
+                                        </div>
                                     ))}
                                 </div>
                             </div>

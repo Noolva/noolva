@@ -1344,6 +1344,338 @@ CREATE TABLE public.ai_rules (
     created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
 );
+
+-- ==========================================
+-- Persons, Jobs, Tasks, and Related (Life OS / Contacts)
+-- ==========================================
+-- Dependencies: users (for created_by where used). Naming: businesses (not companies) to avoid clash with public.companies.
+
+-- 1. Priorities (for tasks / backlog)
+CREATE TABLE public.priorities (
+    id SERIAL PRIMARY KEY,
+    record_uuid UUID DEFAULT gen_random_uuid() NOT NULL UNIQUE,
+    code VARCHAR(10) NOT NULL UNIQUE,
+    label VARCHAR(50),
+    description TEXT,
+    color VARCHAR(20),
+    sort_order INTEGER DEFAULT 0,
+    is_active BOOLEAN DEFAULT TRUE,
+    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP NOT NULL
+);
+
+-- 2. Job areas (life | work | personal | learning)
+CREATE TABLE public.job_areas (
+    id SERIAL PRIMARY KEY,
+    record_uuid UUID DEFAULT gen_random_uuid() NOT NULL UNIQUE,
+    parent_area_id INTEGER REFERENCES public.job_areas(id) ON DELETE SET NULL,
+    name VARCHAR(100) NOT NULL,
+    description TEXT,
+    area_type VARCHAR(50),
+    color VARCHAR(20),
+    icon VARCHAR(50),
+    is_active BOOLEAN DEFAULT TRUE,
+    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP NOT NULL
+);
+
+-- 3. Jobs (ongoing: active, paused; finite: planned, active, completed, cancelled - application rule)
+CREATE TABLE public.jobs (
+    id SERIAL PRIMARY KEY,
+    record_uuid UUID DEFAULT gen_random_uuid() NOT NULL UNIQUE,
+    area_id INTEGER REFERENCES public.job_areas(id) ON DELETE SET NULL,
+    name VARCHAR(200) NOT NULL,
+    job_nature VARCHAR(20) NOT NULL CHECK (job_nature IN ('finite', 'ongoing')),
+    type VARCHAR(50),
+    status VARCHAR(20) CHECK (status IN ('active', 'on_hold', 'completed', 'planned', 'paused', 'cancelled')),
+    start_date DATE,
+    end_date DATE,
+    notes TEXT,
+    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP NOT NULL,
+    updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP NOT NULL
+);
+
+-- 4. Persons (contacts / people)
+CREATE TABLE public.persons (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    name VARCHAR(200),
+    photo VARCHAR(500),
+    alias_names TEXT,
+    dob DATE,
+    tags TEXT[] DEFAULT '{}',
+    marital_status VARCHAR(50),
+    anniversary_date DATE,
+    notes TEXT,
+    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP NOT NULL,
+    updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP NOT NULL
+);
+
+CREATE TABLE public.person_attachments (
+    id SERIAL PRIMARY KEY,
+    record_uuid UUID DEFAULT gen_random_uuid() NOT NULL UNIQUE,
+    person_id UUID NOT NULL REFERENCES public.persons(id) ON DELETE CASCADE,
+    file_path VARCHAR(500),
+    notes TEXT,
+    attachment_type VARCHAR(50),
+    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP NOT NULL
+);
+
+CREATE TABLE public.person_relationships (
+    id SERIAL PRIMARY KEY,
+    record_uuid UUID DEFAULT gen_random_uuid() NOT NULL UNIQUE,
+    person_id UUID NOT NULL REFERENCES public.persons(id) ON DELETE CASCADE,
+    related_person_id UUID NOT NULL REFERENCES public.persons(id) ON DELETE CASCADE,
+    relation_type VARCHAR(50),
+    notes TEXT,
+    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP NOT NULL
+);
+
+CREATE TABLE public.person_contacts (
+    id SERIAL PRIMARY KEY,
+    record_uuid UUID DEFAULT gen_random_uuid() NOT NULL UNIQUE,
+    person_id UUID NOT NULL REFERENCES public.persons(id) ON DELETE CASCADE,
+    type VARCHAR(20),
+    value VARCHAR(200),
+    label VARCHAR(50),
+    is_primary BOOLEAN DEFAULT FALSE,
+    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP NOT NULL
+);
+
+CREATE TABLE public.person_addresses (
+    id SERIAL PRIMARY KEY,
+    record_uuid UUID DEFAULT gen_random_uuid() NOT NULL UNIQUE,
+    person_id UUID NOT NULL REFERENCES public.persons(id) ON DELETE CASCADE,
+    type VARCHAR(50),
+    geo_location VARCHAR(200),
+    direction_landmark TEXT,
+    address_json JSONB DEFAULT '{}',
+    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP NOT NULL
+);
+
+-- 5. Businesses (contact companies; table name avoids clash with public.companies)
+CREATE TABLE public.businesses (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    name VARCHAR(200),
+    legal_name VARCHAR(200),
+    industry VARCHAR(100),
+    website VARCHAR(500),
+    is_active BOOLEAN DEFAULT TRUE,
+    gst_number VARCHAR(50),
+    notes TEXT,
+    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP NOT NULL,
+    updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP NOT NULL
+);
+
+CREATE TABLE public.person_business_roles (
+    id SERIAL PRIMARY KEY,
+    record_uuid UUID DEFAULT gen_random_uuid() NOT NULL UNIQUE,
+    person_id UUID NOT NULL REFERENCES public.persons(id) ON DELETE CASCADE,
+    business_id UUID NOT NULL REFERENCES public.businesses(id) ON DELETE CASCADE,
+    role VARCHAR(100),
+    department VARCHAR(100),
+    employment_type VARCHAR(50),
+    from_date DATE,
+    to_date DATE,
+    notes TEXT,
+    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP NOT NULL
+);
+
+CREATE TABLE public.business_contact_methods (
+    id SERIAL PRIMARY KEY,
+    record_uuid UUID DEFAULT gen_random_uuid() NOT NULL UNIQUE,
+    business_id UUID NOT NULL REFERENCES public.businesses(id) ON DELETE CASCADE,
+    type VARCHAR(50),
+    value VARCHAR(200),
+    notes TEXT,
+    is_active BOOLEAN DEFAULT TRUE,
+    is_primary BOOLEAN DEFAULT FALSE,
+    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP NOT NULL
+);
+
+CREATE TABLE public.business_addresses (
+    id SERIAL PRIMARY KEY,
+    record_uuid UUID DEFAULT gen_random_uuid() NOT NULL UNIQUE,
+    business_id UUID NOT NULL REFERENCES public.businesses(id) ON DELETE CASCADE,
+    type VARCHAR(50),
+    geo_location VARCHAR(200),
+    direction_landmark TEXT,
+    address_json JSONB DEFAULT '{}',
+    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP NOT NULL
+);
+
+-- 6. Lessons learned (referenced by tasks)
+CREATE TABLE public.lessons_learned (
+    id SERIAL PRIMARY KEY,
+    record_uuid UUID DEFAULT gen_random_uuid() NOT NULL UNIQUE,
+    title VARCHAR(200),
+    content_text TEXT,
+    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP NOT NULL
+);
+
+-- 7. Tasks and related
+CREATE TABLE public.tasks (
+    id SERIAL PRIMARY KEY,
+    record_uuid UUID DEFAULT gen_random_uuid() NOT NULL UNIQUE,
+    job_id INTEGER REFERENCES public.jobs(id) ON DELETE SET NULL,
+    area_id INTEGER REFERENCES public.job_areas(id) ON DELETE SET NULL,
+    title VARCHAR(300),
+    description TEXT,
+    task_type VARCHAR(30),
+    status VARCHAR(30),
+    priority_id INTEGER REFERENCES public.priorities(id) ON DELETE SET NULL,
+    lesson_learned_id INTEGER REFERENCES public.lessons_learned(id) ON DELETE SET NULL,
+    due_date DATE,
+    due_time TIME,
+    estimated_minutes INTEGER,
+    actual_minutes INTEGER,
+    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP NOT NULL,
+    completed_at TIMESTAMPTZ
+);
+
+CREATE TABLE public.task_recurrence (
+    task_id INTEGER PRIMARY KEY REFERENCES public.tasks(id) ON DELETE CASCADE,
+    record_uuid UUID DEFAULT gen_random_uuid() NOT NULL UNIQUE,
+    frequency VARCHAR(20),
+    interval_value INTEGER DEFAULT 1,
+    days_of_week VARCHAR(50),
+    start_date DATE,
+    end_date DATE
+);
+
+CREATE TABLE public.sprints (
+    id SERIAL PRIMARY KEY,
+    record_uuid UUID DEFAULT gen_random_uuid() NOT NULL UNIQUE,
+    job_id INTEGER NOT NULL REFERENCES public.jobs(id) ON DELETE CASCADE,
+    name VARCHAR(100),
+    start_date DATE,
+    end_date DATE,
+    goal TEXT,
+    status VARCHAR(30),
+    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP NOT NULL
+);
+
+CREATE TABLE public.sprint_tasks (
+    sprint_id INTEGER NOT NULL REFERENCES public.sprints(id) ON DELETE CASCADE,
+    task_id INTEGER NOT NULL REFERENCES public.tasks(id) ON DELETE CASCADE,
+    record_uuid UUID DEFAULT gen_random_uuid() NOT NULL UNIQUE,
+    PRIMARY KEY (sprint_id, task_id)
+);
+
+CREATE TABLE public.task_references (
+    id SERIAL PRIMARY KEY,
+    record_uuid UUID DEFAULT gen_random_uuid() NOT NULL UNIQUE,
+    task_id INTEGER NOT NULL REFERENCES public.tasks(id) ON DELETE CASCADE,
+    ref_type VARCHAR(30),
+    ref_value VARCHAR(500),
+    UNIQUE (task_id, ref_type, ref_value)
+);
+
+CREATE TABLE public.task_notes (
+    id SERIAL PRIMARY KEY,
+    record_uuid UUID DEFAULT gen_random_uuid() NOT NULL UNIQUE,
+    task_id INTEGER NOT NULL REFERENCES public.tasks(id) ON DELETE CASCADE,
+    note_text TEXT,
+    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP NOT NULL
+);
+
+CREATE TABLE public.task_attachments (
+    id SERIAL PRIMARY KEY,
+    record_uuid UUID DEFAULT gen_random_uuid() NOT NULL UNIQUE,
+    task_id INTEGER NOT NULL REFERENCES public.tasks(id) ON DELETE CASCADE,
+    file_type VARCHAR(30),
+    file_path VARCHAR(500),
+    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP NOT NULL
+);
+
+-- 8. Backlogs
+CREATE TABLE public.backlogs (
+    id SERIAL PRIMARY KEY,
+    record_uuid UUID DEFAULT gen_random_uuid() NOT NULL UNIQUE,
+    job_id INTEGER REFERENCES public.jobs(id) ON DELETE SET NULL,
+    area_id INTEGER REFERENCES public.job_areas(id) ON DELETE SET NULL,
+    name VARCHAR(200),
+    description TEXT,
+    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP NOT NULL
+);
+
+CREATE TABLE public.backlog_items (
+    id SERIAL PRIMARY KEY,
+    record_uuid UUID DEFAULT gen_random_uuid() NOT NULL UNIQUE,
+    backlog_id INTEGER NOT NULL REFERENCES public.backlogs(id) ON DELETE CASCADE,
+    title VARCHAR(300),
+    description TEXT,
+    item_type VARCHAR(30),
+    priority VARCHAR(10),
+    effort_hint VARCHAR(10),
+    status VARCHAR(30),
+    source VARCHAR(30),
+    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP NOT NULL
+);
+
+-- 9. Notes (standalone) and attachments
+CREATE TABLE public.notes (
+    id SERIAL PRIMARY KEY,
+    record_uuid UUID DEFAULT gen_random_uuid() NOT NULL UNIQUE,
+    title VARCHAR(300),
+    note_type VARCHAR(30),
+    content_text TEXT,
+    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP NOT NULL,
+    updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP NOT NULL
+);
+
+CREATE TABLE public.note_attachments (
+    id SERIAL PRIMARY KEY,
+    record_uuid UUID DEFAULT gen_random_uuid() NOT NULL UNIQUE,
+    note_id INTEGER NOT NULL REFERENCES public.notes(id) ON DELETE CASCADE,
+    file_type VARCHAR(30),
+    file_path VARCHAR(500),
+    caption TEXT,
+    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP NOT NULL
+);
+
+-- 10. Password vault (password column stored encrypted via data_model_fields encryption_method)
+CREATE TABLE public.password_vault (
+    id SERIAL PRIMARY KEY,
+    record_uuid UUID DEFAULT gen_random_uuid() NOT NULL UNIQUE,
+    service_name VARCHAR(200),
+    category VARCHAR(50),
+    username_or_email VARCHAR(200),
+    password VARCHAR(500),
+    website_or_app_url VARCHAR(500),
+    login_handler_function VARCHAR(200),
+    recovery_info TEXT,
+    notes TEXT,
+    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP NOT NULL,
+    updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP NOT NULL
+);
+
+-- Indexes for persons, jobs, tasks and related
+CREATE INDEX idx_job_areas_parent ON public.job_areas(parent_area_id);
+CREATE INDEX idx_jobs_area ON public.jobs(area_id);
+CREATE INDEX idx_person_attachments_person ON public.person_attachments(person_id);
+CREATE INDEX idx_person_relationships_person ON public.person_relationships(person_id);
+CREATE INDEX idx_person_relationships_related ON public.person_relationships(related_person_id);
+CREATE INDEX idx_person_contacts_person ON public.person_contacts(person_id);
+CREATE INDEX idx_person_addresses_person ON public.person_addresses(person_id);
+CREATE INDEX idx_person_business_roles_person ON public.person_business_roles(person_id);
+CREATE INDEX idx_person_business_roles_business ON public.person_business_roles(business_id);
+CREATE INDEX idx_business_contact_methods_business ON public.business_contact_methods(business_id);
+CREATE INDEX idx_business_addresses_business ON public.business_addresses(business_id);
+CREATE INDEX idx_tasks_job ON public.tasks(job_id);
+CREATE INDEX idx_tasks_area ON public.tasks(area_id);
+CREATE INDEX idx_tasks_status ON public.tasks(status);
+CREATE INDEX idx_tasks_due_date ON public.tasks(due_date);
+CREATE INDEX idx_tasks_priority ON public.tasks(priority_id);
+CREATE INDEX idx_sprints_job ON public.sprints(job_id);
+CREATE INDEX idx_sprint_tasks_sprint ON public.sprint_tasks(sprint_id);
+CREATE INDEX idx_sprint_tasks_task ON public.sprint_tasks(task_id);
+CREATE INDEX idx_task_references_task ON public.task_references(task_id);
+CREATE INDEX idx_task_notes_task ON public.task_notes(task_id);
+CREATE INDEX idx_task_attachments_task ON public.task_attachments(task_id);
+CREATE INDEX idx_backlogs_job ON public.backlogs(job_id);
+CREATE INDEX idx_backlogs_area ON public.backlogs(area_id);
+CREATE INDEX idx_backlog_items_backlog ON public.backlog_items(backlog_id);
+CREATE INDEX idx_note_attachments_note ON public.note_attachments(note_id);
+CREATE INDEX idx_priorities_code ON public.priorities(code);
+
 -- Note: Seed data (ui_component_types, field_types, settings) has been moved to noolvandb_feeds.sql
 -- 96_seed_ai_model.sql
 -- Classification: Seed Data
