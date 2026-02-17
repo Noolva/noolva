@@ -1,4 +1,4 @@
-cd admin
+cd /Users/karan/Desktop/noolva.com/noolva/admin
 docker run --rm -it \
   -p 3000:3000 \
   -v $(pwd):/app \

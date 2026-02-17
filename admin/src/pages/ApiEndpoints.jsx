@@ -26,7 +26,8 @@ import {
     SearchOutlined,
     CodeOutlined,
     DatabaseOutlined,
-    PlayCircleOutlined
+    PlayCircleOutlined,
+    WarningOutlined,
 } from '@ant-design/icons';
 import { api } from '../utils/api';
 import ErrorModal from '../components/ErrorModal';
@@ -65,6 +66,9 @@ const ApiEndpoints = () => {
     const [testerRecordId, setTesterRecordId] = useState('');
     const [testerFields, setTesterFields] = useState('');
     const [testerBody, setTesterBody] = useState('{}');
+    const [orphanedModalVisible, setOrphanedModalVisible] = useState(false);
+    const [orphanedList, setOrphanedList] = useState([]);
+    const [orphanedLoading, setOrphanedLoading] = useState(false);
 
     useEffect(() => {
         loadDataModels();
@@ -103,6 +107,30 @@ const ApiEndpoints = () => {
             setDataModels(response.data_models || []);
         } catch (e) {
             console.error('Failed to load data models:', e);
+        }
+    };
+
+    const handleFindOrphanedAutoCrud = async () => {
+        try {
+            setOrphanedLoading(true);
+            const res = await api.getOrphanedAutoCrudEndpoints();
+            setOrphanedList(res.orphaned || []);
+            setOrphanedModalVisible(true);
+        } catch (e) {
+            message.error('Failed to load orphaned endpoints: ' + (e.message || 'Unknown error'));
+            if (e.errorData) setErrorModal(e);
+        } finally {
+            setOrphanedLoading(false);
+        }
+    };
+
+    const handleDeleteOrphaned = async (endpointId) => {
+        try {
+            await api.deleteApiEndpoint(endpointId);
+            message.success('Endpoint deleted');
+            setOrphanedList((prev) => prev.filter((e) => e.endpoint_id !== endpointId));
+        } catch (e) {
+            message.error('Delete failed: ' + (e.message || 'Unknown error'));
         }
     };
 
@@ -393,6 +421,14 @@ const ApiEndpoints = () => {
                     <Button onClick={loadEndpoints} icon={<DatabaseOutlined />}>
                         Refresh
                     </Button>
+                    <Button
+                        icon={<WarningOutlined />}
+                        onClick={handleFindOrphanedAutoCrud}
+                        loading={orphanedLoading}
+                        title="Detect auto CRUD endpoints whose data model was deleted"
+                    >
+                        Find orphaned auto CRUD
+                    </Button>
                 </Space>
 
                 <Table
@@ -404,6 +440,60 @@ const ApiEndpoints = () => {
                     scroll={{ x: 800 }}
                 />
             </Card>
+
+            <Modal
+                title={
+                    <Space>
+                        <WarningOutlined />
+                        Orphaned auto CRUD endpoints
+                    </Space>
+                }
+                open={orphanedModalVisible}
+                onCancel={() => setOrphanedModalVisible(false)}
+                footer={
+                    <Button type="primary" onClick={() => setOrphanedModalVisible(false)}>
+                        Close
+                    </Button>
+                }
+                width={640}
+            >
+                <Alert
+                    type="info"
+                    message="These are auto CRUD endpoints whose linked data model no longer exists. You can delete them to keep the list clean."
+                    style={{ marginBottom: 16 }}
+                />
+                {orphanedList.length === 0 ? (
+                    <Text type="secondary">No orphaned endpoints found.</Text>
+                ) : (
+                    <Table
+                        size="small"
+                        dataSource={orphanedList}
+                        rowKey="endpoint_id"
+                        pagination={false}
+                        columns={[
+                            { title: 'Path', dataIndex: 'path', key: 'path', ellipsis: true },
+                            { title: 'Method', dataIndex: 'method', key: 'method', width: 72 },
+                            {
+                                title: 'Actions',
+                                key: 'actions',
+                                width: 90,
+                                render: (_, record) => (
+                                    <Popconfirm
+                                        title="Delete this endpoint?"
+                                        onConfirm={() => handleDeleteOrphaned(record.endpoint_id)}
+                                        okText="Delete"
+                                        cancelText="Cancel"
+                                    >
+                                        <Button type="link" danger size="small" icon={<DeleteOutlined />}>
+                                            Delete
+                                        </Button>
+                                    </Popconfirm>
+                                ),
+                            },
+                        ]}
+                    />
+                )}
+            </Modal>
 
             <Drawer
                 title={editingEndpoint ? 'Edit API Endpoint' : 'Add API Endpoint'}

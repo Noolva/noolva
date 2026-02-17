@@ -31,8 +31,57 @@ const { Option } = Select;
 const { TextArea } = Input;
 const { Text } = Typography;
 
+// Shared: build initial config from value + defaults (used for both initial state and effect sync)
+function buildConfigFromValue(value, defaultPropsJson) {
+    let parsedValue = {};
+    if (value != null) {
+        try {
+            const v = typeof value === 'string' ? JSON.parse(value) : value;
+            parsedValue = typeof v === 'object' && v !== null ? v : {};
+        } catch (e) {
+            console.error('Failed to parse field_config_json:', e);
+        }
+    }
+    let parsedDefaults = {};
+    if (defaultPropsJson) {
+        try {
+            parsedDefaults = typeof defaultPropsJson === 'string' ? JSON.parse(defaultPropsJson) : defaultPropsJson;
+        } catch (e) {
+            console.error('Failed to parse default_props_json:', e);
+        }
+    }
+    let initialConfig = { ...parsedDefaults, ...parsedValue };
+    const rawOptions = Array.isArray(parsedValue.options) && parsedValue.options.length > 0
+        ? parsedValue.options
+        : Array.isArray(parsedValue.items) && parsedValue.items.length > 0
+            ? parsedValue.items
+            : null;
+    const savedOptions = rawOptions
+        ? rawOptions.map((item) => {
+            if (item && typeof item === 'object' && ('label' in item || 'value' in item || 'key' in item)) {
+                return { value: item.value ?? item.key ?? '', label: item.label ?? item.value ?? item.key ?? '' };
+            }
+            return { value: String(item), label: String(item) };
+        })
+        : null;
+    if (savedOptions && savedOptions.length > 0) {
+        initialConfig = { ...initialConfig, options: savedOptions };
+    } else if (Array.isArray(initialConfig.items) && (!Array.isArray(initialConfig.options) || initialConfig.options.length === 0)) {
+        initialConfig = {
+            ...initialConfig,
+            options: initialConfig.items.map((item) => {
+                if (item && typeof item === 'object' && ('label' in item || 'value' in item)) {
+                    return { value: item.value ?? item.key ?? '', label: item.label ?? item.value ?? item.key ?? '' };
+                }
+                return { value: String(item), label: String(item) };
+            }),
+        };
+    }
+    return initialConfig;
+}
+
 export function FieldConfigJsonEditor({ fieldTypeId, fieldTypeCode, defaultPropsJson, value, onChange }) {
-    const [config, setConfig] = useState({});
+    const [config, setConfig] = useState(() => buildConfigFromValue(value, defaultPropsJson));
     const [dataModels, setDataModels] = useState([]);
     const [selectedModel, setSelectedModel] = useState(null);
     const [modelFields, setModelFields] = useState([]);
@@ -44,34 +93,16 @@ export function FieldConfigJsonEditor({ fieldTypeId, fieldTypeCode, defaultProps
     const isSyncingFromValue = useRef(false);
     const prevValueRef = useRef(undefined);
 
-    // Initialize config from value or defaultPropsJson (merge defaults so missing keys get default values)
+    // Sync config when value or defaults change (e.g. switching field or type)
     useEffect(() => {
-        let parsedValue = {};
-        let parsedDefaults = {};
-        if (value) {
-            try {
-                parsedValue = typeof value === 'string' ? JSON.parse(value) : value;
-            } catch (e) {
-                console.error('Failed to parse field_config_json:', e);
-            }
-        }
-        if (defaultPropsJson) {
-            try {
-                parsedDefaults = typeof defaultPropsJson === 'string' ? JSON.parse(defaultPropsJson) : defaultPropsJson;
-            } catch (e) {
-                console.error('Failed to parse default_props_json:', e);
-            }
-        }
-        // Merge: defaults first, then value overrides (so default_props_json fills in missing keys)
-        const initialConfig = { ...parsedDefaults, ...parsedValue };
-        // Only update if merged config actually changed (prevents flicker from unstable refs)
+        const initialConfig = buildConfigFromValue(value, defaultPropsJson);
         const valueKey = JSON.stringify(initialConfig);
         if (prevValueRef.current !== valueKey) {
             prevValueRef.current = valueKey;
             isSyncingFromValue.current = true;
             setConfig(initialConfig);
         }
-    }, [value, defaultPropsJson]);
+    }, [value, defaultPropsJson, fieldTypeCode]);
 
     // Notify parent of changes (skip when syncing from value to prevent effect loop)
     useEffect(() => {
