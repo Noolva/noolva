@@ -243,7 +243,8 @@ export const AuthProvider = ({ children }) => {
             message.success('Login successful');
             return { success: true };
         } catch (error) {
-            const msg = error?.response?.data?.description ?? error?.response?.data?.detail ?? error?.message ?? 'Verification failed';
+            const raw = error?.response?.data?.description ?? error?.response?.data?.detail ?? error?.message ?? 'Verification failed';
+            const msg = typeof raw === 'string' ? raw : Array.isArray(raw) && raw[0]?.msg ? raw.map((e) => e?.msg).filter(Boolean).join('. ') : (raw?.msg ?? 'Verification failed');
             return { success: false, error: { ...error, message: msg, errorData: { description: msg } } };
         }
     };
@@ -383,7 +384,8 @@ export const AuthProvider = ({ children }) => {
             message.success('Welcome back. You can continue.');
             return { success: true };
         } catch (error) {
-            const msg = error?.response?.data?.description ?? error?.response?.data?.detail ?? error?.message ?? 'Re-authentication failed';
+            const raw = error?.response?.data?.description ?? error?.response?.data?.detail ?? error?.message ?? 'Re-authentication failed';
+            const msg = typeof raw === 'string' ? raw : Array.isArray(raw) && raw[0]?.msg ? raw.map((e) => e?.msg).filter(Boolean).join('. ') : (raw?.msg ?? 'Re-authentication failed');
             return { success: false, error: { ...error, message: msg, errorData: { description: msg } } };
         }
     }, [message]);

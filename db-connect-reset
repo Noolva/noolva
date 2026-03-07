@@ -22,6 +22,6 @@ CDN URL for public assets (optional, press Enter to skip): https://cdn.avkaran.c
 
 
 backup all:
-pg_dump -h 192.168.106.2 -p 5432 -U noolvan noolvandb > noolvandb_bkp20260217.sql
+pg_dump -h 192.168.106.2 -p 5432 -U noolvan noolvandb > noolvandb_bkp20260304.sql
 backup schema only:
 pg_dump -h 192.168.106.2 -p 5432 -U noolvan -n public -s noolvandb > public_schema.sql

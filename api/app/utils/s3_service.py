@@ -537,7 +537,46 @@ class S3Service:
                 'message': f'Delete error: {str(e)}',
                 'error': str(e)
             }
-    
+
+    def storage_path_to_full_key(self, storage_path: str) -> str:
+        """
+        Convert a stored path (with or without bucket_prefix) to full S3 key for delete/get.
+        Stored values are saved without bucket_prefix (e.g. public/model-attachments/...);
+        older values may include the prefix. Returns the key to use for S3 operations.
+        """
+        if not storage_path:
+            return storage_path
+        sp = storage_path.strip().lstrip("/")
+        if not self.bucket_prefix:
+            return sp
+        prefix = self.bucket_prefix.rstrip("/")
+        if sp.startswith(prefix):
+            return sp
+        return f"{prefix}/{sp}"
+
+    def delete_object(self, full_s3_key: str) -> Dict[str, Any]:
+        """
+        Delete an object by full S3 key (no bucket_prefix applied).
+        For model-attachment paths stored without prefix, use storage_path_to_full_key() first.
+        """
+        try:
+            full_s3_key = self.storage_path_to_full_key(full_s3_key).strip().lstrip("/")
+            if not full_s3_key:
+                return {'success': False, 'message': 'Empty key'}
+            self.s3_client.delete_object(Bucket=self.bucket_name, Key=full_s3_key)
+            return {
+                'success': True,
+                'message': 'Object deleted successfully',
+                's3_key': full_s3_key,
+            }
+        except Exception as e:
+            logger.error(f"S3 delete object error: {str(e)}")
+            return {
+                'success': False,
+                'message': f'Delete error: {str(e)}',
+                'error': str(e)
+            }
+
     @staticmethod
     def from_integration_config(config: Dict[str, Any]) -> 'S3Service':
         """
@@ -549,12 +588,14 @@ class S3Service:
         Returns:
             S3Service instance
         """
+        # config may have "url" (CDN base) from integration config; prefer over cdn_url for model-attachments
+        cdn_url = config.get('url') or config.get('cdn_url')
         return S3Service(
             access_key_id=config.get('aws_access_key_id'),
             secret_access_key=config.get('aws_secret_access_key'),
             bucket_name=config.get('bucket_name'),
             region=config.get('aws_region', 'us-east-1'),
             endpoint_url=config.get('endpoint_url'),
-            cdn_url=config.get('cdn_url'),
+            cdn_url=cdn_url,
             bucket_prefix=config.get('bucket_prefix')
         )

@@ -60,3 +60,6 @@ typing-inspection==0.4.1
 # AWS SDK for S3 operations
 boto3==1.35.0
 botocore==1.35.0
+
+# Image processing for thumbnails
+Pillow>=10.0.0

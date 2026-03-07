@@ -9,14 +9,13 @@ from typing import Any, Dict, List, Optional, Tuple
 from middlewares.auth import verify_jwt_token, resolve_bearer_to_user
 from utils.db import get_db
 from classes.postgres_db import PostgresDB
-from datetime import datetime
+from datetime import datetime, date
 import json
 import re
-import base64
 import time
 import logging
 
-from utils.encryption_service import get_encryption_service
+from utils import field_encryption
 
 router = APIRouter()
 logger = logging.getLogger("noolva_api")
@@ -67,10 +66,12 @@ async def _get_model_by_name(model_name: str) -> Optional[Dict[str, Any]]:
 async def _get_model_fields_meta(model_id: int) -> List[Dict[str, Any]]:
     return await PostgresDB.fetch(
         """
-        SELECT field_name, encryption_method, order_no
-        FROM public.data_model_fields
-        WHERE model_id = $1
-        ORDER BY order_no, field_name
+        SELECT dmf.field_name, dmf.encryption_method, dmf.order_no,
+               ft.type_code, ft.actual_db_type
+        FROM public.data_model_fields dmf
+        LEFT JOIN public.field_types ft ON dmf.field_type_id = ft.field_type_id
+        WHERE dmf.model_id = $1
+        ORDER BY dmf.order_no, dmf.field_name
         """,
         model_id,
     )
@@ -136,6 +137,44 @@ def _resolve_auth_scope_values(user: Dict[str, Any], scope_field: str) -> List[A
     return []
 
 
+def _coerce_value_for_db(type_code: Optional[str], actual_db_type: Optional[str], value: Any) -> Any:
+    """
+    Coerce string values to date/datetime/time for asyncpg (expects Python types for DATE/TIMESTAMPTZ/TIME).
+    For file/image fields, accept list of paths (multiple) and store as JSON array string.
+    When type_code/actual_db_type are missing (e.g. field not in data_model_fields), still try
+    to parse ISO date strings so DATE columns don't get raw strings (asyncpg: 'str' has no 'toordinal').
+    """
+    if value is None:
+        return value
+    type_code = (type_code or "").strip().lower()
+    if type_code in ("file", "image") and isinstance(value, list):
+        return json.dumps([str(x).strip() for x in value if x is not None and str(x).strip()])
+    if not isinstance(value, str):
+        return value
+    actual_db_type = (actual_db_type or "").upper()
+    try:
+        s = value.strip()
+        if type_code == "date" or actual_db_type == "DATE":
+            return datetime.strptime(s[:10], "%Y-%m-%d").date()
+        if type_code == "datetime" or "TIMESTAMP" in actual_db_type or actual_db_type == "TIMESTAMPTZ":
+            if len(s) <= 10:
+                return datetime.strptime(s, "%Y-%m-%d").date()
+            dt = datetime.fromisoformat(s.replace("Z", "+00:00"))
+            return dt
+        if type_code == "time" or actual_db_type == "TIME":
+            # asyncpg expects datetime.time for TIME columns (not str; 'str' has no 'hour')
+            if re.match(r"^\d{1,2}:\d{1,2}(:\d{1,2})?$", s):
+                if s.count(":") == 2:
+                    return datetime.strptime(s, "%H:%M:%S").time()
+                return datetime.strptime(s, "%H:%M").time()
+        # Fallback: no type meta (e.g. LEFT JOIN null) but value looks like ISO date -> coerce for DATE columns
+        if len(s) >= 10 and s[4] == "-" and s[7] == "-" and re.match(r"^\d{4}-\d{2}-\d{2}", s):
+            return datetime.strptime(s[:10], "%Y-%m-%d").date()
+    except (ValueError, TypeError):
+        pass
+    return value
+
+
 def _normalize_user_values(raw: Any) -> List[str]:
     if raw is None:
         return []
@@ -184,22 +223,52 @@ async def _get_primary_key_column(table_name: str) -> Optional[str]:
     return (row or {}).get("column_name")
 
 
-def _xor_cipher(value: str, key: str) -> str:
-    if value is None:
-        return value
-    key_bytes = (key or "noolva").encode("utf-8")
-    data = value.encode("utf-8")
-    out = bytes([b ^ key_bytes[i % len(key_bytes)] for i, b in enumerate(data)])
-    return base64.b64encode(out).decode("utf-8")
+def _looks_like_uuid(value: str) -> bool:
+    """Return True if value looks like a UUID string."""
+    if not value or not isinstance(value, str):
+        return False
+    return bool(re.fullmatch(r"[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}", value.strip()))
 
 
-def _xor_decipher(value: str, key: str) -> str:
-    if value is None:
-        return value
-    key_bytes = (key or "noolva").encode("utf-8")
-    data = base64.b64decode(value.encode("utf-8"))
-    out = bytes([b ^ key_bytes[i % len(key_bytes)] for i, b in enumerate(data)])
-    return out.decode("utf-8")
+async def _resolve_record_id_column_and_value(table_name: str, record_id: str) -> Tuple[Optional[str], Any]:
+    """
+    Resolve (column_name, value) for WHERE clause when looking up by record_id.
+    Supports both integer PK and UUID: if record_id looks like UUID and table has a uuid column, use it; else use PK.
+    """
+    if not _is_safe_identifier(table_name) or not record_id:
+        return (None, None)
+    pk_col = await _get_primary_key_column(table_name)
+    if not pk_col:
+        return (None, None)
+    record_id = record_id.strip()
+    if _looks_like_uuid(record_id):
+        uuid_cols = await PostgresDB.fetch(
+            """
+            SELECT column_name FROM information_schema.columns
+            WHERE table_schema = 'public' AND table_name = $1 AND data_type = 'uuid'
+            ORDER BY column_name
+            """,
+            table_name,
+        )
+        if uuid_cols:
+            col = (uuid_cols[0] or {}).get("column_name")
+            if col:
+                return (col, record_id)
+    pk_type_row = await PostgresDB.fetchrow(
+        """
+        SELECT data_type FROM information_schema.columns
+        WHERE table_schema = 'public' AND table_name = $1 AND column_name = $2
+        """,
+        table_name,
+        pk_col,
+    )
+    data_type = (pk_type_row or {}).get("data_type", "")
+    if data_type in ("integer", "bigint", "smallint", "serial", "bigserial"):
+        try:
+            return (pk_col, int(record_id))
+        except ValueError:
+            return (pk_col, record_id)
+    return (pk_col, record_id)
 
 
 class DataModelFieldCreate(BaseModel):
@@ -1777,11 +1846,8 @@ def _apply_field_masking(
 ) -> List[Dict[str, Any]]:
     """
     Ensures every requested field exists in each row; unauthorized fields become "AuthFailed".
-    Decrypts values for readable encrypted fields when possible.
+    Decrypts values for readable encrypted fields when possible (same key as credentials).
     """
-    xor_key = "noolva"
-    enc = get_encryption_service()
-
     out: List[Dict[str, Any]] = []
     for r in rows or []:
         item: Dict[str, Any] = {}
@@ -1792,22 +1858,8 @@ def _apply_field_masking(
 
             val = r.get(f)
             method = encryption_by_field.get(f) or "none"
-            if val is None or method == "none":
-                item[f] = val
-            elif method == "xor_cipher":
-                try:
-                    item[f] = _xor_decipher(str(val), xor_key)
-                except Exception:
-                    item[f] = val
-            elif method == "aes":
-                # Best-effort: values encrypted via EncryptionService as {"v": "<string>"}
-                try:
-                    payload = enc.decrypt(str(val))
-                    item[f] = payload.get("v")
-                except Exception:
-                    item[f] = val
-            else:
-                item[f] = val
+            decrypted = field_encryption.decrypt_field_value(method, str(val) if val is not None else None)
+            item[f] = decrypted if decrypted is not None else val
         out.append(item)
     return out
 
@@ -1894,6 +1946,75 @@ async def auto_list_records(
     return {"model_name": model_name, "records": masked, "limit": limit, "offset": offset}
 
 
+@router.get("/auto/{model_name}/records/{record_id}")
+async def auto_get_one_record(
+    model_name: str,
+    record_id: str,
+    request: Request,
+    fields: Optional[str] = Query(None, description="Comma-separated fields; default = model fields"),
+    authorization: Optional[str] = Header(None),
+):
+    """
+    Get one record by record_id (supports both integer ID and UUID, e.g. person_uuid for persons).
+    """
+    model = await _get_model_by_name(model_name)
+    if not model:
+        raise HTTPException(status_code=404, detail="Model not found")
+
+    user = await resolve_bearer_to_user(authorization)
+    if not model.get("is_public") and not user:
+        raise HTTPException(status_code=401, detail="Authentication required")
+    if user:
+        _assert_user_type_allowed(user)
+
+    table_name = model.get("table_name")
+    if not table_name or not _is_safe_identifier(table_name):
+        raise HTTPException(status_code=500, detail="Invalid model configuration")
+
+    id_col, id_val = await _resolve_record_id_column_and_value(table_name, record_id)
+    if not id_col or id_val is None:
+        raise HTTPException(status_code=400, detail="Target table has no primary key or invalid record_id")
+
+    model_id = model["model_id"]
+    fields_meta = await _get_model_fields_meta(model_id)
+    all_fields = [f["field_name"] for f in fields_meta] if fields_meta else []
+    encryption_by_field = {f["field_name"]: f.get("encryption_method") for f in fields_meta or []}
+
+    if fields:
+        requested_fields = [x.strip() for x in fields.split(",") if x.strip()]
+    else:
+        requested_fields = all_fields
+    for f in requested_fields:
+        if not _is_safe_identifier(f) or f not in all_fields:
+            raise HTTPException(status_code=400, detail=f"Invalid field requested: {f}")
+
+    where_sql, where_args = await _build_row_policy_where(model_id, ACTION_READ, user, request)
+    readable_fields = set(requested_fields)
+    if user and not _user_bypasses_row_and_field_policies(user):
+        role_ids = await _get_user_role_ids(user["user_id"], user.get("company_id"))
+        masks = await _get_field_permission_masks(model_id, role_ids)
+        readable_fields = {f for f in requested_fields if (masks.get(f, 0) & ACTION_READ) != 0}
+
+    select_fields = [f for f in requested_fields if f in readable_fields]
+    pk_col = await _get_primary_key_column(table_name)
+    if pk_col and pk_col not in select_fields:
+        select_fields = [pk_col] + select_fields
+    if not select_fields:
+        select_fields = all_fields[:1] if all_fields else [id_col]
+
+    cols_sql = ", ".join([f'"{c}"' for c in select_fields])
+    args: List[Any] = [id_val] + list(where_args)
+    where = f'WHERE "{id_col}" = $1'
+    if where_sql:
+        where += " AND " + where_sql.replace(" WHERE ", "", 1)
+    sql = f'SELECT {cols_sql} FROM public."{table_name}" {where} LIMIT 1'
+    row = await PostgresDB.fetchrow(sql, *args)
+    if not row:
+        raise HTTPException(status_code=404, detail="Record not found (or not permitted)")
+    masked = _apply_field_masking([row], requested_fields, readable_fields, encryption_by_field)
+    return {"model_name": model_name, "record": masked[0] if masked else {}}
+
+
 @router.post("/auto/{model_name}/records")
 async def auto_create_record(
     model_name: str,
@@ -1975,17 +2096,22 @@ async def auto_create_record(
     else:
         masks = None  # User bypasses; all fields readable in response
 
-    # Apply encryption
-    xor_key = "noolva"
-    enc = get_encryption_service()
+    # Coerce date/datetime strings to Python types for asyncpg
+    field_type_map = {f["field_name"]: (f.get("type_code"), f.get("actual_db_type")) for f in fields_meta or []}
     for k, v in list(data.items()):
-        method = encryption_by_field.get(k) or "none"
-        if v is None or method == "none":
+        tc, db_type = field_type_map.get(k, (None, None))
+        data[k] = _coerce_value_for_db(tc, db_type, v)
+
+    # Apply encryption (same key as credentials / EncryptionService).
+    # Only overwrite when we actually encrypt; for method "none", encrypt_field_value returns the
+    # value as-is (string), which would overwrite coerced date/datetime objects and break asyncpg.
+    for k, v in list(data.items()):
+        method = (encryption_by_field.get(k) or "none").strip().lower()
+        if method in ("none", "") or v is None:
             continue
-        if method == "xor_cipher":
-            data[k] = _xor_cipher(str(v), xor_key)
-        elif method == "aes":
-            data[k] = enc.encrypt({"v": str(v)})
+        encrypted = field_encryption.encrypt_field_value(method, str(v))
+        if encrypted is not None:
+            data[k] = encrypted
 
     cols = list(data.keys())
     placeholders = ", ".join([f"${i+1}" for i in range(len(cols))])
@@ -2032,6 +2158,10 @@ async def auto_update_record(
     if not pk_col:
         raise HTTPException(status_code=400, detail="Target table has no primary key")
 
+    id_col, id_val = await _resolve_record_id_column_and_value(table_name, record_id)
+    if not id_col or id_val is None:
+        raise HTTPException(status_code=400, detail="Invalid record_id (use integer ID or UUID)")
+
     model_id = model["model_id"]
     fields_meta = await _get_model_fields_meta(model_id)
     all_fields = [f["field_name"] for f in fields_meta] if fields_meta else []
@@ -2054,24 +2184,74 @@ async def auto_update_record(
 
     # Enforce row policies for UPDATE (saas_admin/tenant_admin bypass)
     policy_where, policy_args = await _build_row_policy_where(model_id, ACTION_UPDATE, user, request)
-    where = f'WHERE "{pk_col}" = $1'
+    where = f'WHERE "{id_col}" = $1'
     if policy_where:
         where += " AND " + policy_where.replace(" WHERE ", "", 1)
 
-    # Apply encryption
-    xor_key = "noolva"
-    enc = get_encryption_service()
+    # Coerce date/datetime strings to Python types for asyncpg
+    field_type_map = {f["field_name"]: (f.get("type_code"), f.get("actual_db_type")) for f in fields_meta or []}
     for k, v in list(updates.items()):
-        method = encryption_by_field.get(k) or "none"
-        if v is None or method == "none":
+        tc, db_type = field_type_map.get(k, (None, None))
+        updates[k] = _coerce_value_for_db(tc, db_type, v)
+
+    # Apply encryption (same key as credentials / EncryptionService).
+    # Only overwrite when we actually encrypt (see INSERT comment re date/datetime).
+    for k, v in list(updates.items()):
+        method = (encryption_by_field.get(k) or "none").strip().lower()
+        if method in ("none", "") or v is None:
             continue
-        if method == "xor_cipher":
-            updates[k] = _xor_cipher(str(v), xor_key)
-        elif method == "aes":
-            updates[k] = enc.encrypt({"v": str(v)})
+        encrypted = field_encryption.encrypt_field_value(method, str(v))
+        if encrypted is not None:
+            updates[k] = encrypted
+
+    # Delete old S3 objects for file/image attachment fields when value is being replaced (supports single path or JSON array for multiple)
+    def _attachment_paths_from_value(val: Any) -> List[str]:
+        if val is None:
+            return []
+        s = (val.strip() if isinstance(val, str) else str(val or "")).strip()
+        if not s or s.startswith(("http://", "https://")):
+            return []
+        if s.startswith("["):
+            try:
+                arr = json.loads(s)
+                return [str(x).strip() for x in arr if isinstance(x, str) and x.strip() and not x.strip().startswith(("http://", "https://"))] if isinstance(arr, list) else [s]
+            except (json.JSONDecodeError, TypeError):
+                return [s]
+        return [s]
+
+    attachment_fields = [
+        f["field_name"] for f in (fields_meta or [])
+        if (f.get("type_code") or "").strip().lower() in ("file", "image") and f["field_name"] in updates
+    ]
+    if attachment_fields:
+        cols_sql = ", ".join(f'"{c}"' for c in attachment_fields)
+        select_args: List[Any] = [id_val] + list(policy_args)
+        current_row = await PostgresDB.fetchrow(
+            f'SELECT {cols_sql} FROM public."{table_name}" {where}',
+            *select_args,
+        )
+        if current_row:
+            from routes.upload import _get_company_id_for_s3, _get_default_s3_service
+            try:
+                company_id = _get_company_id_for_s3(user)
+                s3 = await _get_default_s3_service(company_id)
+                for fn in attachment_fields:
+                    old_val = current_row.get(fn)
+                    new_val = updates.get(fn)
+                    new_paths = _attachment_paths_from_value(new_val)
+                    old_paths = _attachment_paths_from_value(old_val)
+                    if not old_paths or set(old_paths) == set(new_paths):
+                        continue
+                    for path in old_paths:
+                        try:
+                            s3.delete_object(path)
+                        except Exception:
+                            pass
+            except Exception as e:
+                logger.warning("Delete old attachment on update failed: %s", e)
 
     # Build SQL with correct placeholder indices
-    args: List[Any] = [record_id] + list(policy_args)
+    args: List[Any] = [id_val] + list(policy_args)
     param_idx = len(args) + 1
     set_parts = []
     for k in updates.keys():
@@ -2124,13 +2304,58 @@ async def auto_delete_record(
     if not pk_col:
         raise HTTPException(status_code=400, detail="Target table has no primary key")
 
+    id_col, id_val = await _resolve_record_id_column_and_value(table_name, record_id)
+    if not id_col or id_val is None:
+        raise HTTPException(status_code=400, detail="Invalid record_id (use integer ID or UUID)")
+
     model_id = model["model_id"]
+    fields_meta = await _get_model_fields_meta(model_id)
+    attachment_fields = [
+        f["field_name"] for f in (fields_meta or [])
+        if (f.get("type_code") or "").strip().lower() in ("file", "image")
+    ]
+
     policy_where, policy_args = await _build_row_policy_where(model_id, ACTION_DELETE, user, request)
-    where = f'WHERE "{pk_col}" = $1'
+    where = f'WHERE "{id_col}" = $1'
     if policy_where:
         where += " AND " + policy_where.replace(" WHERE ", "", 1)
 
-    args: List[Any] = [record_id] + list(policy_args)
+    # Before delete: remove S3 objects for file/image fields (single path or JSON array of paths)
+    if attachment_fields:
+        cols_sql = ", ".join(f'"{c}"' for c in attachment_fields)
+        select_args = [id_val] + list(policy_args)
+        row = await PostgresDB.fetchrow(
+            f'SELECT {cols_sql} FROM public."{table_name}" {where}',
+            *select_args,
+        )
+        if row:
+            from routes.upload import _get_company_id_for_s3, _get_default_s3_service
+            try:
+                company_id = _get_company_id_for_s3(user)
+                s3 = await _get_default_s3_service(company_id)
+                for fn in attachment_fields:
+                    val = row.get(fn)
+                    if val is None:
+                        continue
+                    s = (val.strip() if isinstance(val, str) else str(val or "")).strip()
+                    if not s or s.startswith(("http://", "https://")):
+                        continue
+                    paths = [s]
+                    if s.startswith("["):
+                        try:
+                            arr = json.loads(s)
+                            paths = [str(x).strip() for x in arr if isinstance(x, str) and x.strip() and not x.strip().startswith(("http://", "https://"))] if isinstance(arr, list) else []
+                        except (json.JSONDecodeError, TypeError):
+                            pass
+                    for path in paths:
+                        try:
+                            s3.delete_object(path)
+                        except Exception:
+                            pass
+            except Exception as e:
+                logger.warning("Delete S3 attachments on record delete failed: %s", e)
+
+    args: List[Any] = [id_val] + list(policy_args)
     sql = f'DELETE FROM public."{table_name}" {where} RETURNING "{pk_col}"'
     deleted = await PostgresDB.fetchrow(sql, *args)
     if not deleted:
