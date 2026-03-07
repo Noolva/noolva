@@ -687,6 +687,13 @@ export function FieldConfigJsonEditor({ fieldTypeId, fieldTypeCode, defaultProps
                                 </Form.Item>
                             </>
                         )}
+                        <Form.Item label="Generate Thumbnail">
+                            <Switch
+                                checked={config.generate_thumbnail || false}
+                                onChange={(checked) => updateConfig('generate_thumbnail', checked)}
+                            />
+                            <Text type="secondary" style={{ marginLeft: 8 }}>Auto-generate thumbnail on upload (saved as &lt;filename&gt;_thumb.&lt;ext&gt;)</Text>
+                        </Form.Item>
                         <Form.Item label="Max Size (MB)">
                             <InputNumber
                                 value={config.max_size_mb}

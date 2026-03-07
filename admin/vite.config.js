@@ -11,7 +11,8 @@ export default defineConfig({
         target: 'http://localhost:9001',
         changeOrigin: true,
       },
-      '/app': {
+      // Use /app/ (trailing slash) so /app_icons/* is not proxied and is served from public/app_icons
+      '/app/': {
         target: 'http://localhost:9001',
         changeOrigin: true,
       },
