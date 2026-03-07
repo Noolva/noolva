@@ -6,6 +6,16 @@ import { getSessionLocked, getSessionLockedRequire2FA, clearSessionLock } from '
 
 const { Text } = Typography;
 
+/** Coerce error payload to a string so message.error() never receives an object (avoids React "Objects are not valid as a React child"). */
+const toErrorString = (err, fallback = 'Something went wrong') => {
+    if (err == null) return fallback;
+    if (typeof err === 'string') return err || fallback;
+    const d = err?.errorData?.description ?? err?.message ?? err?.msg;
+    if (typeof d === 'string') return d || fallback;
+    if (Array.isArray(d) && d[0]?.msg) return d.map((e) => e?.msg).filter(Boolean).join('. ') || fallback;
+    return fallback;
+};
+
 /**
  * Modal for:
  * 1) auth:tokenExpired - full login (identifier + password)
@@ -14,10 +24,12 @@ const { Text } = Typography;
  */
 const ReLoginModal = () => {
     const { message } = App.useApp();
-    const { login, reauth } = useAuth();
+    const { login, loginVerifyTotp, reauth } = useAuth();
     const [visible, setVisible] = useState(false);
     const [mode, setMode] = useState('tokenExpired'); // 'tokenExpired' | 'idleLock'
     const [require2FA, setRequire2FA] = useState(false);
+    /** When session expired and backend requires TOTP, we show TOTP step in modal */
+    const [totpStep, setTotpStep] = useState({ active: false, tempToken: null });
     const [loading, setLoading] = useState(false);
     const [form] = Form.useForm();
 
@@ -25,6 +37,7 @@ const ReLoginModal = () => {
     const showIdleLockModal = () => {
         setMode('idleLock');
         setRequire2FA(getSessionLockedRequire2FA());
+        setTotpStep({ active: false, tempToken: null });
         form.resetFields();
         setVisible(true);
     };
@@ -37,12 +50,14 @@ const ReLoginModal = () => {
         const handleTokenExpired = () => {
             setMode('tokenExpired');
             setRequire2FA(false);
+            setTotpStep({ active: false, tempToken: null });
             form.resetFields();
             setVisible(true);
         };
         const handleIdleLock = (e) => {
             setMode('idleLock');
             setRequire2FA(!!(e?.detail?.enable_2fa));
+            setTotpStep({ active: false, tempToken: null });
             form.resetFields();
             setVisible(true);
         };
@@ -74,17 +89,37 @@ const ReLoginModal = () => {
                     form.resetFields();
                     setVisible(false);
                 } else {
-                    message.error(result.error?.message || result.error?.errorData?.description || 'Re-authentication failed');
+                    message.error(toErrorString(result.error, 'Re-authentication failed'));
                 }
             } else {
+                // Session expired: handle TOTP step when backend required 2FA after password
+                if (totpStep.active && totpStep.tempToken) {
+                    const doVerifyTotp = typeof loginVerifyTotp === 'function' ? loginVerifyTotp : null;
+                    if (!doVerifyTotp) {
+                        message.error('2FA verification is not available. Please refresh and sign in on the login page.');
+                        return;
+                    }
+                    const result = await doVerifyTotp(totpStep.tempToken, values.totp_code?.trim() || '');
+                    if (result.success) {
+                        setTotpStep({ active: false, tempToken: null });
+                        form.resetFields();
+                        setVisible(false);
+                        message.success('Signed in again. You can continue.');
+                    } else {
+                        message.error(toErrorString(result.error, 'Invalid or expired code.'));
+                    }
+                    return;
+                }
                 const result = await login(values.identifier, values.password, values.company_id || null);
                 if (result.success) {
                     form.resetFields();
                     setVisible(false);
                     message.success('Signed in again. You can continue.');
+                } else if (result.requiresTotp && result.tempToken) {
+                    setTotpStep({ active: true, tempToken: result.tempToken });
+                    form.setFieldsValue({ password: '', totp_code: '' });
                 } else {
-                    const msg = result.error?.errorData?.description || result.error?.message || 'Login failed. Please try again.';
-                    message.error(msg);
+                    message.error(toErrorString(result.error, 'Login failed. Please try again.'));
                 }
             }
         } finally {
@@ -94,6 +129,7 @@ const ReLoginModal = () => {
 
     const onCancel = () => {
         if (mode === 'idleLock') return; // Session locked: do not allow closing without re-auth
+        setTotpStep({ active: false, tempToken: null });
         form.resetFields();
         setVisible(false);
     };
@@ -122,7 +158,7 @@ const ReLoginModal = () => {
                 onFinish={onFinish}
                 autoComplete="off"
             >
-                {!isIdleLock && (
+                {!isIdleLock && !totpStep.active && (
                     <Form.Item
                         label="Username, Email, or Phone"
                         name="identifier"
@@ -131,13 +167,15 @@ const ReLoginModal = () => {
                         <Input prefix={<UserOutlined />} placeholder="username, email, or phone" />
                     </Form.Item>
                 )}
-                <Form.Item
-                    label="Password"
-                    name="password"
-                    rules={[{ required: true, message: 'Please enter your password' }]}
-                >
-                    <Input.Password prefix={<LockOutlined />} placeholder="••••••••" />
-                </Form.Item>
+                {(isIdleLock || (!isIdleLock && !totpStep.active)) && (
+                    <Form.Item
+                        label="Password"
+                        name="password"
+                        rules={[{ required: true, message: 'Please enter your password' }]}
+                    >
+                        <Input.Password prefix={<LockOutlined />} placeholder="••••••••" />
+                    </Form.Item>
+                )}
                 {isIdleLock && require2FA && (
                     <Form.Item
                         label="Two-factor code"
@@ -147,14 +185,28 @@ const ReLoginModal = () => {
                         <Input placeholder="000000" maxLength={6} />
                     </Form.Item>
                 )}
-                {!isIdleLock && (
+                {!isIdleLock && totpStep.active && (
+                    <>
+                        <Form.Item
+                            label="Two-factor code"
+                            name="totp_code"
+                            rules={[{ required: true, message: 'Please enter the 6-digit code from your authenticator app' }, { len: 6, message: 'Code must be 6 digits' }]}
+                        >
+                            <Input placeholder="000000" maxLength={6} />
+                        </Form.Item>
+                        <Text type="secondary" style={{ display: 'block', marginBottom: 12, fontSize: 12 }}>
+                            <a onClick={() => { setTotpStep({ active: false, tempToken: null }); form.setFieldsValue({ totp_code: '' }); }}>← Back to password</a>
+                        </Text>
+                    </>
+                )}
+                {!isIdleLock && !totpStep.active && (
                     <Form.Item name="company_id" hidden>
                         <Input type="hidden" />
                     </Form.Item>
                 )}
                 <Form.Item style={{ marginBottom: 0 }}>
                     <Button type="primary" htmlType="submit" block loading={loading}>
-                        {isIdleLock ? 'Unlock' : 'Sign in again'}
+                        {isIdleLock ? 'Unlock' : totpStep.active ? 'Verify' : 'Sign in again'}
                     </Button>
                 </Form.Item>
             </Form>

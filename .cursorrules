@@ -11,6 +11,14 @@
 - Note entries in `api/assets/assets_manifest.json`
 - Make entries in assets table in `noolvandb_feeds.sql`
 
+## File uploads (forms and external apps)
+- For uploading files to the **default S3 bucket** (from integrations table), use the API endpoint **POST /upload**
+- Auth: `Authorization: Bearer <JWT or PAT>` (PAT is for external apps / scripts)
+- Request: `multipart/form-data` with `file` or `files` (at least one required), optional `key` (S3 path), optional `is_public` (true/false; false = private, signed URL required), optional `model_name`, `field_name`, `record_id` for model-attachments (path = bucket_prefix + public|private + model-attachments/&lt;model_name&gt;/&lt;id&gt;)
+- Response: single file `{ "success", "s3_key", "public_url", "bucket", "is_public" }`; multiple files `{ "success", "uploads": [...], "count" }`
+- When `model_name` + `field_name` are provided, field_config (filters, max_size_mb) is validated for file/image fields
+- Use this endpoint whenever the app or forms need to upload files to S3 (do not add duplicate upload endpoints)
+
 ## Component Development
 - Always implement components as VC (View Component) in `admin/src/components/ViewComponents/`
 - Use VC components in pages - keep them reusable and changeable

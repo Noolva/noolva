@@ -2,7 +2,7 @@
 -- PostgreSQL database dump
 --
 
-\restrict wQkCq4BmIWYAX7RmbF81OHoNf7grcijcLj0ULVMmY4gfntFQgIWCDD0Pcuoc0h1
+\restrict BWWxitOl4X12qECqfKge6TG2C8X396EMxk0fukBAD428eafRgVPXhY0t1LKavo0
 
 -- Dumped from database version 16.11 (Ubuntu 16.11-0ubuntu0.24.04.1)
 -- Dumped by pg_dump version 18.1
@@ -282,6 +282,90 @@ CREATE TABLE public.ai_rules (
 
 
 ALTER TABLE public.ai_rules OWNER TO noolvan;
+
+--
+-- Name: alarm_sounds; Type: TABLE; Schema: public; Owner: noolvan
+--
+
+CREATE TABLE public.alarm_sounds (
+    sound_id integer NOT NULL,
+    created_by integer,
+    idate timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
+    last_updated timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
+    alarm_file_path character varying(255),
+    sound_title character varying(100),
+    is_default boolean
+);
+
+
+ALTER TABLE public.alarm_sounds OWNER TO noolvan;
+
+--
+-- Name: alarm_sounds_sound_id_seq; Type: SEQUENCE; Schema: public; Owner: noolvan
+--
+
+CREATE SEQUENCE public.alarm_sounds_sound_id_seq
+    AS integer
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+ALTER SEQUENCE public.alarm_sounds_sound_id_seq OWNER TO noolvan;
+
+--
+-- Name: alarm_sounds_sound_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: noolvan
+--
+
+ALTER SEQUENCE public.alarm_sounds_sound_id_seq OWNED BY public.alarm_sounds.sound_id;
+
+
+--
+-- Name: alarms; Type: TABLE; Schema: public; Owner: noolvan
+--
+
+CREATE TABLE public.alarms (
+    alarm_id integer NOT NULL,
+    created_by integer,
+    idate timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
+    last_updated timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
+    entity_type character varying(50),
+    alarm_mode character varying(255) DEFAULT 'time_based'::character varying NOT NULL,
+    scheduled_for timestamp with time zone,
+    condition_json jsonb,
+    title character varying(255),
+    message text,
+    status character varying(255) DEFAULT 'pending'::character varying NOT NULL,
+    acknowledged_at timestamp with time zone,
+    entity_id numeric
+);
+
+
+ALTER TABLE public.alarms OWNER TO noolvan;
+
+--
+-- Name: alarms_alarm_id_seq; Type: SEQUENCE; Schema: public; Owner: noolvan
+--
+
+CREATE SEQUENCE public.alarms_alarm_id_seq
+    AS integer
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+ALTER SEQUENCE public.alarms_alarm_id_seq OWNER TO noolvan;
+
+--
+-- Name: alarms_alarm_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: noolvan
+--
+
+ALTER SEQUENCE public.alarms_alarm_id_seq OWNED BY public.alarms.alarm_id;
+
 
 --
 -- Name: api_endpoints; Type: TABLE; Schema: public; Owner: noolvan
@@ -586,12 +670,10 @@ CREATE TABLE public.business_addresses (
     address_type character varying(255) DEFAULT 'head_office'::character varying NOT NULL,
     address_line1 character varying(255) NOT NULL,
     address_line2 character varying(255),
-    city character varying(150) NOT NULL,
-    state character varying(150) NOT NULL,
     postal_code character varying(20) NOT NULL,
-    country character varying(150) DEFAULT 'India'::character varying NOT NULL,
-    location point,
-    is_primary boolean DEFAULT false
+    is_primary boolean DEFAULT false,
+    map_location point,
+    location integer
 );
 
 
@@ -1523,12 +1605,14 @@ CREATE TABLE public.my_tasks (
     recurrence_type character varying(255),
     recurrence_interval numeric DEFAULT '1'::numeric,
     recurrence_days text[],
-    do_alarm boolean DEFAULT false,
-    alarm_before numeric,
     estimated_time numeric,
     timebox numeric,
     actual_time numeric,
-    assigned_to integer
+    assigned_to integer,
+    task_uuid uuid DEFAULT gen_random_uuid(),
+    alarm_id integer,
+    person_id integer,
+    business_id integer
 );
 
 
@@ -1570,9 +1654,8 @@ CREATE TABLE public.password_vault (
     login_handler_function character varying(200),
     recovery_info text,
     notes text,
-    updated_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
-    record_uuid uuid DEFAULT gen_random_uuid() NOT NULL,
-    additional_secrets jsonb
+    additional_secrets jsonb,
+    service_uuid uuid DEFAULT gen_random_uuid()
 );
 
 
@@ -1613,12 +1696,10 @@ CREATE TABLE public.person_addresses (
     address_type character varying(255) DEFAULT 'home'::character varying NOT NULL,
     address_line1 character varying(255) NOT NULL,
     address_line2 character varying(255),
-    city character varying(150) NOT NULL,
-    state character varying(150) NOT NULL,
     postal_code character varying(20) NOT NULL,
-    country character varying(150) DEFAULT 'India'::character varying NOT NULL,
-    location point,
-    is_primary boolean DEFAULT false
+    is_primary boolean DEFAULT false,
+    map_location point,
+    location integer
 );
 
 
@@ -1876,7 +1957,8 @@ CREATE TABLE public.persons (
     dob date,
     marital_status character varying(255),
     anniversary_date date,
-    notes text
+    notes text,
+    person_uuid uuid DEFAULT gen_random_uuid()
 );
 
 
@@ -2097,22 +2179,24 @@ ALTER SEQUENCE public.settings_setting_id_seq OWNED BY public.settings.setting_i
 --
 
 CREATE TABLE public.task_attachments (
-    id integer NOT NULL,
-    task_id integer NOT NULL,
-    file_type character varying(30),
-    file_path character varying(500),
-    created_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
-    record_uuid uuid DEFAULT gen_random_uuid() NOT NULL
+    attachment_id integer NOT NULL,
+    created_by integer,
+    idate timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
+    last_updated timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
+    attachment_uuid uuid DEFAULT gen_random_uuid(),
+    attachment_title character varying(100),
+    file_path character varying(255),
+    task integer
 );
 
 
 ALTER TABLE public.task_attachments OWNER TO noolvan;
 
 --
--- Name: task_attachments_id_seq; Type: SEQUENCE; Schema: public; Owner: noolvan
+-- Name: task_attachments_attachment_id_seq; Type: SEQUENCE; Schema: public; Owner: noolvan
 --
 
-CREATE SEQUENCE public.task_attachments_id_seq
+CREATE SEQUENCE public.task_attachments_attachment_id_seq
     AS integer
     START WITH 1
     INCREMENT BY 1
@@ -2121,13 +2205,13 @@ CREATE SEQUENCE public.task_attachments_id_seq
     CACHE 1;
 
 
-ALTER SEQUENCE public.task_attachments_id_seq OWNER TO noolvan;
+ALTER SEQUENCE public.task_attachments_attachment_id_seq OWNER TO noolvan;
 
 --
--- Name: task_attachments_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: noolvan
+-- Name: task_attachments_attachment_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: noolvan
 --
 
-ALTER SEQUENCE public.task_attachments_id_seq OWNED BY public.task_attachments.id;
+ALTER SEQUENCE public.task_attachments_attachment_id_seq OWNED BY public.task_attachments.attachment_id;
 
 
 --
@@ -2171,6 +2255,45 @@ ALTER SEQUENCE public.task_categories_task_category_id_seq OWNER TO noolvan;
 --
 
 ALTER SEQUENCE public.task_categories_task_category_id_seq OWNED BY public.task_categories.task_category_id;
+
+
+--
+-- Name: task_comments; Type: TABLE; Schema: public; Owner: noolvan
+--
+
+CREATE TABLE public.task_comments (
+    comment_id integer NOT NULL,
+    created_by integer,
+    idate timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
+    last_updated timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
+    task integer,
+    message text,
+    comment_title character varying(100)
+);
+
+
+ALTER TABLE public.task_comments OWNER TO noolvan;
+
+--
+-- Name: task_comments_comment_id_seq; Type: SEQUENCE; Schema: public; Owner: noolvan
+--
+
+CREATE SEQUENCE public.task_comments_comment_id_seq
+    AS integer
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+ALTER SEQUENCE public.task_comments_comment_id_seq OWNER TO noolvan;
+
+--
+-- Name: task_comments_comment_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: noolvan
+--
+
+ALTER SEQUENCE public.task_comments_comment_id_seq OWNED BY public.task_comments.comment_id;
 
 
 --
@@ -2390,6 +2513,51 @@ ALTER SEQUENCE public.themes_theme_id_seq OWNER TO noolvan;
 --
 
 ALTER SEQUENCE public.themes_theme_id_seq OWNED BY public.themes.theme_id;
+
+
+--
+-- Name: time_slots; Type: TABLE; Schema: public; Owner: noolvan
+--
+
+CREATE TABLE public.time_slots (
+    time_id integer NOT NULL,
+    created_by integer,
+    idate timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
+    last_updated timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
+    slot_uuid uuid DEFAULT gen_random_uuid(),
+    name character varying(150) NOT NULL,
+    slot_type character varying(255),
+    start_time time without time zone NOT NULL,
+    end_time time without time zone NOT NULL,
+    applies_type character varying(255),
+    applies_value character varying(20),
+    priority_level numeric DEFAULT '1'::numeric,
+    description text
+);
+
+
+ALTER TABLE public.time_slots OWNER TO noolvan;
+
+--
+-- Name: time_slots_time_id_seq; Type: SEQUENCE; Schema: public; Owner: noolvan
+--
+
+CREATE SEQUENCE public.time_slots_time_id_seq
+    AS integer
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+ALTER SEQUENCE public.time_slots_time_id_seq OWNER TO noolvan;
+
+--
+-- Name: time_slots_time_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: noolvan
+--
+
+ALTER SEQUENCE public.time_slots_time_id_seq OWNED BY public.time_slots.time_id;
 
 
 --
@@ -2906,6 +3074,20 @@ ALTER TABLE ONLY public.ai_knowledge_relations ALTER COLUMN relation_id SET DEFA
 
 
 --
+-- Name: alarm_sounds sound_id; Type: DEFAULT; Schema: public; Owner: noolvan
+--
+
+ALTER TABLE ONLY public.alarm_sounds ALTER COLUMN sound_id SET DEFAULT nextval('public.alarm_sounds_sound_id_seq'::regclass);
+
+
+--
+-- Name: alarms alarm_id; Type: DEFAULT; Schema: public; Owner: noolvan
+--
+
+ALTER TABLE ONLY public.alarms ALTER COLUMN alarm_id SET DEFAULT nextval('public.alarms_alarm_id_seq'::regclass);
+
+
+--
 -- Name: api_endpoints endpoint_id; Type: DEFAULT; Schema: public; Owner: noolvan
 --
 
@@ -3186,10 +3368,10 @@ ALTER TABLE ONLY public.settings ALTER COLUMN setting_id SET DEFAULT nextval('pu
 
 
 --
--- Name: task_attachments id; Type: DEFAULT; Schema: public; Owner: noolvan
+-- Name: task_attachments attachment_id; Type: DEFAULT; Schema: public; Owner: noolvan
 --
 
-ALTER TABLE ONLY public.task_attachments ALTER COLUMN id SET DEFAULT nextval('public.task_attachments_id_seq'::regclass);
+ALTER TABLE ONLY public.task_attachments ALTER COLUMN attachment_id SET DEFAULT nextval('public.task_attachments_attachment_id_seq'::regclass);
 
 
 --
@@ -3197,6 +3379,13 @@ ALTER TABLE ONLY public.task_attachments ALTER COLUMN id SET DEFAULT nextval('pu
 --
 
 ALTER TABLE ONLY public.task_categories ALTER COLUMN task_category_id SET DEFAULT nextval('public.task_categories_task_category_id_seq'::regclass);
+
+
+--
+-- Name: task_comments comment_id; Type: DEFAULT; Schema: public; Owner: noolvan
+--
+
+ALTER TABLE ONLY public.task_comments ALTER COLUMN comment_id SET DEFAULT nextval('public.task_comments_comment_id_seq'::regclass);
 
 
 --
@@ -3232,6 +3421,13 @@ ALTER TABLE ONLY public.tenants ALTER COLUMN tenant_id SET DEFAULT nextval('publ
 --
 
 ALTER TABLE ONLY public.themes ALTER COLUMN theme_id SET DEFAULT nextval('public.themes_theme_id_seq'::regclass);
+
+
+--
+-- Name: time_slots time_id; Type: DEFAULT; Schema: public; Owner: noolvan
+--
+
+ALTER TABLE ONLY public.time_slots ALTER COLUMN time_id SET DEFAULT nextval('public.time_slots_time_id_seq'::regclass);
 
 
 --
@@ -3405,6 +3601,43 @@ aa1330f6-7746-4b82-83ca-46db11a02d7d	Inactive Project Archive	\N	{"op": ">", "da
 
 
 --
+-- Data for Name: alarm_sounds; Type: TABLE DATA; Schema: public; Owner: noolvan
+--
+
+COPY public.alarm_sounds (sound_id, created_by, idate, last_updated, alarm_file_path, sound_title, is_default) FROM stdin;
+1	\N	2026-02-24 18:33:43.858074+00	2026-02-24 18:33:43.858074+00	private/model-attachments/alarm_sounds/e4ec047e0d2d4688a93e3b9c8243bb1d.mp3	Cinematic Sound Effect	\N
+2	\N	2026-02-24 18:34:15.187033+00	2026-02-24 18:34:15.187033+00	private/model-attachments/alarm_sounds/3d4dcd798b244bddaa4010ad30604c34.mp3	Riser Hit	t
+\.
+
+
+--
+-- Data for Name: alarms; Type: TABLE DATA; Schema: public; Owner: noolvan
+--
+
+COPY public.alarms (alarm_id, created_by, idate, last_updated, entity_type, alarm_mode, scheduled_for, condition_json, title, message, status, acknowledged_at, entity_id) FROM stdin;
+2	\N	2026-02-26 08:05:37.544764+00	2026-02-26 08:05:37.544764+00	reminder	condition_based	\N	\N	soap purchase	\N	pending	\N	\N
+4	\N	2026-02-26 12:20:07.947746+00	2026-02-26 12:20:07.947746+00	reminder	time_based	2026-02-26 13:30:00+00	\N	utlilization service with prasanna sir	\N	pending	\N	\N
+6	\N	2026-02-26 13:39:08.315706+00	2026-02-26 13:39:08.315706+00	reminder	time_based	2026-02-26 13:44:07+00	\N	52 Week PPM for Weeks 1 to 9 in NSDC Instance..	\N	sent	\N	\N
+7	\N	2026-02-26 16:39:40.274062+00	2026-02-26 16:39:40.274062+00	reminder	time_based	2026-02-26 16:44:39+00	\N	revert brookfields nginx conf	\N	sent	\N	\N
+3	\N	2026-02-26 08:47:40.036382+00	2026-02-26 08:47:40.036382+00	reminder	time_based	2026-02-26 14:30:00+00	\N	connect with reg connect api brookfields from local	\N	sent	2026-02-26 11:58:30+00	\N
+8	\N	2026-02-27 04:20:01.529276+00	2026-02-27 04:20:01.529276+00	reminder	time_based	2026-02-27 04:25:00+00	\N	production audit details for the week john	\N	sent	\N	\N
+11	\N	2026-02-27 06:46:37.609897+00	2026-02-27 06:46:37.609897+00	reminder	time_based	2026-02-27 06:51:37+00	\N	vivek prs	\N	sent	2026-02-27 08:09:14+00	\N
+12	\N	2026-02-27 06:47:13.083356+00	2026-02-27 06:47:13.083356+00	reminder	time_based	2026-02-27 13:30:00+00	\N	external crons, revert and deploy to mcloud,	release/1.7.140.1\nfinish release-deploy	sent	\N	\N
+16	\N	2026-02-28 12:37:27.153221+00	2026-02-28 12:37:27.153221+00	reminder	time_based	2026-02-28 12:42:27+00	\N	52 Week PPM for NSDC Instance Week 1 to 9	\N	sent	\N	\N
+14	\N	2026-02-27 15:18:28.532159+00	2026-02-27 15:18:28.532159+00	reminder	time_based	2026-02-27 15:23:27+00	\N	jagdeesh ticket update for iot	SR2600256	sent	\N	\N
+1	\N	2026-02-26 04:42:46.072836+00	2026-02-26 04:42:46.072836+00	reminder	time_based	2026-02-28 11:30:00+00	\N	check my laptop charge	\N	sent	\N	\N
+9	\N	2026-02-27 06:45:14.045173+00	2026-02-27 06:45:14.045173+00	reminder	time_based	2026-03-01 10:45:13+00	\N	john task finalize	\N	pending	\N	\N
+13	\N	2026-02-27 06:48:02.980153+00	2026-02-27 06:48:02.980153+00	reminder	time_based	2026-03-01 07:48:02+00	\N	John:tenx:  ticket validation	\N	pending	\N	\N
+10	\N	2026-02-27 06:46:06.33163+00	2026-02-27 06:46:06.33163+00	reminder	time_based	2026-02-28 11:00:00+00	\N	branch cut-down	\N	sent	\N	\N
+15	\N	2026-02-27 15:19:31.680724+00	2026-02-27 15:19:31.680724+00	reminder	time_based	2026-02-28 14:30:00+00	\N	warehouse pgsync	\N	sent	\N	\N
+17	\N	2026-02-28 14:42:24.570781+00	2026-02-28 14:42:24.570781+00	reminder	time_based	2026-03-01 14:47:49+00	\N	warehouse-brookfields pgsync	\N	pending	\N	\N
+5	\N	2026-02-26 12:21:03.191559+00	2026-02-26 12:21:03.191559+00	reminder	time_based	2026-03-01 14:48:01+00	\N	inpsection ppm sync sundaram sir	\N	pending	\N	\N
+18	\N	2026-03-04 09:27:47.989122+00	2026-03-04 09:27:47.989122+00	reminder	time_based	2026-03-19 18:30:00+00	\N	Ramzan leave	Ramzan	pending	\N	\N
+19	\N	2026-03-04 09:29:58.963918+00	2026-03-04 09:29:58.963918+00	reminder	time_based	2026-03-18 18:30:00+00	\N	Telugu New Year Holiday	Telugu New Year's Day	pending	\N	\N
+\.
+
+
+--
 -- Data for Name: api_endpoints; Type: TABLE DATA; Schema: public; Owner: noolvan
 --
 
@@ -3449,10 +3682,18 @@ COPY public.api_endpoints (endpoint_id, endpoint_uuid, path, method, type, relat
 194	0c5d367c-23dd-456d-9068-7219b1d77a31	/data-models/auto/locations/records	POST	auto_crud	57	\N	f	2	2026-02-17 03:52:41.373232+00	2026-02-17 03:52:41.373232+00	{57}	{}
 195	c9084dbd-27d1-4611-9144-ae1f6764094c	/data-models/auto/locations/records/{record_id}	PUT	auto_crud	57	\N	f	2	2026-02-17 03:52:41.381083+00	2026-02-17 03:52:41.381083+00	{57}	{}
 196	641fa3da-beb4-4906-b7f6-83917cc7edbc	/data-models/auto/locations/records/{record_id}	DELETE	auto_crud	57	\N	f	2	2026-02-17 03:52:41.388001+00	2026-02-17 03:52:41.388001+00	{57}	{}
+197	ec145e50-e1a2-4ed4-86a6-a5991cb1b5f1	/data-models/auto/alarm_sounds/records	GET	auto_crud	58	\N	f	2	2026-02-24 17:54:53.878538+00	2026-02-24 17:54:53.878538+00	{58}	{}
+198	6857e1e4-4886-4495-a8d5-780a564391de	/data-models/auto/alarm_sounds/records	POST	auto_crud	58	\N	f	2	2026-02-24 17:54:53.898423+00	2026-02-24 17:54:53.898423+00	{58}	{}
+199	8cbb7ed4-0d1d-4b60-8a44-2caea57f2b63	/data-models/auto/alarm_sounds/records/{record_id}	PUT	auto_crud	58	\N	f	2	2026-02-24 17:54:53.910852+00	2026-02-24 17:54:53.910852+00	{58}	{}
+200	08a116c1-08db-4cbc-ba1e-f2e09d4adb62	/data-models/auto/alarm_sounds/records/{record_id}	DELETE	auto_crud	58	\N	f	2	2026-02-24 17:54:53.921043+00	2026-02-24 17:54:53.921043+00	{58}	{}
 165	3964a2c6-4672-49a5-9a8f-c7c87c150b39	/data-models/auto/person_relationships/records	GET	auto_crud	50	\N	f	2	2026-02-17 01:52:31.7001+00	2026-02-17 01:52:31.7001+00	{50}	{}
 166	d0156cf6-fe94-47e6-8d90-194283467c2e	/data-models/auto/person_relationships/records	POST	auto_crud	50	\N	f	2	2026-02-17 01:52:31.717742+00	2026-02-17 01:52:31.717742+00	{50}	{}
 167	684120f2-b1db-40d9-85e3-61c089a1b052	/data-models/auto/person_relationships/records/{record_id}	PUT	auto_crud	50	\N	f	2	2026-02-17 01:52:31.728537+00	2026-02-17 01:52:31.728537+00	{50}	{}
 168	2b2a8de2-dfbb-491b-91ac-126effd37f35	/data-models/auto/person_relationships/records/{record_id}	DELETE	auto_crud	50	\N	f	2	2026-02-17 01:52:31.740076+00	2026-02-17 01:52:31.740076+00	{50}	{}
+201	80566fad-6b5a-4471-af27-7208b86d5c47	/data-models/auto/alarms/records	GET	auto_crud	59	\N	f	2	2026-02-24 18:02:52.559221+00	2026-02-24 18:02:52.559221+00	{59}	{}
+202	4e624446-ad60-4d14-a77f-680fb2582eed	/data-models/auto/alarms/records	POST	auto_crud	59	\N	f	2	2026-02-24 18:02:52.574036+00	2026-02-24 18:02:52.574036+00	{59}	{}
+203	a78e4607-663c-4b01-a4eb-d3f154af851c	/data-models/auto/alarms/records/{record_id}	PUT	auto_crud	59	\N	f	2	2026-02-24 18:02:52.581758+00	2026-02-24 18:02:52.581758+00	{59}	{}
+204	f0eaca70-2073-4a9f-a69a-e2310413c4ac	/data-models/auto/alarms/records/{record_id}	DELETE	auto_crud	59	\N	f	2	2026-02-24 18:02:52.589513+00	2026-02-24 18:02:52.589513+00	{59}	{}
 169	8b698864-b9cd-4335-8d7f-840968a84559	/data-models/auto/businesses/records	GET	auto_crud	51	\N	f	2	2026-02-17 02:23:41.212284+00	2026-02-17 02:23:41.212284+00	{51}	{}
 170	75c52d33-fbca-4c4c-b2da-9c6f2508a7ff	/data-models/auto/businesses/records	POST	auto_crud	51	\N	f	2	2026-02-17 02:23:41.228863+00	2026-02-17 02:23:41.228863+00	{51}	{}
 171	c31fad8b-78ad-4a73-8105-9ea8d0f80a86	/data-models/auto/businesses/records/{record_id}	PUT	auto_crud	51	\N	f	2	2026-02-17 02:23:41.238494+00	2026-02-17 02:23:41.238494+00	{51}	{}
@@ -3461,10 +3702,10 @@ COPY public.api_endpoints (endpoint_id, endpoint_uuid, path, method, type, relat
 174	c9e152a8-98e7-4745-9ab5-84721d9a4644	/data-models/auto/person_attachments/records	POST	auto_crud	52	\N	f	2	2026-02-17 02:27:54.637175+00	2026-02-17 02:27:54.637175+00	{52}	{}
 175	ddb0f1f4-1371-4a28-b620-10eebec63419	/data-models/auto/person_attachments/records/{record_id}	PUT	auto_crud	52	\N	f	2	2026-02-17 02:27:54.646749+00	2026-02-17 02:27:54.646749+00	{52}	{}
 176	aa6d64ee-cd46-45e8-811e-da6d5c32cba4	/data-models/auto/person_attachments/records/{record_id}	DELETE	auto_crud	52	\N	f	2	2026-02-17 02:27:54.655744+00	2026-02-17 02:27:54.655744+00	{52}	{}
-101	4165b2a2-d595-4769-ac65-a8cc9d1155fb	/data-models/auto/task_attachments/records	GET	auto_crud	34	\N	f	\N	2026-02-08 19:12:50.670585+00	2026-02-08 19:12:50.670585+00	{34}	{}
-102	9244f497-3b59-4625-85f9-b512cc82e37c	/data-models/auto/task_attachments/records	POST	auto_crud	34	\N	f	\N	2026-02-08 19:12:50.670585+00	2026-02-08 19:12:50.670585+00	{34}	{}
-103	5530b099-4cf6-4d18-b8fb-484ca1288fb4	/data-models/auto/task_attachments/records/{record_id}	PUT	auto_crud	34	\N	f	\N	2026-02-08 19:12:50.670585+00	2026-02-08 19:12:50.670585+00	{34}	{}
-104	67d84daa-e45d-4066-b261-4bcd1fc6ed17	/data-models/auto/task_attachments/records/{record_id}	DELETE	auto_crud	34	\N	f	\N	2026-02-08 19:12:50.670585+00	2026-02-08 19:12:50.670585+00	{34}	{}
+205	bf189fc1-2231-4122-a951-6f766ea322b1	/data-models/auto/time_slots/records	GET	auto_crud	60	\N	f	2	2026-03-01 08:04:26.544459+00	2026-03-01 08:04:26.544459+00	{60}	{}
+206	566232a4-e761-4894-968a-c109865e36dd	/data-models/auto/time_slots/records	POST	auto_crud	60	\N	f	2	2026-03-01 08:04:26.565178+00	2026-03-01 08:04:26.565178+00	{60}	{}
+207	b08f64fb-6212-49ef-ae70-60b5fddb4668	/data-models/auto/time_slots/records/{record_id}	PUT	auto_crud	60	\N	f	2	2026-03-01 08:04:26.575822+00	2026-03-01 08:04:26.575822+00	{60}	{}
+208	224c9f56-cb3e-429a-a29d-ea9989112a29	/data-models/auto/time_slots/records/{record_id}	DELETE	auto_crud	60	\N	f	2	2026-03-01 08:04:26.587137+00	2026-03-01 08:04:26.587137+00	{60}	{}
 121	894dd5be-5429-4702-ad19-7f134ea39f67	/data-models/auto/password_vault/records	GET	auto_crud	39	\N	f	\N	2026-02-08 19:12:50.670585+00	2026-02-08 19:12:50.670585+00	{39}	{}
 122	0bc05374-18fd-40ca-bb6e-fe4a56b42f1e	/data-models/auto/password_vault/records	POST	auto_crud	39	\N	f	\N	2026-02-08 19:12:50.670585+00	2026-02-08 19:12:50.670585+00	{39}	{}
 123	5e1630e8-e93a-4b37-9ab8-0510a60fc5fb	/data-models/auto/password_vault/records/{record_id}	PUT	auto_crud	39	\N	f	\N	2026-02-08 19:12:50.670585+00	2026-02-08 19:12:50.670585+00	{39}	{}
@@ -3501,6 +3742,14 @@ COPY public.api_endpoints (endpoint_id, endpoint_uuid, path, method, type, relat
 186	a02d1596-e283-4d14-83df-0c92cc608ab9	/data-models/auto/person_business_roles/records	POST	auto_crud	55	\N	f	2	2026-02-17 02:47:01.974264+00	2026-02-17 02:47:01.974264+00	{55}	{}
 187	20033033-8e14-4d4d-a4fa-138374d83f2e	/data-models/auto/person_business_roles/records/{record_id}	PUT	auto_crud	55	\N	f	2	2026-02-17 02:47:01.984163+00	2026-02-17 02:47:01.984163+00	{55}	{}
 188	72e4af55-669c-4b4e-8838-41a974022820	/data-models/auto/person_business_roles/records/{record_id}	DELETE	auto_crud	55	\N	f	2	2026-02-17 02:47:01.997004+00	2026-02-17 02:47:01.997004+00	{55}	{}
+209	fd9965e9-dacf-45a9-8c34-ca8a7683c67c	/data-models/auto/task_comments/records	GET	auto_crud	61	\N	f	2	2026-03-02 19:27:52.251677+00	2026-03-02 19:27:52.251677+00	{61}	{}
+210	ba3746c2-eb7c-4282-8dad-f844eb5c389b	/data-models/auto/task_comments/records	POST	auto_crud	61	\N	f	2	2026-03-02 19:27:52.278913+00	2026-03-02 19:27:52.278913+00	{61}	{}
+211	968f3586-66c9-4c21-9463-1722b0906b45	/data-models/auto/task_comments/records/{record_id}	PUT	auto_crud	61	\N	f	2	2026-03-02 19:27:52.291683+00	2026-03-02 19:27:52.291683+00	{61}	{}
+212	29ebda7d-433d-4351-b684-2ad73f0caa77	/data-models/auto/task_comments/records/{record_id}	DELETE	auto_crud	61	\N	f	2	2026-03-02 19:27:52.306515+00	2026-03-02 19:27:52.306515+00	{61}	{}
+213	3037ef68-48c2-4b34-a8f3-5c43c27f50d6	/data-models/auto/task_attachments/records	GET	auto_crud	62	\N	f	2	2026-03-02 19:32:53.473847+00	2026-03-02 19:32:53.473847+00	{62}	{}
+214	75e7c4d4-8c0c-4b76-a041-5e183ef028b6	/data-models/auto/task_attachments/records	POST	auto_crud	62	\N	f	2	2026-03-02 19:32:53.4947+00	2026-03-02 19:32:53.4947+00	{62}	{}
+215	2a65fb5a-2784-490c-ab52-549f3429e325	/data-models/auto/task_attachments/records/{record_id}	PUT	auto_crud	62	\N	f	2	2026-03-02 19:32:53.509919+00	2026-03-02 19:32:53.509919+00	{62}	{}
+216	221e966f-8aac-449c-ab4e-e8a75eb6b56c	/data-models/auto/task_attachments/records/{record_id}	DELETE	auto_crud	62	\N	f	2	2026-03-02 19:32:53.524746+00	2026-03-02 19:32:53.524746+00	{62}	{}
 \.
 
 
@@ -3555,7 +3804,8 @@ COPY public.audit_logs_default (log_id, event_time, tenant_id, user_id, event_ca
 -- Data for Name: business_addresses; Type: TABLE DATA; Schema: public; Owner: noolvan
 --
 
-COPY public.business_addresses (address_id, created_by, idate, last_updated, business_id, address_type, address_line1, address_line2, city, state, postal_code, country, location, is_primary) FROM stdin;
+COPY public.business_addresses (address_id, created_by, idate, last_updated, business_id, address_type, address_line1, address_line2, postal_code, is_primary, map_location, location) FROM stdin;
+1	\N	2026-02-22 18:32:08.927338+00	2026-02-22 18:32:08.927338+00	1	head_office	Share Space Evoma, 88, Borewell Rd	Palm Meadows, Dodsworth Layout	560066	t	(12.968650876502462,77.74778445945935)	2
 \.
 
 
@@ -3572,6 +3822,7 @@ COPY public.business_contacts (contact_id, created_by, idate, last_updated, busi
 --
 
 COPY public.businesses (business_id, created_by, idate, last_updated, name, legal_name, industry, website, is_active, gst_number, notes) FROM stdin;
+1	\N	2026-02-21 21:02:52.142366+00	2026-02-21 21:02:52.142366+00	Helixsense	Helix Sense Technologies Pvt Ltd	\N	https://helixsense.com	t	\N	\N
 \.
 
 
@@ -3715,9 +3966,9 @@ COPY public.data_model_fields (field_id, model_id, field_name, display_name, fie
 302	42	status	Status	13	{"options": [{"label": "Planned", "value": "planned"}, {"label": "Active", "value": "active"}, {"label": "Completed", "value": "completed"}, {"label": "Archived", "value": "archived"}], "options_mode": "custom_collection"}	f	f	f	planned	none	\N	5	2026-02-14 22:26:10.543055+00
 303	42	start_date	Start Date	8	{}	f	f	f	\N	none	\N	6	2026-02-14 22:26:10.627744+00
 304	42	end_date	End Date	8	{}	f	f	f	\N	none	\N	7	2026-02-14 22:26:10.693414+00
+528	58	created_by	Created By	3	{}	f	f	f	\N	none	\N	2	2026-02-24 17:54:53.798552+00
 305	42	created_at	Created At	9	{}	f	f	f	now()	none	\N	8	2026-02-14 22:26:10.740184+00
 306	42	is_active	Is Active	12	{}	f	f	f	true	none	\N	9	2026-02-14 22:26:10.789875+00
-364	39	additional_secrets	Additional Secrets	28	{}	f	f	f	\N	aes	\N	7	2026-02-16 18:36:56.077714+00
 443	51	business_id	ID	4	{}	f	f	t	\N	none	\N	1	2026-02-17 02:23:41.141058+00
 444	51	created_by	Created By	3	{}	f	f	f	\N	none	\N	2	2026-02-17 02:23:41.180608+00
 445	51	idate	Created Date	9	{}	t	f	f	\N	none	\N	3	2026-02-17 02:23:41.193105+00
@@ -3739,14 +3990,16 @@ COPY public.data_model_fields (field_id, model_id, field_name, display_name, fie
 287	41	last_updated	Last Updated	9	{}	t	f	f	\N	none	\N	4	2026-02-14 22:05:16.096262+00
 288	41	name	Name	1	{"max_length": 100}	f	f	f	\N	none	\N	3	2026-02-14 22:05:49.711553+00
 289	41	description	Description	2	{"max_line_counts": 3}	f	f	f	\N	none	\N	4	2026-02-14 22:05:49.785102+00
-199	39	password	Password	18	{}	f	f	f	\N	aes	\N	6	2026-02-08 18:56:36.548075+00
 200	39	website_or_app_url	Website or App URL	17	{}	f	f	f	\N	none	\N	8	2026-02-08 18:56:36.548075+00
+332	45	task_id	ID	4	{}	f	f	t	\N	none	\N	1	2026-02-15 19:00:41.099861+00
 293	41	is_active	Is Active	12	{}	f	f	f	\N	none	\N	8	2026-02-14 22:05:50.114675+00
 290	41	task_type	Task Type	13	{"options": [{"label": "Life", "value": "life"}, {"label": "Work", "value": "work"}], "options_mode": "custom_collection"}	f	f	f	\N	none	\N	5	2026-02-14 22:05:49.867502+00
 291	41	color	Color	19	{}	f	f	f	\N	none	\N	6	2026-02-14 22:05:49.952609+00
-205	39	updated_at	Updated At	9	{}	f	f	f	\N	none	\N	12	2026-02-08 18:56:36.548075+00
+199	39	password	Password	18	{}	f	f	f	\N	aes	\N	6	2026-02-08 18:56:36.548075+00
+529	58	idate	Created Date	9	{}	t	f	f	\N	none	\N	3	2026-02-24 17:54:53.812762+00
 292	41	icon	Icon	29	{"format": "prefix:name", "examples": ["fa:heart", "antd:download", "smily:thanks", "custom:myhome"]}	f	f	f	\N	none	\N	7	2026-02-14 22:05:50.033305+00
 461	52	attachment_type	Attachment Type	13	{"options": [{"label": "Document", "value": "document"}, {"label": "ID Proof", "value": "id_proof"}, {"label": "Address Proof", "value": "address_proof"}, {"label": "Photo", "value": "photo"}, {"label": "Contract", "value": "contract"}, {"label": "Certificate", "value": "certificate"}, {"label": "Other", "value": "other"}], "options_mode": "custom_collection", "collection_id": ""}	t	f	f	document	none	\N	3	2026-02-17 02:28:08.836343+00
+530	58	last_updated	Last Updated	9	{}	t	f	f	\N	none	\N	4	2026-02-24 17:54:53.822138+00
 294	41	order_no	Order No	3	{"maximum_digits": 10, "allowed_decimal_places": 0}	f	f	f	\N	none	\N	9	2026-02-14 22:12:05.698533+00
 299	42	task_category_id	Task Category	26	{"target_field": "task_category_id", "target_model": "task_categories", "relation_type": "one_to_many"}	f	f	f	\N	none	\N	2	2026-02-14 22:26:10.286861+00
 462	52	file_name	File Name	1	{"max_length": 255}	t	f	f	\N	none	\N	4	2026-02-17 02:28:08.891057+00
@@ -3755,36 +4008,37 @@ COPY public.data_model_fields (field_id, model_id, field_name, display_name, fie
 465	52	mime_type	MIME Type	1	{"max_length": 100}	f	f	f	\N	none	\N	7	2026-02-17 02:28:09.09885+00
 320	44	created_by	Created By	3	{}	f	f	f	\N	none	\N	2	2026-02-15 07:47:27.434573+00
 321	44	idate	Created Date	9	{}	t	f	f	\N	none	\N	3	2026-02-15 07:47:27.449013+00
+337	45	project_id	Project	26	{"target_field": "project_id", "target_model": "my_projects", "relation_type": "many_to_one", "target_model_id": 42}	f	f	f	\N	none	\N	4	2026-02-15 19:00:50.203516+00
+338	45	sprint_id	Sprint	26	{"target_field": "sprint_id", "target_model": "task_sprints", "relation_type": "many_to_one"}	f	f	f	\N	none	\N	5	2026-02-15 19:00:50.28818+00
 322	44	last_updated	Last Updated	9	{}	t	f	f	\N	none	\N	4	2026-02-15 07:47:27.466757+00
+339	45	title	Task Title	1	{"max_length": 300}	t	f	f	\N	none	\N	6	2026-02-15 19:00:50.355569+00
+340	45	description	Description	2	{"max_line_counts": 6}	f	f	f	\N	none	\N	7	2026-02-15 19:00:50.433155+00
+551	58	is_default	Is Default	12	{}	f	f	f	\N	none	\N	5	2026-02-26 02:09:18.229906+00
+562	60	applies_value	Applies Value	1	{"max_length": 20, "description": "specific_weekday → sun, mon, tue... specific_date → YYYY-MM-DD specific_month → 1-12\\n"}	f	f	f	\N	none	\N	8	2026-03-01 08:05:29.168411+00
+344	45	priority	Priority	26	{"target_field": "priority_id", "target_model": "task_priorities", "relation_type": "many_to_one"}	f	f	f		none	\N	8	2026-02-15 19:00:50.69234+00
 319	44	sprint_id	ID	4	{}	f	f	t	\N	none	\N	1	2026-02-15 07:47:27.397304+00
+351	45	due_date	Due Date	8	{}	f	f	f	\N	none	\N	10	2026-02-15 19:00:51.12668+00
 323	44	sprint_name	Sprint Name	1	{"max_length": 150}	t	f	f	\N	none	\N	3	2026-02-15 07:47:40.812233+00
+563	60	priority_level	Priority Level	3	{"min_value": 1}	f	f	f	1	none	\N	9	2026-03-01 08:05:29.213214+00
+564	60	description	Description	2	{}	f	f	f	\N	none	\N	10	2026-03-01 08:05:29.266179+00
 324	44	description	Description	2	{"max_line_counts": 5}	f	f	f	\N	none	\N	4	2026-02-15 07:47:40.889651+00
 325	44	goal	Sprint Goal	2	{"max_line_counts": 3}	f	f	f	\N	none	\N	5	2026-02-15 07:47:40.965996+00
 326	44	start_date	Start Date	8	{}	f	f	f	\N	none	\N	6	2026-02-15 07:47:41.035292+00
 327	44	end_date	End Date	8	{}	f	f	f	\N	none	\N	7	2026-02-15 07:47:41.099271+00
 328	44	status	Status	13	{"options": [{"label": "Planned", "value": "planned"}, {"label": "Active", "value": "active"}, {"label": "Completed", "value": "completed"}, {"label": "Cancelled", "value": "cancelled"}], "options_mode": "custom_collection"}	f	f	f	planned	none	\N	8	2026-02-15 07:47:41.153684+00
+355	45	recurrence_type	Recurrence Type	13	{"options": [{"label": "Daily", "value": "daily"}, {"label": "Weekly", "value": "weekly"}, {"label": "Monthly", "value": "monthly"}, {"label": "Yearly", "value": "yearly"}], "options_mode": "custom_collection"}	f	f	f	\N	none	\N	11	2026-02-15 19:25:01.867061+00
 329	44	completed_at	Completed At	9	{}	f	f	f	\N	none	\N	9	2026-02-15 07:47:41.203898+00
 330	44	is_active	Is Active	12	{}	f	f	f	true	none	\N	10	2026-02-15 07:47:41.251355+00
 333	45	created_by	Created By	3	{}	f	f	f	\N	none	\N	2	2026-02-15 19:00:41.131325+00
 334	45	idate	Created Date	9	{}	t	f	f	\N	none	\N	3	2026-02-15 19:00:41.143961+00
 335	45	last_updated	Last Updated	9	{}	t	f	f	\N	none	\N	4	2026-02-15 19:00:41.152581+00
-339	45	title	Task Title	1	{"max_length": 300}	t	f	f	\N	none	\N	5	2026-02-15 19:00:50.355569+00
-337	45	project_id	Project	26	{"target_field": "project_id", "target_model": "my_projects", "relation_type": "many_to_one", "target_model_id": 42}	f	f	f	\N	none	\N	3	2026-02-15 19:00:50.203516+00
-351	45	due_date	Due Date	8	{}	f	f	f	\N	none	\N	9	2026-02-15 19:00:51.12668+00
-360	45	estimated_time	Estimated Time	11	{}	f	f	f	\N	none	\N	15	2026-02-15 19:25:02.23241+00
-352	45	scheduled_at	Scheduled At	9	{}	f	f	f	\N	none	\N	19	2026-02-15 19:00:51.192189+00
-332	45	task_id	ID	4	{}	f	f	t	\N	none	\N	1	2026-02-15 19:00:41.099861+00
-338	45	sprint_id	Sprint	26	{"target_field": "sprint_id", "target_model": "task_sprints", "relation_type": "many_to_one"}	f	f	f	\N	none	\N	4	2026-02-15 19:00:50.28818+00
-340	45	description	Description	2	{"max_line_counts": 6}	f	f	f	\N	none	\N	6	2026-02-15 19:00:50.433155+00
-344	45	priority	Priority	26	{"target_field": "priority_id", "target_model": "task_priorities", "relation_type": "many_to_one"}	f	f	f		none	\N	7	2026-02-15 19:00:50.69234+00
-355	45	recurrence_type	Recurrence Type	13	{"options": [{"label": "Daily", "value": "daily"}, {"label": "Weekly", "value": "weekly"}, {"label": "Monthly", "value": "monthly"}, {"label": "Yearly", "value": "yearly"}], "options_mode": "custom_collection"}	f	f	f	\N	none	\N	10	2026-02-15 19:25:01.867061+00
-356	45	recurrence_interval	Recurrence Interval	3	{"min_value": 1}	f	f	f	1	none	\N	11	2026-02-15 19:25:01.937378+00
-357	45	recurrence_days	Recurrence Days	14	{"options": [{"label": "Sunday", "value": "sun"}, {"label": "Monday", "value": "mon"}, {"label": "Tuesday", "value": "tue"}, {"label": "Wednesday", "value": "wed"}, {"label": "Thursday", "value": "thu"}, {"label": "Friday", "value": "fri"}, {"label": "Saturday", "value": "sat"}], "options_mode": "custom_collection"}	f	f	f	\N	none	\N	12	2026-02-15 19:25:02.011142+00
-358	45	do_alarm	Enable Alarm	12	{}	f	f	f	false	none	\N	13	2026-02-15 19:25:02.080725+00
-359	45	alarm_before	Alarm Before	11	{}	f	f	f	\N	none	\N	14	2026-02-15 19:25:02.156605+00
-362	45	actual_time	Actual Time (Minutes)	3	{"min_value": 0}	f	f	f	\N	none	\N	17	2026-02-15 19:25:02.374611+00
-353	45	started_at	Started At	9	{}	f	f	f	\N	none	\N	20	2026-02-15 19:00:51.261431+00
-354	45	completed_at	Completed At	9	{}	f	f	f	\N	none	\N	21	2026-02-15 19:00:51.332842+00
+356	45	recurrence_interval	Recurrence Interval	3	{"min_value": 1}	f	f	f	1	none	\N	12	2026-02-15 19:25:01.937378+00
+357	45	recurrence_days	Recurrence Days	14	{"options": [{"label": "Sunday", "value": "sun"}, {"label": "Monday", "value": "mon"}, {"label": "Tuesday", "value": "tue"}, {"label": "Wednesday", "value": "wed"}, {"label": "Thursday", "value": "thu"}, {"label": "Friday", "value": "fri"}, {"label": "Saturday", "value": "sat"}], "options_mode": "custom_collection"}	f	f	f	\N	none	\N	13	2026-02-15 19:25:02.011142+00
+360	45	estimated_time	Estimated Time	11	{}	f	f	f	\N	none	\N	16	2026-02-15 19:25:02.23241+00
+362	45	actual_time	Actual Time (Minutes)	3	{"min_value": 0}	f	f	f	\N	none	\N	18	2026-02-15 19:25:02.374611+00
+352	45	scheduled_at	Scheduled At	9	{}	f	f	f	\N	none	\N	20	2026-02-15 19:00:51.192189+00
+353	45	started_at	Started At	9	{}	f	f	f	\N	none	\N	21	2026-02-15 19:00:51.261431+00
+354	45	completed_at	Completed At	9	{}	f	f	f	\N	none	\N	22	2026-02-15 19:00:51.332842+00
 1	1	user_id	User ID	1	{"max_length": 100}	t	t	t	\N	none	\N	1	2026-01-18 00:33:45.084095+00
 2	1	user_uuid	User UUID	1	{"max_length": 100}	t	t	f	\N	none	\N	2	2026-01-18 00:33:45.084095+00
 13	1	last_login	Last Login	1	{"max_length": 100}	f	f	f	\N	none	\N	13	2026-01-18 00:33:45.084095+00
@@ -3799,28 +4053,24 @@ COPY public.data_model_fields (field_id, model_id, field_name, display_name, fie
 80	11	company_uuid	Company UUID	1	{"max_length": 100}	t	t	f	\N	none	\N	2	2026-01-18 01:15:37.637979+00
 86	11	branding_config	Branding Config	14	{"options": [], "options_mode": "custom_collection"}	f	f	f	\N	none	\N	8	2026-01-18 01:15:37.637979+00
 98	14	created_by	Created By	3	{"maximum_digits": 10, "allowed_decimal_places": 0}	f	f	f	\N	none	\N	2	2026-01-31 00:06:26.042875+00
-195	39	id	ID	3	{"maximum_digits": 10, "allowed_decimal_places": 0}	f	f	t	\N	none	\N	2	2026-02-08 18:56:36.548075+00
-196	39	service_name	Service Name	1	{"max_length": 100}	f	f	f	\N	none	\N	3	2026-02-08 18:56:36.548075+00
-197	39	category	Category	1	{"max_length": 100}	f	f	f	\N	none	\N	4	2026-02-08 18:56:36.548075+00
-198	39	username_or_email	Username or Email	1	{"max_length": 100}	f	f	f	\N	none	\N	5	2026-02-08 18:56:36.548075+00
+527	58	sound_id	ID	4	{}	f	f	t	\N	none	\N	1	2026-02-24 17:54:53.758614+00
+532	58	sound_title	Sound Title	1	{"max_length": 100}	f	f	f	\N	none	\N	2	2026-02-24 18:02:03.932566+00
+534	59	created_by	Created By	3	{}	f	f	f	\N	none	\N	2	2026-02-24 18:02:52.533174+00
+535	59	idate	Created Date	9	{}	t	f	f	\N	none	\N	3	2026-02-24 18:02:52.543363+00
+536	59	last_updated	Last Updated	9	{}	t	f	f	\N	none	\N	4	2026-02-24 18:02:52.550781+00
+533	59	alarm_id	ID	4	{}	f	f	t	\N	none	\N	1	2026-02-24 18:02:52.506928+00
+525	39	service_uuid	Service UUID	31	{}	f	f	f	\N	none	\N	2	2026-02-21 19:22:03.628935+00
 201	39	login_handler_function	Login Handler	1	{"max_length": 100}	f	f	f	\N	none	\N	9	2026-02-08 18:56:36.548075+00
-373	46	address_line2	Address Line 2	1	{"max_length": 255}	f	f	f	\N	none	\N	5	2026-02-17 01:34:22.16037+00
-374	46	city	City	1	{"max_length": 150}	t	f	f	\N	none	\N	6	2026-02-17 01:34:22.226103+00
-375	46	state	State	1	{"max_length": 150}	t	f	f	\N	none	\N	7	2026-02-17 01:34:22.285845+00
+526	45	task_uuid	Task UUID	31	{}	f	f	f	\N	none	\N	2	2026-02-21 19:22:42.035278+00
+537	59	entity_type	Entity Type	1	{"max_length": 50}	f	f	f	\N	none	\N	3	2026-02-24 18:06:01.879378+00
+531	58	alarm_file_path	Alarm File Path	21	{"filters": [".mp3"], "multiple": false}	f	f	f	\N	none	\N	3	2026-02-24 18:01:38.874384+00
 511	57	location_id	ID	4	{}	f	f	t	\N	none	\N	1	2026-02-17 03:52:41.318308+00
 384	47	person_id	Person	26	{"target_field": "person_id", "target_model": "persons", "relation_type": "one_to_many"}	t	f	f	\N	none	\N	2	2026-02-17 01:36:05.698007+00
 512	57	created_by	Created By	3	{}	f	f	f	\N	none	\N	2	2026-02-17 03:52:41.33824+00
 513	57	idate	Created Date	9	{}	t	f	f	\N	none	\N	3	2026-02-17 03:52:41.34657+00
-366	46	address_id	ID	4	{}	f	f	t	\N	none	\N	1	2026-02-17 01:34:05.462413+00
 367	46	created_by	Created By	3	{}	f	f	f	\N	none	\N	2	2026-02-17 01:34:05.520668+00
 368	46	idate	Created Date	9	{}	t	f	f	\N	none	\N	3	2026-02-17 01:34:05.533469+00
 369	46	last_updated	Last Updated	9	{}	t	f	f	\N	none	\N	4	2026-02-17 01:34:05.54058+00
-371	46	address_type	Address Type	13	{"options": [{"label": "Home", "value": "home"}, {"label": "Work", "value": "work"}, {"label": "Billing", "value": "billing"}, {"label": "Shipping", "value": "shipping"}, {"label": "Other", "value": "other"}], "options_mode": "custom_collection", "collection_id": ""}	t	f	f	home	none	\N	3	2026-02-17 01:34:22.045733+00
-372	46	address_line1	Address Line 1	1	{"max_length": 255}	t	f	f	\N	none	\N	4	2026-02-17 01:34:22.095703+00
-376	46	postal_code	Postal Code	1	{"max_length": 20}	t	f	f	\N	none	\N	8	2026-02-17 01:34:22.345427+00
-377	46	country	Country	1	{"max_length": 150}	t	f	f	India	none	\N	9	2026-02-17 01:34:22.404652+00
-378	46	location	Map Location	25	{}	f	f	f	\N	none	\N	10	2026-02-17 01:34:22.472767+00
-379	46	is_primary	Is Primary	12	{}	f	f	f	false	none	\N	11	2026-02-17 01:34:22.537331+00
 380	47	contact_id	ID	4	{}	f	f	t	\N	none	\N	1	2026-02-17 01:35:49.057044+00
 381	47	created_by	Created By	3	{}	f	f	f	\N	none	\N	2	2026-02-17 01:35:49.083422+00
 382	47	idate	Created Date	9	{}	t	f	f	\N	none	\N	3	2026-02-17 01:35:49.092275+00
@@ -3838,20 +4088,36 @@ COPY public.data_model_fields (field_id, model_id, field_name, display_name, fie
 517	57	country	Country	1	{"max_length": 150}	t	f	f	\N	none	\N	4	2026-02-17 03:55:42.551697+00
 518	57	display_name	Display Name	1	{"max_length": 300, "auto_generate": "city + ', ' + state + ', ' + country"}	t	t	f	\N	none	\N	5	2026-02-17 03:55:42.613333+00
 519	57	is_active	Is Active	12	{}	t	f	f	true	none	\N	6	2026-02-17 03:55:42.674247+00
-271	39	record_uuid	Record UUID	1	{}	f	t	f	\N	none	\N	1	2026-02-08 19:06:42.329878+00
+366	46	address_id	ID	4	{}	f	f	t	\N	none	\N	1	2026-02-17 01:34:05.462413+00
+371	46	address_type	Address Type	13	{"options": [{"label": "Home", "value": "home"}, {"label": "Work", "value": "work"}, {"label": "Billing", "value": "billing"}, {"label": "Shipping", "value": "shipping"}, {"label": "Other", "value": "other"}], "options_mode": "custom_collection", "collection_id": ""}	t	f	f	home	none	\N	3	2026-02-17 01:34:22.045733+00
+372	46	address_line1	Address Line 1	1	{"max_length": 255}	t	f	f	\N	none	\N	4	2026-02-17 01:34:22.095703+00
+373	46	address_line2	Address Line 2	1	{"max_length": 255}	f	f	f	\N	none	\N	5	2026-02-17 01:34:22.16037+00
+376	46	postal_code	Postal Code	1	{"max_length": 20}	t	f	f	\N	none	\N	6	2026-02-17 01:34:22.345427+00
+379	46	is_primary	Is Primary	12	{}	f	f	f	false	none	\N	9	2026-02-17 01:34:22.537331+00
+195	39	id	ID	3	{"maximum_digits": 10, "allowed_decimal_places": 0}	f	f	t	\N	none	\N	1	2026-02-08 18:56:36.548075+00
+196	39	service_name	Service Name	1	{"max_length": 100}	f	f	f	\N	none	\N	3	2026-02-08 18:56:36.548075+00
+197	39	category	Category	1	{"max_length": 100}	f	f	f	\N	none	\N	4	2026-02-08 18:56:36.548075+00
+198	39	username_or_email	Username or Email	1	{"max_length": 100}	f	f	f	\N	none	\N	5	2026-02-08 18:56:36.548075+00
+364	39	additional_secrets	Additional Secrets	28	{}	f	f	f	\N	aes	\N	7	2026-02-16 18:36:56.077714+00
 467	52	is_private	Is Private	12	{}	f	f	f	true	none	\N	9	2026-02-17 02:28:09.227858+00
-203	39	notes	Notes	2	{"max_line_counts": 3}	f	f	f	\N	none	\N	11	2026-02-08 18:56:36.548075+00
-202	39	recovery_info	Recovery Info	2	{"max_line_counts": 3}	f	f	f	\N	aes	\N	10	2026-02-08 18:56:36.548075+00
-370	46	person_id	Person	26	{"target_field": "person_id", "target_model": "persons", "relation_type": "one_to_many"}	t	f	f	\N	none	\N	2	2026-02-17 01:34:21.992898+00
-247	34	id	ID	3	{"maximum_digits": 10, "allowed_decimal_places": 0}	f	f	t	\N	none	\N	1	2026-02-08 18:56:36.548075+00
+543	59	title	Title	1	{"max_length": 255}	f	f	f	\N	none	\N	2	2026-02-24 18:06:02.402519+00
+539	59	alarm_mode	Alarm Mode	13	{"options": [{"label": "Time Based", "value": "time_based"}, {"label": "Condition Based", "value": "condition_based"}], "options_mode": "custom_collection"}	t	f	f	time_based	none	\N	5	2026-02-24 18:06:02.099429+00
+540	59	scheduled_for	Scheduled For	9	{}	f	f	f	\N	none	\N	6	2026-02-24 18:06:02.17895+00
+542	59	condition_json	Condition Rule	28	{}	f	f	f	\N	none	\N	7	2026-02-24 18:06:02.335364+00
+544	59	message	Message	2	{"max_line_counts": 6}	f	f	f	\N	none	\N	8	2026-02-24 18:06:02.447552+00
+545	59	status	Status	13	{"options": [{"label": "Pending", "value": "pending"}, {"label": "Sent", "value": "sent"}, {"label": "Failed", "value": "failed"}, {"label": "Cancelled", "value": "cancelled"}], "options_mode": "custom_collection"}	t	f	f	pending	none	\N	9	2026-02-24 18:06:02.494881+00
+547	59	acknowledged_at	Acknowledged At	9	{}	f	f	f	\N	none	\N	10	2026-02-24 18:06:02.670672+00
+552	60	time_id	ID	4	{}	f	f	t	\N	none	\N	1	2026-03-01 08:04:26.405408+00
+553	60	created_by	Created By	3	{}	f	f	f	\N	none	\N	2	2026-03-01 08:04:26.456566+00
+554	60	idate	Created Date	9	{}	t	f	f	\N	none	\N	3	2026-03-01 08:04:26.472431+00
+555	60	last_updated	Last Updated	9	{}	t	f	f	\N	none	\N	4	2026-03-01 08:04:26.484982+00
+556	60	slot_uuid	Slot UUID	31	{}	f	f	f	\N	none	\N	2	2026-03-01 08:05:28.71695+00
+557	60	name	Slot Name	1	{"max_length": 150}	t	f	f	\N	none	\N	3	2026-03-01 08:05:28.834718+00
+524	54	location	location	26	{"target_field": "location_id", "target_model": "locations", "relation_type": "one_to_many"}	f	f	f	\N	none	\N	6	2026-02-21 18:52:37.652484+00
 466	52	description	Description	2	{"max_line_counts": 3}	f	f	f	\N	none	\N	8	2026-02-17 02:28:09.163616+00
 468	52	expiry_date	Expiry Date	8	{}	f	f	f	\N	none	\N	10	2026-02-17 02:28:09.295947+00
 460	52	person_id	Person	26	{"target_field": "person_id", "target_model": "persons", "relation_type": "many_to_one", "target_model_id": 49}	t	f	f	\N	none	\N	2	2026-02-17 02:28:08.789284+00
-492	54	country	Country	1	{"max_length": 150}	t	f	f	India	none	\N	9	2026-02-17 02:43:14.082563+00
-493	54	location	Map Location	25	{}	f	f	f	\N	none	\N	10	2026-02-17 02:43:14.138257+00
-494	54	is_primary	Is Primary	12	{}	f	f	f	false	none	\N	11	2026-02-17 02:43:14.205105+00
 495	55	role_id	ID	4	{}	f	f	t	\N	none	\N	1	2026-02-17 02:47:01.904888+00
-266	34	record_uuid	Record UUID	1	{}	f	t	f	\N	none	\N	0	2026-02-08 19:06:42.329878+00
 496	55	created_by	Created By	3	{}	f	f	f	\N	none	\N	2	2026-02-17 02:47:01.931436+00
 497	55	idate	Created Date	9	{}	t	f	f	\N	none	\N	3	2026-02-17 02:47:01.942313+00
 498	55	last_updated	Last Updated	9	{}	t	f	f	\N	none	\N	4	2026-02-17 02:47:01.949882+00
@@ -3868,26 +4134,30 @@ COPY public.data_model_fields (field_id, model_id, field_name, display_name, fie
 506	55	notes	Notes	2	{"max_line_counts": 3}	f	f	f	\N	none	\N	9	2026-02-17 02:47:14.579757+00
 499	55	person_id	Person	26	{"target_field": "person_id", "target_model": "persons", "relation_type": "many_to_one", "target_model_id": 49}	t	f	f	\N	none	\N	2	2026-02-17 02:47:14.128354+00
 500	55	business_id	Business	26	{"target_field": "business_id", "target_model": "businesses", "relation_type": "many_to_one", "target_model_id": 51}	t	f	f	\N	none	\N	3	2026-02-17 02:47:14.218023+00
-407	49	person_id	ID	4	{}	f	f	t	\N	none	\N	1	2026-02-17 01:46:58.940576+00
-336	45	task_category_id	Task Category	26	{"target_field": "task_category_id", "target_model": "task_categories", "relation_type": "many_to_one", "target_model_id": 41}	f	f	f	\N	none	\N	2	2026-02-15 19:00:50.120218+00
-345	45	status	Status	13	{"options": [{"label": "Inbox", "value": "inbox"}, {"label": "Clarified", "value": "clarified"}, {"label": "Scheduled", "value": "scheduled"}, {"label": "In Progress", "value": "in_progress"}, {"label": "Waiting", "value": "waiting"}, {"label": "Completed", "value": "completed"}, {"label": "Cancelled", "value": "cancelled"}], "options_mode": "custom_collection"}	f	f	f	inbox	none	\N	8	2026-02-15 19:00:50.739233+00
-361	45	timebox	Timebox	11	{}	f	f	f	\N	none	\N	16	2026-02-15 19:25:02.307386+00
-363	45	assigned_to	Assigned To	1	{"max_length": 100}	f	f	f	\N	none	\N	18	2026-02-15 19:25:02.437085+00
+520	49	person_uuid	Person UUID	31	{}	f	f	f	\N	none	\N	2	2026-02-21 18:39:51.45812+00
+416	49	marital_status	Marital Status	13	{"options": [{"label": "Single", "value": "single"}, {"label": "Married", "value": "Married"}, {"label": "Divorced", "value": "divorced"}, {"label": "Widowed", "value": "widowed"}, {"label": "Separated", "value": "separated"}], "options_mode": "custom_collection", "collection_id": ""}	f	f	f	\N	none	\N	7	2026-02-17 01:47:11.790973+00
+370	46	person_id	Person	26	{"target_field": "person_id", "target_model": "persons", "relation_type": "one_to_many"}	t	f	f	\N	none	\N	2	2026-02-17 01:34:21.992898+00
+522	46	location	location	26	{"target_field": "location_id", "target_model": "locations", "relation_type": "one_to_many"}	f	f	f	\N	none	\N	7	2026-02-21 18:50:44.847666+00
+521	46	map_location	Map Location	25	{}	f	f	f	\N	none	\N	8	2026-02-21 18:50:02.750935+00
+523	54	map_location	Map Location	25	{}	f	f	f	\N	none	\N	8	2026-02-21 18:52:09.365597+00
+494	54	is_primary	Is Primary	12	{}	f	f	f	false	none	\N	9	2026-02-17 02:43:14.205105+00
+202	39	recovery_info	Recovery Info	2	{"max_line_counts": 3}	f	f	f	\N	aes	\N	10	2026-02-08 18:56:36.548075+00
+203	39	notes	Notes	2	{"max_line_counts": 3}	f	f	f	\N	none	\N	11	2026-02-08 18:56:36.548075+00
+441	50	relation_type	Relation Type	13	{"options": [{"label": "Father", "value": "father"}, {"label": "Mother", "value": "mother"}, {"label": "Son", "value": "son"}, {"label": "Daughter", "value": "daughter"}, {"label": "Brother", "value": "brother"}, {"label": "Sister", "value": "sister"}, {"label": "Spouse", "value": "spouse"}, {"label": "Grandfather", "value": "grandfather"}, {"label": "Grandmother", "value": "grandmother"}, {"label": "friend", "value": "friend"}, {"label": "colleague", "value": "colleague"}, {"label": "mother-in-law", "value": "mother-in-law"}, {"label": "father-in-law", "value": "father-in-law"}, {"label": "vendor", "value": "vendor"}, {"label": "other", "value": "other"}], "options_mode": "custom_collection", "collection_id": ""}	t	f	f	\N	none	\N	4	2026-02-17 01:55:07.499667+00
+363	45	assigned_to	Assigned To	1	{"max_length": 100}	f	f	f	\N	none	\N	19	2026-02-15 19:25:02.437085+00
 408	49	created_by	Created By	3	{}	f	f	f	\N	none	\N	2	2026-02-17 01:46:58.959448+00
 409	49	idate	Created Date	9	{}	t	f	f	\N	none	\N	3	2026-02-17 01:46:58.966449+00
 410	49	last_updated	Last Updated	9	{}	t	f	f	\N	none	\N	4	2026-02-17 01:46:58.972921+00
-411	49	name	Name	1	{"max_length": 100}	f	f	f	\N	none	\N	2	2026-02-17 01:47:11.545306+00
-412	49	alias_names	Alias Names	2	{"max_line_counts": 3}	f	f	f	\N	none	\N	3	2026-02-17 01:47:11.613382+00
-413	49	profile_photo	Profile photo	20	{"filters": [".jpg", ".png", ".jpeg"], "multiple": false}	f	f	f	\N	none	\N	4	2026-02-17 01:47:11.663944+00
-414	49	dob	DOB	8	{}	f	f	f	\N	none	\N	5	2026-02-17 01:47:11.706639+00
-416	49	marital_status	Marital Status	13	{"options": [{"label": "Single", "value": "single"}, {"label": "Married", "value": "Married"}, {"label": "Divorced", "value": "divorced"}, {"label": "Widowed", "value": "widowed"}, {"label": "Separated", "value": "separated"}], "options_mode": "custom_collection", "collection_id": ""}	f	f	f	\N	none	\N	7	2026-02-17 01:47:11.790973+00
-417	49	anniversary_date	Anniversary Date	8	{}	f	f	f	\N	none	\N	8	2026-02-17 01:47:11.837102+00
-418	49	notes	Notes	2	{"max_line_counts": 3}	f	f	f	\N	none	\N	9	2026-02-17 01:47:11.893725+00
+548	59	entity_id	Entity Id	3	{"maximum_digits": 10, "allowed_decimal_places": 0}	f	f	f	\N	none	\N	4	2026-02-24 18:08:32.207146+00
+550	45	alarm_id	Alarm	26	{"target_field": "alarm_id", "target_model": "alarms", "relation_type": "one_to_many"}	f	f	f	\N	none	\N	23	2026-02-24 18:14:06.174554+00
 419	50	relationship_id	ID	4	{}	f	f	t	\N	none	\N	1	2026-02-17 01:52:31.62059+00
 420	50	created_by	Created By	3	{}	f	f	f	\N	none	\N	2	2026-02-17 01:52:31.665107+00
 421	50	idate	Created Date	9	{}	t	f	f	\N	none	\N	3	2026-02-17 01:52:31.677999+00
 422	50	last_updated	Last Updated	9	{}	t	f	f	\N	none	\N	4	2026-02-17 01:52:31.68888+00
-441	50	relation_type	Relation Type	13	{"options": [{"label": "Father", "value": "father"}, {"label": "Mother", "value": "mother"}, {"label": "Son", "value": "son"}, {"label": "Daughter", "value": "daughter"}, {"label": "Brother", "value": "brother"}, {"label": "Sister", "value": "sister"}, {"label": "Spouse", "value": "spouse"}, {"label": "Grandfather", "value": "grandfather"}, {"label": "Grandmother", "value": "grandmother"}, {"label": "Other", "value": "other"}], "options_mode": "custom_collection", "collection_id": ""}	t	f	f	\N	none	\N	4	2026-02-17 01:55:07.499667+00
+558	60	slot_type	Slot Type	13	{"options": [{"label": "Core", "value": "core"}, {"label": "Growth", "value": "growth"}, {"label": "Operational", "value": "operational"}, {"label": "Open", "value": "open"}], "options_mode": "custom_collection"}	f	f	f	\N	none	\N	4	2026-03-01 08:05:28.907978+00
+559	60	start_time	Start Time	10	{}	t	f	f	\N	none	\N	5	2026-03-01 08:05:28.981859+00
+560	60	end_time	End Time	10	{}	t	f	f	\N	none	\N	6	2026-03-01 08:05:29.053186+00
+561	60	applies_type	Applies Type	13	{"options": [{"label": "Everyday", "value": "everyday"}, {"label": "Specific Weekday", "value": "specific_weekday"}, {"label": "Specific Date", "value": "specific_date"}, {"label": "Specific Month", "value": "specific_month"}], "options_mode": "custom_collection"}	f	f	f	\N	none	\N	7	2026-03-01 08:05:29.115456+00
 442	50	notes	Notes	2	{"max_line_counts": 3}	f	f	f	\N	none	\N	5	2026-02-17 01:55:07.544987+00
 439	50	person_id	Person	26	{"target_field": "person_id", "target_model": "persons", "relation_type": "many_to_one", "target_model_id": 49}	t	f	f	\N	none	\N	2	2026-02-17 01:55:07.38948+00
 440	50	related_person_id	Related Person	26	{"target_field": "person_id", "target_model": "persons", "relation_type": "many_to_one", "target_model_id": 49}	t	f	f	\N	none	\N	3	2026-02-17 01:55:07.456573+00
@@ -3903,17 +4173,42 @@ COPY public.data_model_fields (field_id, model_id, field_name, display_name, fie
 478	53	is_verified	Is Verified	12	{}	f	f	f	false	none	\N	7	2026-02-17 02:40:17.140787+00
 479	53	verified_at	Verified At	9	{}	f	f	f	\N	none	\N	8	2026-02-17 02:40:17.216035+00
 480	53	notes	Notes	2	{"max_line_counts": 3}	f	f	f	\N	none	\N	9	2026-02-17 02:40:17.274282+00
-481	54	address_id	ID	4	{}	f	f	t	\N	none	\N	1	2026-02-17 02:43:03.907194+00
 482	54	created_by	Created By	3	{}	f	f	f	\N	none	\N	2	2026-02-17 02:43:03.923967+00
 483	54	idate	Created Date	9	{}	t	f	f	\N	none	\N	3	2026-02-17 02:43:03.931522+00
 484	54	last_updated	Last Updated	9	{}	t	f	f	\N	none	\N	4	2026-02-17 02:43:03.9383+00
+407	49	person_id	ID	4	{}	f	f	t	\N	none	\N	1	2026-02-17 01:46:58.940576+00
+411	49	name	Name	1	{"max_length": 100}	f	f	f	\N	none	\N	3	2026-02-17 01:47:11.545306+00
+412	49	alias_names	Alias Names	2	{"max_line_counts": 3}	f	f	f	\N	none	\N	4	2026-02-17 01:47:11.613382+00
+414	49	dob	DOB	8	{}	f	f	f	\N	none	\N	6	2026-02-17 01:47:11.706639+00
+417	49	anniversary_date	Anniversary Date	8	{}	f	f	f	\N	none	\N	8	2026-02-17 01:47:11.837102+00
+418	49	notes	Notes	2	{"max_line_counts": 3}	f	f	f	\N	none	\N	9	2026-02-17 01:47:11.893725+00
+481	54	address_id	ID	4	{}	f	f	t	\N	none	\N	1	2026-02-17 02:43:03.907194+00
 485	54	business_id	Business	26	{"target_field": "id", "target_model": "businesses", "relation_type": "many_to_one", "target_model_id": 51}	t	f	f	\N	none	\N	2	2026-02-17 02:43:13.688692+00
 486	54	address_type	Address Type	13	{"options": [{"label": "Head Office", "value": "head_office"}, {"label": "Branch", "value": "branch"}, {"label": "Billing", "value": "billing"}, {"label": "Shipping", "value": "shipping"}, {"label": "Registered Office", "value": "registered_office"}, {"label": "Other", "value": "other"}], "options_mode": "custom_collection", "collection_id": ""}	t	f	f	head_office	none	\N	3	2026-02-17 02:43:13.766899+00
 487	54	address_line1	Address Line 1	1	{"max_length": 255}	t	f	f	\N	none	\N	4	2026-02-17 02:43:13.832003+00
 488	54	address_line2	Address Line 2	1	{"max_length": 255}	f	f	f	\N	none	\N	5	2026-02-17 02:43:13.889175+00
-489	54	city	City	1	{"max_length": 150}	t	f	f	\N	none	\N	6	2026-02-17 02:43:13.935879+00
-490	54	state	State	1	{"max_length": 150}	t	f	f	\N	none	\N	7	2026-02-17 02:43:13.979332+00
-491	54	postal_code	Postal Code	1	{"max_length": 20}	t	f	f	\N	none	\N	8	2026-02-17 02:43:14.023577+00
+491	54	postal_code	Postal Code	1	{"max_length": 20}	t	f	f	\N	none	\N	7	2026-02-17 02:43:14.023577+00
+336	45	task_category_id	Task Category	26	{"target_field": "task_category_id", "target_model": "task_categories", "relation_type": "many_to_one", "target_model_id": 41}	f	f	f	\N	none	\N	3	2026-02-15 19:00:50.120218+00
+345	45	status	Status	13	{"options": [{"label": "Inbox", "value": "inbox"}, {"label": "Clarified", "value": "clarified"}, {"label": "Scheduled", "value": "scheduled"}, {"label": "In Progress", "value": "in_progress"}, {"label": "Waiting", "value": "waiting"}, {"label": "Completed", "value": "completed"}, {"label": "Cancelled", "value": "cancelled"}], "options_mode": "custom_collection"}	f	f	f	inbox	none	\N	9	2026-02-15 19:00:50.739233+00
+361	45	timebox	Timebox	11	{}	f	f	f	\N	none	\N	17	2026-02-15 19:25:02.307386+00
+413	49	profile_photo	Profile photo	20	{"filters": [".jpg", ".png", ".jpeg"], "multiple": false, "allow_crop": true, "crop_ratio": "1:1", "crop_shape": "circle", "max_size_mb": 2, "generate_thumbnail": true}	f	f	f	\N	none	\N	5	2026-02-17 01:47:11.663944+00
+566	45	person_id	Person Id	26	{"target_field": "person_id", "target_model": "persons", "relation_type": "many_to_one"}	f	f	f	\N	none	\N	25	2026-03-01 10:37:06.970522+00
+567	45	business_id	Business Id	26	{"target_field": "business_id", "target_model": "businesses", "relation_type": "many_to_one"}	f	f	f	\N	none	\N	26	2026-03-01 16:49:08.767358+00
+569	61	created_by	Created By	3	{}	f	f	f	\N	none	\N	2	2026-03-02 19:27:52.178839+00
+570	61	idate	Created Date	9	{}	t	f	f	\N	none	\N	3	2026-03-02 19:27:52.193101+00
+571	61	last_updated	Last Updated	9	{}	t	f	f	\N	none	\N	4	2026-03-02 19:27:52.201491+00
+568	61	comment_id	ID	4	{}	f	f	t	\N	none	\N	1	2026-03-02 19:27:52.14372+00
+572	61	task	Task	26	{"target_field": "task_id", "target_model": "my_tasks", "relation_type": "one_to_many"}	f	f	f	\N	none	\N	2	2026-03-02 19:29:38.782415+00
+574	61	comment_title	Comment Title	1	{"max_length": 100}	f	f	f	\N	none	\N	3	2026-03-02 19:31:41.985558+00
+573	61	message	Message	27	{"content_type": "markdown"}	f	f	f	\N	none	\N	4	2026-03-02 19:30:21.091413+00
+575	62	attachment_id	ID	4	{}	f	f	t	\N	none	\N	1	2026-03-02 19:32:53.374843+00
+576	62	created_by	Created By	3	{}	f	f	f	\N	none	\N	2	2026-03-02 19:32:53.430342+00
+577	62	idate	Created Date	9	{}	t	f	f	\N	none	\N	3	2026-03-02 19:32:53.449209+00
+578	62	last_updated	Last Updated	9	{}	t	f	f	\N	none	\N	4	2026-03-02 19:32:53.460876+00
+579	62	attachment_uuid	attachment_uuid	31	{}	f	f	f	\N	none	\N	5	2026-03-02 19:33:23.802251+00
+581	62	attachment_title	Attachment Title	1	{"max_length": 100}	f	f	f	\N	none	\N	6	2026-03-02 19:35:31.678473+00
+583	62	task	task	26	{"target_field": "task_id", "target_model": "my_tasks", "relation_type": "one_to_many"}	f	f	f	\N	none	\N	8	2026-03-03 17:32:59.710921+00
+582	62	file_path	File Path	21	{"filters": [".pdf", ".doc", ".docx", ".xls", ".xlsx", ".txt", ".csv", ".jpg", ".png", ".gif"], "multiple": false, "generate_thumbnail": true}	f	f	f	\N	none	\N	7	2026-03-02 19:36:25.520066+00
 \.
 
 
@@ -3928,7 +4223,9 @@ COPY public.data_models (model_id, model_uuid, app_id, model_name, display_name,
 7	73a08e4d-2faf-4216-8f44-f179f7c64b38	5	roles	Roles	roles	f	t	t	Roles table - defines role-based access control roles	1	2026-01-18 01:14:59.440739+00	2026-01-18 01:14:59.440739+00	r	saas
 9	ca3b0fa1-08e2-4d48-9fbe-ca60beb3914c	5	teams	Teams	teams	f	t	t	Teams table - organizes users into teams with hierarchy and management	1	2026-01-18 01:15:37.595914+00	2026-01-18 01:15:37.595914+00	t	saas
 11	3245e49b-28f5-4e1e-8da4-398a524326fc	5	companies	Companies	companies	f	t	t	Companies table - manages company/organization entities within tenants	1	2026-01-18 01:15:37.637979+00	2026-01-18 01:15:37.637979+00	c	saas
-34	89ef837c-654a-4e3a-8f19-3ea322239fbf	\N	task_attachments	Task Attachments	task_attachments	f	f	t	\N	\N	2026-02-08 18:56:36.535448+00	2026-02-08 18:56:36.535448+00	\N	saas
+60	7c683665-07c4-44c1-a934-b9e9b6af7d8d	\N	time_slots	Time Slots	time_slots	f	f	t	time_slots = personal boundary definition (24-hour model)\n- core        # Never disturb (sleep, health, family, deep focus)\n- growth      # Important but movable (learning, planning)\n- operational # Daily maintenance (work admin, errands)\n- open        # Free / social / flexible	2	2026-03-01 08:04:26.122919+00	2026-03-01 08:04:26.122919+00	tt	saas
+61	d7be0513-2f37-4d6b-b801-759d57d72480	\N	task_comments	Task Comments	task_comments	f	f	t	to store comments related to task	2	2026-03-02 19:27:51.940632+00	2026-03-02 19:27:51.940632+00	tcm	saas
+62	63cf83c0-9524-4bf0-b265-b36706023c79	\N	task_attachments	Task Attachments	task_attachments	f	f	t	\N	2	2026-03-02 19:32:53.295037+00	2026-03-02 19:32:53.295037+00	ta	saas
 39	c042736a-d20a-41a0-88a2-85d0736819d2	\N	password_vault	Password Vault	password_vault	f	f	t	pk manager	\N	2026-02-08 18:56:36.545076+00	2026-02-14 08:18:46.351275+00	\N	saas
 40	3a453f11-9fd0-4678-bd16-0e8e807767df	\N	task_priorities	Task Priorities	task_priorities	f	f	t	pk manager	2	2026-02-14 20:54:20.181459+00	2026-02-14 20:54:20.181459+00	tp	saas
 41	0f4ac677-9b29-4942-a952-25e4c83cf8aa	\N	task_categories	Task Categories	task_categories	f	f	t	pk manager	2	2026-02-14 22:05:15.871756+00	2026-02-14 22:05:15.871756+00	tc	saas
@@ -3945,6 +4242,8 @@ COPY public.data_models (model_id, model_uuid, app_id, model_name, display_name,
 54	231ed024-956b-47ac-8838-bdf9afe37025	\N	business_addresses	Business Addresses	business_addresses	f	f	t	pk manager	2	2026-02-17 02:43:03.86844+00	2026-02-17 02:43:03.86844+00	ba	saas
 55	7f749e78-7bc6-4142-a9c7-d84bfc190a5e	\N	person_business_roles	Person Business Roles	person_business_roles	f	f	t	pk manager	2	2026-02-17 02:47:01.84665+00	2026-02-17 02:47:01.84665+00	br	saas
 57	9fcc780c-207f-4acc-a427-0a851653a79d	\N	locations	Locations	locations	f	f	t	pk manager	2	2026-02-17 03:52:41.267089+00	2026-02-17 03:52:41.267089+00	l	saas
+59	08957260-2864-4033-a075-521959440006	\N	alarms	Alarms	alarms	f	f	t	pk manager	2	2026-02-24 18:02:52.450084+00	2026-02-24 18:02:52.450084+00	al	saas
+58	4d6abfbd-ba9d-4f22-aac2-01713a5c0d9b	\N	alarm_sounds	Alarm Sounds	alarm_sounds	f	f	t	pk manager	2	2026-02-24 17:54:53.552186+00	2026-02-26 02:01:11.201147+00	ass	saas
 \.
 
 
@@ -4538,7 +4837,7 @@ COPY public.integration_providers (provider_id, provider_uuid, provider_name, pr
 --
 
 COPY public.integrations (integration_id, integration_uuid, company_id, provider_id, provider_name, integration_name, encrypted_credentials, credentials_version, config, integration_type, metadata, is_active, is_default, created_by, last_updated) FROM stdin;
-1	ecc260c3-3281-4543-ac5a-aec33e5a34e3	1	2	aws_s3	Default S3 Bucket	+KSUNn9amlUuG51Af4pX08gQmnb4MqUubpTZyZL0WFDJNLH4LqeWqI7nOquSh83y+ucFm+Jwk89rj7ghqT+HaCcnidhMuAdOeT/Z0P4gq0BC9Jtzv2i/T/OcH2wH1Z7xw81P4LuXlhuj70rCg425bB3e4TJswhjEM290ZIfmu7PawajuCVqlrcjOU5yXj9E8ULSBgHPfiH/kjpGYyqEUudPMDtlJP0SJBWIstsfmqGC8NqnimhARAz3CFgmgWoI8bfArz0mAMMeHN7Ac0Y3pqFSIOjDKWdSB2UnFZtN903F7q2m/4j+RzI6vFdQkklwgRCiiSHgLeegMq33Px4X+ZpU//6L+8rAF5gnoCOk=	1	{"region": "us-east-1", "bucket_name": "avkaran", "bucket_prefix": "websites/noolva"}	api	{}	t	t	1	2026-01-15 23:30:07.827518+00
+1	ecc260c3-3281-4543-ac5a-aec33e5a34e3	1	2	aws_s3	Default S3 Bucket	+KSUNn9amlUuG51Af4pX08gQmnb4MqUubpTZyZL0WFDJNLH4LqeWqI7nOquSh83y+ucFm+Jwk89rj7ghqT+HaCcnidhMuAdOeT/Z0P4gq0BC9Jtzv2i/T/OcH2wH1Z7xw81P4LuXlhuj70rCg425bB3e4TJswhjEM290ZIfmu7PawajuCVqlrcjOU5yXj9E8ULSBgHPfiH/kjpGYyqEUudPMDtlJP0SJBWIstsfmqGC8NqnimhARAz3CFgmgWoI8bfArz0mAMMeHN7Ac0Y3pqFSIOjDKWdSB2UnFZtN903F7q2m/4j+RzI6vFdQkklwgRCiiSHgLeegMq33Px4X+ZpU//6L+8rAF5gnoCOk=	1	{"url": "https://cdn.avkaran.com", "region": "us-east-1", "bucket_name": "avkaran", "bucket_prefix": "websites/noolva"}	api	{}	t	t	1	2026-01-15 23:30:07.827518+00
 \.
 
 
@@ -4555,6 +4854,8 @@ COPY public.job_queue (job_id, job_uuid, company_id, action_id, related_workflow
 --
 
 COPY public.locations (location_id, created_by, idate, last_updated, city, state, country, display_name, is_active) FROM stdin;
+1	\N	2026-02-22 16:32:23.80535+00	2026-02-22 16:32:23.80535+00	Vannarpettai, Tirunelveli	Tamil Nadu	India	Vannarpettai, Tirunelveli,Tamilnadu,India	t
+2	\N	2026-02-22 18:33:59.639165+00	2026-02-22 18:33:59.639165+00	Whitefield,Bengaluru	Karnataka	India	Whitefield, Bengaluru, Karnataka, India	t
 \.
 
 
@@ -4632,6 +4933,8 @@ COPY public.modules (module_id, module_uuid, module_code, module_name, app_id, c
 --
 
 COPY public.my_projects (project_id, created_by, idate, last_updated, task_category_id, project_name, description, status, start_date, end_date, created_at, is_active) FROM stdin;
+4	\N	2026-03-01 10:51:28.440533+00	2026-03-01 10:51:28.440533+00	1	PKManager	\N	active	2026-02-01	\N	2026-02-14 22:26:10.746709+00	t
+3	\N	2026-03-01 10:50:42.274068+00	2026-03-01 10:50:42.274068+00	1	Noolva	\N	active	2026-03-01	\N	2026-02-14 22:26:10.746709+00	t
 \.
 
 
@@ -4639,7 +4942,33 @@ COPY public.my_projects (project_id, created_by, idate, last_updated, task_categ
 -- Data for Name: my_tasks; Type: TABLE DATA; Schema: public; Owner: noolvan
 --
 
-COPY public.my_tasks (task_id, created_by, idate, last_updated, task_category_id, project_id, sprint_id, title, description, priority, status, due_date, scheduled_at, started_at, completed_at, recurrence_type, recurrence_interval, recurrence_days, do_alarm, alarm_before, estimated_time, timebox, actual_time, assigned_to) FROM stdin;
+COPY public.my_tasks (task_id, created_by, idate, last_updated, task_category_id, project_id, sprint_id, title, description, priority, status, due_date, scheduled_at, started_at, completed_at, recurrence_type, recurrence_interval, recurrence_days, estimated_time, timebox, actual_time, assigned_to, task_uuid, alarm_id, person_id, business_id) FROM stdin;
+6	\N	2026-03-02 08:59:16.793184+00	2026-03-02 08:59:16.793184+00	1	\N	\N	hs-cicd, setup azure deveps agent inside	\N	4	completed	2026-03-02	2026-03-02 09:29:16+00	\N	2026-03-03 03:26:31+00	\N	\N	\N	\N	\N	\N	1	98bc6248-b8f1-4a6b-83bf-2d24dda86862	\N	\N	1
+1	\N	2026-03-01 16:51:41.279828+00	2026-03-01 16:51:41.279828+00	1	\N	\N	test	test	4	cancelled	2026-03-01	2026-03-01 17:21:41+00	\N	\N	\N	\N	\N	\N	\N	\N	1	4e5d37de-fbc7-4151-a42c-42778fe2f278	\N	\N	1
+11	\N	2026-03-03 03:10:10.5786+00	2026-03-03 03:10:10.5786+00	1	\N	\N	inspection re-synch brookfields	\N	4	completed	2026-03-03	2026-03-03 03:15:10+00	\N	2026-03-03 07:35:27+00	\N	\N	\N	\N	\N	\N	1	efd1f8c0-4df9-4e8d-919a-5894c4ed5e87	\N	\N	1
+9	\N	2026-03-02 17:17:17.430724+00	2026-03-02 17:17:17.430724+00	1	\N	1	data-security link for helixsense	waiting for ticket-creation	4	in_progress	2026-03-02	2026-03-02 11:30:00+00	\N	\N	\N	\N	\N	\N	\N	\N	1	32558e23-7af8-4fac-8800-9973c078f511	\N	\N	1
+22	\N	2026-03-04 06:03:57.643874+00	2026-03-04 06:03:57.643874+00	1	\N	\N	hs-dev-vm assets cleanup	have to get idea from sundaram sir	4	scheduled	2026-03-04	2026-03-04 06:33:57+00	\N	\N	\N	\N	\N	\N	\N	\N	1	3dbb2ea6-bfbb-474e-9e13-e9eb86a28fa6	\N	\N	1
+15	\N	2026-03-03 08:25:03.295316+00	2026-03-03 08:25:03.295316+00	1	\N	\N	script for latest data brookfield preprod	for both api, and warehouse	4	inbox	2026-03-03	2026-03-03 11:25:03+00	\N	\N	\N	\N	\N	\N	\N	\N	1	b42a3cfc-c48b-4dcc-81d3-e5e6ce89bb94	\N	\N	1
+16	\N	2026-03-03 09:52:15.750283+00	2026-03-03 09:52:15.750283+00	1	\N	\N	HP2600124 RDS DB maintenance Patch Upgrade	\N	4	inbox	2026-03-03	2026-03-03 10:22:15+00	\N	\N	\N	\N	\N	\N	\N	\N	1	24a5e62d-795a-4b48-a795-ba88bb8323fb	\N	\N	1
+26	\N	2026-03-04 13:53:32.959535+00	2026-03-04 13:53:32.959535+00	1	\N	\N	brookfield preprod job queue failed	\N	4	inbox	2026-03-04	2026-03-04 14:23:32+00	\N	\N	\N	\N	\N	\N	\N	\N	1	1ac26e6e-3c30-4d51-943e-3d631050f345	\N	\N	1
+25	\N	2026-03-04 12:38:01.860623+00	2026-03-04 12:38:01.860623+00	1	\N	\N	mro gatepass web icon issue,	ls /opt/odoo12/hsense-erpv3/mro_addons/mro_gatepass/static/description/home.png\nls /opt/apiqa/hsense-erpv3/mro_addons/mro_gatepass/static/description/home.png\n\n\nSELECT id, name\nFROM ir_ui_menu\nWHERE name = 'Gatepass';\nSELECT m.id, m.name, p.name AS parent\nFROM ir_ui_menu m\nLEFT JOIN ir_ui_menu p ON m.parent_id = p.id\nWHERE m.name = 'Gatepass';\n\n\napidevdb=> SELECT module, name, res_id\nFROM ir_model_data\nWHERE model = 'ir.ui.menu'\nAND name = 'menu_gatepass_root';\n\n\napidevdb: res_id = 1089\napiqadb_new: res_id = 965\n\nSELECT COUNT(*) AS attachment_count\nFROM ir_attachment\nWHERE res_model = 'ir.ui.menu'\nAND res_field = 'web_icon_data'\nAND res_id = 1089;\n\n\n\n\nDELETE FROM ir_attachment\nWHERE res_model='ir.ui.menu'\nAND res_field='web_icon_data'\nAND res_id=1089\nAND id NOT IN (\n    SELECT MAX(id)\n    FROM ir_attachment\n    WHERE res_model='ir.ui.menu'\n    AND res_field='web_icon_data'\n    AND res_id=1089\n);	4	completed	2026-03-04	2026-03-04 13:08:01+00	\N	2026-03-04 12:38:34+00	\N	\N	\N	\N	\N	\N	1	7ef35568-6140-491a-8bd0-b49942da3883	\N	\N	1
+13	\N	2026-03-03 07:53:27.140621+00	2026-03-03 07:53:27.140621+00	1	\N	\N	SR2600149 utlization report	delegated to Adithan to work on it.	4	completed	2026-03-03	2026-03-03 08:23:26+00	\N	2026-03-03 09:56:28+00	\N	\N	\N	\N	\N	\N	1	ad34803e-0aa6-4fc0-bd12-57e4e3368b04	\N	\N	1
+21	\N	2026-03-04 05:41:28.087497+00	2026-03-04 05:41:28.087497+00	1	\N	\N	Ignore: /controllers/**.py  on dev deployment	motive to avoid manual changes on dev.	4	scheduled	2026-03-04	2026-03-04 06:11:27+00	\N	\N	\N	\N	\N	\N	\N	\N	1	75ee7ba6-5585-4018-92bf-c065cf3890df	\N	\N	1
+10	\N	2026-03-03 03:01:12.023752+00	2026-03-03 03:01:12.023752+00	1	\N	\N	apiqa local changes for adhi	mro_addons/mro_tenant_employee/models/res_company.py  +19\nstate_id = fields.Many2one('res.country.state',store=True)	1	completed	2026-03-03	2026-03-03 03:06:11+00	\N	2026-03-03 03:24:32+00	\N	\N	\N	\N	\N	\N	1	9c26010d-1a3a-4e3b-ace6-0574cc89efb4	\N	\N	1
+7	\N	2026-03-02 09:00:22.703403+00	2026-03-02 09:00:22.703403+00	1	\N	\N	android app share current build	VERSION_CODE           = 110\nVERSION_NAME           = 1.7.141.1\nACCOUNT_ACTIVATION_URL = erp.helixsense.com\nAPK  : http://20.127.165.58:8081/repository/artifacts/android-app/1.7.141.1/helixsenseAndroid_1.7.141.1_020326_08_30.apk\nAAB  : http://20.127.165.58:8081/repository/artifacts/android-app/1.7.141.1/helixsenseAndroid_1.7.141.1.110_020326_08_38.aab\n\n\nadd tag and prs	4	completed	2026-03-02	2026-03-02 09:30:22+00	\N	2026-03-03 03:24:58+00	\N	\N	\N	\N	\N	\N	1	0c7f0ab1-2b8d-457b-b15a-e6bf038c7bfd	\N	\N	1
+4	\N	2026-03-02 04:01:29.634472+00	2026-03-02 04:01:29.634472+00	1	\N	\N	apiqa,web qa deployment	\N	4	completed	2026-03-02	2026-03-02 14:01:49+00	\N	2026-03-03 03:26:11+00	\N	\N	\N	\N	\N	\N	1	18409738-7a68-411e-bfe7-07d02dae4142	\N	\N	1
+5	\N	2026-03-02 08:57:49.46451+00	2026-03-02 08:57:49.46451+00	1	\N	\N	take old audits and delete on notes	take old audits and delete on notes	4	completed	2026-03-02	2026-03-02 11:01:03+00	\N	2026-03-03 03:26:16+00	\N	\N	\N	\N	\N	\N	1	a7f8890b-cd12-4682-b52d-9a25cc7df28a	\N	\N	1
+3	\N	2026-03-01 18:23:05.661892+00	2026-03-01 18:23:05.661892+00	1	\N	1	warehouse-brookfields pgsync	warehouse-brookfields pgsync	4	completed	2026-03-01	2026-03-02 13:12:45+00	\N	2026-03-03 03:26:21+00	\N	\N	\N	\N	\N	\N	1	90c55576-e912-4a41-8729-285bce5b0d00	\N	\N	1
+2	\N	2026-03-01 18:22:25.638421+00	2026-03-01 18:22:25.638421+00	1	\N	1	warehouse-brookfields pgsync	warehouse-brookfields pgsync	4	completed	2026-03-01	2026-03-01 18:52:25+00	\N	2026-03-03 03:26:26+00	\N	\N	\N	\N	\N	\N	1	24186711-3b3b-480e-9636-2fbf3180449c	\N	\N	1
+17	\N	2026-03-03 14:36:10.071355+00	2026-03-03 14:36:10.071355+00	1	\N	\N	data count mismatch in dw2 brookfields.	helpdesk : 1 record happened at the time of deployment of service\nwork permit: dummy site(floating site with parent),	4	completed	2026-03-03	2026-03-03 15:06:09+00	\N	2026-03-03 14:40:36+00	\N	\N	\N	\N	\N	\N	1	1965f4a4-19b6-43d5-9b1a-8fe1c51e4854	\N	\N	1
+18	\N	2026-03-03 14:43:55.918477+00	2026-03-03 14:43:55.918477+00	1	\N	\N	latest scheduler-dev.aforce360 deployed from the release/1.0.3	latest scheduler-dev.aforce360 deployed from the release/1.0.3	4	completed	2026-03-03	2026-03-03 15:13:55+00	\N	2026-03-03 14:44:10+00	\N	\N	\N	\N	\N	\N	1	969c2e23-cd13-40c8-8a0b-a9bc8f6eae1a	\N	\N	1
+14	\N	2026-03-03 08:23:24.897259+00	2026-03-03 08:23:24.897259+00	1	\N	\N	SR2600248 Gate Pass - query	SR2600248 Gate Pass - Non-Returnable Gate Pass Displaying Due Days..\nQuery Executed on cbre-preprod.\nEoD at production confirmed by jagdeesh sir.	4	completed	2026-03-03	2026-03-03 13:30:00+00	\N	2026-03-03 15:18:18+00	\N	\N	\N	\N	\N	\N	1	462debb6-e8d2-4bd2-a232-b80679e18266	\N	\N	1
+20	\N	2026-03-03 16:27:18.17222+00	2026-03-03 16:27:18.17222+00	1	\N	\N	AWS SES migration GE,Airtel,HCL,MCloud	\N	4	completed	2026-03-03	2026-03-03 16:57:18+00	\N	2026-03-03 16:27:33+00	\N	\N	\N	\N	\N	\N	1	543077fa-4901-45ac-9e7e-32331641d323	\N	\N	1
+23	\N	2026-03-04 06:34:14.19942+00	2026-03-04 06:34:14.19942+00	1	\N	\N	create hx.waste_tracker_log	create hx.waste_tracker_log\n\nSR2600268\n26 Feb 2026 9:00 PM IST \n\t=>2026-02-26 15:30:00 UTC\n26 Feb 2026 10:00 PM IST\n\t=>2026-02-26 16:30:00 UTC	4	completed	2026-03-04	2026-03-04 07:04:13+00	\N	2026-03-04 09:38:06+00	\N	\N	\N	\N	\N	\N	1	703feb64-6737-4d0d-8aa9-d328853fa963	\N	\N	1
+12	\N	2026-03-03 07:38:52.612312+00	2026-03-03 07:38:52.612312+00	1	\N	\N	migrate selfhost hs-cicd to aws	add aws tags,\ntest major builds,\nstop the azure vm\ntell the plan to vaibhav,\ncreate ticket for it.	4	in_progress	2026-03-03	2026-03-03 08:08:52+00	\N	\N	\N	\N	\N	\N	\N	\N	1	87a64289-3297-416f-81a4-d70d83f03a71	\N	\N	1
+8	\N	2026-03-02 09:12:33.971887+00	2026-03-02 09:12:33.971887+00	1	\N	\N	Alert BROOKFIELD-WAREHOUSE-VM-Memory-High-80	Alert BROOKFIELD-WAREHOUSE-VM-Memory-High-80 on hsn-brookfield-vm-prod-eastus-002 ( microsoft.compute/virtualmachines ) at 3/2/2026 2:20:09 AM\nvaibhav only getting alert,	4	waiting	2026-03-02	2026-03-02 11:12:33+00	\N	\N	\N	\N	\N	\N	\N	\N	1	03a75157-f9a1-4fa0-a097-cc5b1f363679	\N	\N	1
+19	\N	2026-03-03 16:24:09.556997+00	2026-03-03 16:24:09.556997+00	1	\N	\N	Cherry-pick failure to UAE-Enhancement	6056=>done\n6096\n6097\n6101\n6102	4	scheduled	2026-03-04	2026-03-04 04:30:00+00	\N	\N	\N	\N	\N	\N	\N	\N	1	871a51ce-2a92-404f-b610-0ccd05bc239f	\N	\N	1
+24	\N	2026-03-04 12:24:29.471755+00	2026-03-04 12:24:29.471755+00	1	\N	\N	52 Week PPM for CBRE - Weeks 1 to 10....	52 Week PPM for CBRE - Weeks 1 to 10....	4	scheduled	2026-03-04	2026-03-04 12:54:28+00	\N	\N	\N	\N	\N	\N	\N	\N	1	b9845bce-de45-465a-ab1f-41c47106e39a	\N	\N	1
 \.
 
 
@@ -4647,7 +4976,7 @@ COPY public.my_tasks (task_id, created_by, idate, last_updated, task_category_id
 -- Data for Name: password_vault; Type: TABLE DATA; Schema: public; Owner: noolvan
 --
 
-COPY public.password_vault (id, service_name, category, username_or_email, password, website_or_app_url, login_handler_function, recovery_info, notes, updated_at, record_uuid, additional_secrets) FROM stdin;
+COPY public.password_vault (id, service_name, category, username_or_email, password, website_or_app_url, login_handler_function, recovery_info, notes, additional_secrets, service_uuid) FROM stdin;
 \.
 
 
@@ -4655,7 +4984,8 @@ COPY public.password_vault (id, service_name, category, username_or_email, passw
 -- Data for Name: person_addresses; Type: TABLE DATA; Schema: public; Owner: noolvan
 --
 
-COPY public.person_addresses (address_id, created_by, idate, last_updated, person_id, address_type, address_line1, address_line2, city, state, postal_code, country, location, is_primary) FROM stdin;
+COPY public.person_addresses (address_id, created_by, idate, last_updated, person_id, address_type, address_line1, address_line2, postal_code, is_primary, map_location, location) FROM stdin;
+1	\N	2026-02-22 16:43:42.842649+00	2026-02-22 16:43:42.842649+00	1	home	54H/2	Thirukkurippu Thondar Street,Vannarpettai	627003	f	(8.7361308,77.7195449)	1
 \.
 
 
@@ -4664,6 +4994,7 @@ COPY public.person_addresses (address_id, created_by, idate, last_updated, perso
 --
 
 COPY public.person_attachments (attachment_id, created_by, idate, last_updated, person_id, attachment_type, file_name, file, file_size, mime_type, description, is_private, expiry_date) FROM stdin;
+1	\N	2026-02-22 16:49:29.856139+00	2026-02-22 16:49:29.856139+00	1	photo	cd0eb551d9294590ba3f6e2fe89598a8.jpg	private/model-attachments/person_attachments/19155d079b1d4956abc9dbd8fd15bcd7.jpg	\N	\N	\N	t	\N
 \.
 
 
@@ -4672,6 +5003,7 @@ COPY public.person_attachments (attachment_id, created_by, idate, last_updated, 
 --
 
 COPY public.person_business_roles (role_id, created_by, idate, last_updated, person_id, business_id, role, from_date, to_date, is_active, ownership_percentage, notes) FROM stdin;
+1	\N	2026-02-22 17:14:40.204002+00	2026-02-22 17:14:40.204002+00	1	1	employee	2025-04-25	\N	t	0	Devops Engineer
 \.
 
 
@@ -4680,6 +5012,8 @@ COPY public.person_business_roles (role_id, created_by, idate, last_updated, per
 --
 
 COPY public.person_contacts (contact_id, created_by, idate, last_updated, person_id, contact_type, contact_value, label, is_primary, is_verified, verified_at, notes) FROM stdin;
+1	\N	2026-02-22 16:59:05.465395+00	2026-02-22 16:59:05.465395+00	1	phone	9943604103	personal	t	t	2026-02-21 18:30:00+00	\N
+2	\N	2026-02-22 18:49:27.629869+00	2026-02-22 18:49:27.629869+00	1	email	avkarannellai@gmail.com	personal	t	t	2026-02-22 18:30:00+00	\N
 \.
 
 
@@ -4696,7 +5030,7 @@ COPY public.person_relationships (relationship_id, created_by, idate, last_updat
 --
 
 COPY public.personal_access_tokens (pat_id, pat_uuid, user_id, company_id, name, token_hash, scopes_json, expires_at, last_used_at, created_at) FROM stdin;
-1	b3a25496-7a71-4f32-af85-2cb960c58df4	2	\N	thinker-app	be03bbd66e3ad16ca0a8bde5374174e290c76b273c05fff9439478e70fccd985	[]	2026-05-08 23:49:01.705124+00	2026-02-12 08:56:31.43317+00	2026-02-08 05:19:01.882554+00
+1	b3a25496-7a71-4f32-af85-2cb960c58df4	2	\N	thinker-app	be03bbd66e3ad16ca0a8bde5374174e290c76b273c05fff9439478e70fccd985	[]	2026-05-08 23:49:01.705124+00	2026-03-04 16:28:57.436674+00	2026-02-08 05:19:01.882554+00
 \.
 
 
@@ -4704,7 +5038,9 @@ COPY public.personal_access_tokens (pat_id, pat_uuid, user_id, company_id, name,
 -- Data for Name: persons; Type: TABLE DATA; Schema: public; Owner: noolvan
 --
 
-COPY public.persons (person_id, created_by, idate, last_updated, name, alias_names, profile_photo, dob, marital_status, anniversary_date, notes) FROM stdin;
+COPY public.persons (person_id, created_by, idate, last_updated, name, alias_names, profile_photo, dob, marital_status, anniversary_date, notes, person_uuid) FROM stdin;
+1	\N	2026-02-21 21:00:23.43858+00	2026-02-21 21:00:23.43858+00	Vijayakaran	karan,vijay,muraly	private/model-attachments/persons/4070b2d2402641ebb309ff64bcfef25c.jpg	1985-10-27	Married	2017-11-27	\N	3a734566-e01c-4bb2-9a48-45739a473a02
+2	\N	2026-03-01 10:28:07.390158+00	2026-03-01 10:28:07.390158+00	Iswaya	\N	\N	1990-02-20	Married	2017-10-27	\N	7c99387a-f8f2-4d4a-9fb1-e57dc6e09eed
 \.
 
 
@@ -4752,7 +5088,8 @@ COPY public.settings (setting_id, group_name, setting_key, setting_name, descrip
 -- Data for Name: task_attachments; Type: TABLE DATA; Schema: public; Owner: noolvan
 --
 
-COPY public.task_attachments (id, task_id, file_type, file_path, created_at, record_uuid) FROM stdin;
+COPY public.task_attachments (attachment_id, created_by, idate, last_updated, attachment_uuid, attachment_title, file_path, task) FROM stdin;
+8	\N	2026-03-04 03:45:36.154603+00	2026-03-04 03:45:36.154603+00	91afab2f-5b19-49b9-aca4-45015a23cdc3	image.png	private/model-attachments/task_attachments/c89da31b92434208af98c92b498d4869.png	12
 \.
 
 
@@ -4765,6 +5102,54 @@ COPY public.task_categories (task_category_id, created_by, idate, last_updated, 
 2	\N	2026-02-14 22:09:43.919189+00	2026-02-14 22:09:43.919189+00	Personal	Personal life and family	life	\N	\N	t	\N
 3	\N	2026-02-14 22:09:43.919189+00	2026-02-14 22:09:43.919189+00	Learning	Learning and skill development	life	\N	\N	t	\N
 4	\N	2026-02-14 22:09:43.919189+00	2026-02-14 22:09:43.919189+00	Family	Family and home	life	\N	\N	t	\N
+\.
+
+
+--
+-- Data for Name: task_comments; Type: TABLE DATA; Schema: public; Owner: noolvan
+--
+
+COPY public.task_comments (comment_id, created_by, idate, last_updated, task, message, comment_title) FROM stdin;
+1	\N	2026-03-02 20:51:32.680049+00	2026-03-02 20:51:32.680049+00	3	completed	Completed
+2	\N	2026-03-02 21:10:30.756031+00	2026-03-02 21:10:30.756031+00	2	news creds shared to ubikaa,prajith,jagdeesh sir.	Completed
+3	\N	2026-03-03 03:01:23.990308+00	2026-03-03 03:01:23.990308+00	6	completed	Completed
+4	\N	2026-03-03 03:24:32.893811+00	2026-03-03 03:24:32.893811+00	10	completed	Completed
+5	\N	2026-03-03 03:24:58.458676+00	2026-03-03 03:24:58.458676+00	7	Completed	Completed
+6	\N	2026-03-03 03:26:11.42604+00	2026-03-03 03:26:11.42604+00	4		Completed
+7	\N	2026-03-03 03:26:16.230775+00	2026-03-03 03:26:16.230775+00	5		Completed
+8	\N	2026-03-03 03:26:21.140591+00	2026-03-03 03:26:21.140591+00	3		Completed
+9	\N	2026-03-03 03:26:26.6887+00	2026-03-03 03:26:26.6887+00	2		Completed
+10	\N	2026-03-03 03:26:31.063606+00	2026-03-03 03:26:31.063606+00	6		Completed
+11	\N	2026-03-03 03:28:59.890253+00	2026-03-03 03:28:59.890253+00	9	waiting for ticket with ubikaa	waiting for ticket
+12	\N	2026-03-03 03:29:56.436395+00	2026-03-03 03:29:56.436395+00	8	monitoring for next alert	monitoring for next alert
+13	\N	2026-03-03 07:35:27.407627+00	2026-03-03 07:35:27.407627+00	11	completed	Completed
+14	\N	2026-03-03 07:54:30.242432+00	2026-03-03 07:54:30.242432+00	13	explained details and issues.	delegated to Adithan
+15	\N	2026-03-03 08:12:21.576575+00	2026-03-03 08:12:21.576575+00	9	get ticket +manually change production at 5PM	get ticket +manually change production at 5PM
+16	\N	2026-03-03 09:56:28.368939+00	2026-03-03 09:56:28.368939+00	13	given access to utlization service user	delegated to Adi
+17	\N	2026-03-03 14:40:36.858307+00	2026-03-03 14:40:36.858307+00	17	informed to vaibhav and jagdeesh sir.	Completed
+18	\N	2026-03-03 14:41:16.066008+00	2026-03-03 14:41:16.066008+00	9	waiting for ticket	waiting for ticket
+19	\N	2026-03-03 14:44:10.059682+00	2026-03-03 14:44:10.059682+00	18		Completed
+20	\N	2026-03-03 15:18:18.914443+00	2026-03-03 15:18:18.914443+00	14	id  |  to_be_returned_on\n-----+---------------------\n  36 | 2025-07-31 05:44:47\n  21 | 2025-07-08 04:49:40\n  12 | 2025-06-25 05:53:14\n 136 | 2025-10-22 02:37:24\n 134 | 2025-10-22 02:25:44\n 133 | 2025-10-22 01:51:20\n 135 | 2025-10-22 02:29:05\n 565 | 2026-02-27 02:19:12\n\napinsdc also having same issue	Completed
+21	\N	2026-03-03 16:27:33.913356+00	2026-03-03 16:27:33.913356+00	20	completed with jagdeesh sir.	Completed
+22	\N	2026-03-04 03:15:12.153609+00	2026-03-04 03:15:12.153609+00	12	/opt/azagent1\n/opt/azagent2\ncd /opt\nsudo mkdir azagent2\nsudo chown ssm-user:ssm-user azagent2\ncd azagent2\n\n\nsudo systemctl status vsts.agent.*\nwill show two....	multi azure agents
+23	\N	2026-03-04 03:29:24.153524+00	2026-03-04 03:29:24.153524+00	12	disc 64 GiB\nStandard D2as v4 (2 vcpus, 8 GiB memory)\nself host azure	old azure vm info
+24	\N	2026-03-04 03:29:36.024779+00	2026-03-04 03:29:36.024779+00	12	Attachment removed.\n\nAttachment: mro.report.scheduler_mcloud2.csv\nFile: private/model-attachments/task_attachments/b9113b5941fe4da0828a00dd73b43cd6.csv\n\nReason:\ndelete	Attachment removed – mro.report.scheduler_mcloud2.csv
+25	\N	2026-03-04 03:29:42.381256+00	2026-03-04 03:29:42.381256+00	12	Attachment removed.\n\nAttachment: image.png\nFile: private/model-attachments/task_attachments/a0936e63a6d94fb6b5ff04536845b159.png\n\nReason:\ndelete	Attachment removed – image.png
+26	\N	2026-03-04 03:29:54.800359+00	2026-03-04 03:29:54.800359+00	12	Attachment removed.\n\nAttachment: 7.png\nFile: private/model-attachments/task_attachments/854efbf3541c40018b38e063b4906056.png\n\nReason:\ndelete	Attachment removed – 7.png
+27	\N	2026-03-04 03:29:59.739548+00	2026-03-04 03:29:59.739548+00	12	Attachment removed.\n\nAttachment: image.png\nFile: private/model-attachments/task_attachments/1c52dc04898249a98bd40f8c92b63db3.png\n\nReason:\ndelete	Attachment removed – image.png
+28	\N	2026-03-04 03:30:04.331166+00	2026-03-04 03:30:04.331166+00	12	Attachment removed.\n\nAttachment: image.png\nFile: private/model-attachments/task_attachments/e905d9a2c6224e1690501794f41c43f6.png\n\nReason:\ndelete	Attachment removed – image.png
+29	\N	2026-03-04 03:30:10.532486+00	2026-03-04 03:30:10.532486+00	12	Attachment removed.\n\nAttachment: image.png\nFile: private/model-attachments/task_attachments/a242a60df60a4b2c968203e684ce5f59.png\n\nReason:\ndelete	Attachment removed – image.png
+30	\N	2026-03-04 03:44:39.45772+00	2026-03-04 03:44:39.45772+00	12	Attachment removed.\n\nAttachment: image.png\nFile: private/model-attachments/task_attachments/0fa4a18924034c3a82a90dabae5e6ce6.png\n\nReason:\ndelete	Attachment removed – image.png
+31	\N	2026-03-04 06:43:13.597162+00	2026-03-04 06:43:13.597162+00	22	said by vaibhav	keep it for last 120 days and delete older
+32	\N	2026-03-04 06:43:56.011774+00	2026-03-04 06:43:56.011774+00	23	by cropping that time window.	9pm to 10pm log status given
+33	\N	2026-03-04 06:47:27.564664+00	2026-03-04 06:47:27.564664+00	23	root@hsn-brookfield-vm-prod-eastus-001:/var/log/odoo12/brookfields# tar -xOzf apibrookfields.log-2026-02-25-220001.tgz | grep -F "create hx.waste_tracker_log res.users[1089]"\n2026-02-25 11:42:02,450 20026 INFO hsense odoo.addons.mro_tenant_employee.controllers.controller_api: LOG C:/api/v4/create hx.waste_tracker_log res.users[1089]\n2026-02-25 14:18:46,273 16468 INFO hsense odoo.addons.mro_tenant_employee.controllers.controller_api: LOG C:/api/v4/create hx.waste_tracker_log res.users[1089]\n2026-02-25 16:35:16,063 11605 INFO hsense odoo.addons.mro_tenant_employee.controllers.controller_api: LOG C:/api/v4/create hx.waste_tracker_log res.users[1089]\nroot@hsn-brookfield-vm-prod-eastus-001:/var/log/odoo12/brookfields# tar -xOzf apibrookfields.log-2026-02-26-220001.tgz | grep -F "create hx.waste_tracker_log res.users[1089]"\n2026-02-26 10:26:56,292 1558 INFO hsense odoo.addons.mro_tenant_employee.controllers.controller_api: LOG C:/api/v4/create hx.waste_tracker_log res.users[1089]\nroot@hsn-brookfield-vm-prod-eastus-001:/var/log/odoo12/brookfields# tar -xOzf apibrookfields.log-2026-02-27-220001.tgz | grep -F "create hx.waste_tracker_log res.users[1089]"\n2026-02-27 14:19:19,387 7798 INFO hsense odoo.addons.mro_tenant_employee.controllers.controller_api: LOG C:/api/v4/create hx.waste_tracker_log res.users[1089]\n2026-02-27 17:01:31,650 11605 INFO hsense odoo.addons.mro_tenant_employee.controllers.controller_api: LOG C:/api/v4/create hx.waste_tracker_log res.users[1089]\n2026-02-27 21:18:17,857 20597 INFO hsense odoo.addons.mro_tenant_employee.controllers.controller_api: LOG C:/api/v4/create hx.waste_tracker_log res.users[1089]	final- log search approach
+34	\N	2026-03-04 08:30:27.024978+00	2026-03-04 08:30:27.024978+00	12	disk increased and debugging, pipelines	disk increased by 64gb
+35	\N	2026-03-04 09:34:40.319048+00	2026-03-04 09:34:40.319048+00	9	HP2600147	give pr HP2600147
+36	\N	2026-03-04 09:38:06.104683+00	2026-03-04 09:38:06.104683+00	23		Completed
+37	\N	2026-03-04 09:45:52.7784+00	2026-03-04 09:45:52.7784+00	9	test and update in ticket HP2600147	test after 6pm by checkout master
+38	\N	2026-03-04 10:00:35.126189+00	2026-03-04 10:00:35.126189+00	21	With web_icon\nmenu upgrade\n   ↓\nwrite(menu)\n   ↓\nwrite(web_icon)\n   ↓\nbinary_fields.py override\n   ↓\nattachment search → many results\n   ↓\nExpected singleton ❌\nWithout web_icon\nmenu upgrade\n   ↓\nwrite(menu)\n   ↓\n(no icon write)\n   ↓\nno attachment logic\n   ↓\nupgrade succeeds ✅	web icon-issu
+39	\N	2026-03-04 10:11:48.122329+00	2026-03-04 10:11:48.122329+00	21	SELECT id, create_date, res_id\nFROM ir_attachment\nWHERE res_model = 'ir.ui.menu'\nAND res_field = 'web_icon_data'\nAND res_id = 1089\nORDER BY id DESC;	execute this on dev qa, that will different.
+40	\N	2026-03-04 12:38:34.92601+00	2026-03-04 12:38:34.92601+00	25		Completed
 \.
 
 
@@ -4788,6 +5173,8 @@ COPY public.task_priorities (priority_id, created_by, idate, last_updated, name,
 --
 
 COPY public.task_sprints (sprint_id, created_by, idate, last_updated, sprint_name, description, goal, start_date, end_date, status, completed_at, is_active) FROM stdin;
+1	\N	2026-03-01 10:55:49.386218+00	2026-03-01 10:55:49.386218+00	Helixsense sprint 1.7.141	\N	\N	2026-03-02	2026-03-07	active	\N	t
+2	\N	2026-03-01 10:56:26.253163+00	2026-03-01 10:56:26.253163+00	Helixsense sprint 1.7.142	\N	\N	2026-03-09	2026-03-14	active	\N	t
 \.
 
 
@@ -4816,6 +5203,15 @@ COPY public.themes (theme_id, theme_uuid, theme_name, theme_key, theme_json, use
 2	c9e2b293-2e8f-4ed4-8ebc-88c2c719f011	Slate Corporate	slate	{"theme": "slate", "theme_mode": "light", "font_size_base": 14, "font_size_large": 16, "font_size_small": 12, "header_bg_color": "#334155", "sidebar_bg_color": "none", "theme_color_primary": "#1890ff", "theme_color_secondary": "#52c41a"}	\N	saas	\N	t	f	1	2026-02-01 18:23:06.780532+00	2026-02-01 18:23:06.780532+00
 1	4cecc474-fbc3-4fca-96d4-d6e4ad78d661	Default Corporate	default	{"theme": "default", "theme_mode": "light", "font_size_base": 14, "font_size_large": 16, "font_size_small": 12, "header_bg_color": "#0F172A", "sidebar_bg_color": "none", "theme_color_primary": "#1890ff", "theme_color_secondary": "#4ba120"}	\N	saas	\N	t	t	1	2026-02-01 18:23:06.780532+00	2026-02-01 18:52:48.752438+00
 5	23a24e13-abd6-4500-88b1-98b89ffbdc55	My Theme	user_theme	{"theme": "user_theme", "theme_mode": "light", "font_size_base": 14, "font_size_large": 16, "font_size_small": 12, "header_bg_color": "#0f172a", "sidebar_bg_color": "#261a1a00", "theme_color_primary": "#1890ff", "theme_color_secondary": "#4ba120"}	2	saas	\N	f	f	2	2026-02-01 19:46:10.803448+00	2026-02-01 20:06:16.433971+00
+\.
+
+
+--
+-- Data for Name: time_slots; Type: TABLE DATA; Schema: public; Owner: noolvan
+--
+
+COPY public.time_slots (time_id, created_by, idate, last_updated, slot_uuid, name, slot_type, start_time, end_time, applies_type, applies_value, priority_level, description) FROM stdin;
+1	\N	2026-03-01 08:54:57.186959+00	2026-03-01 08:54:57.186959+00	0dbc6455-c7f0-4989-bed9-92cb47642695	Wakeup & Refresh & Prayer	core	05:00:00	07:00:00	everyday	\N	1	\N
 \.
 
 
@@ -4913,6 +5309,9 @@ COPY public.user_sessions (session_id, session_uuid, user_id, company_id, login_
 34	113592c5-becf-47ae-b0f1-89496653ebaf	3	\N	google_oauth	2026-02-06 11:30:59.199282+00	2026-02-06 11:30:59.199282+00	2026-02-07 06:00:59.159289+00	{"platform": "\\"macOS\\"", "user_agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/144.0.0.0 Safari/537.36"}	127.0.0.1	Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/144.0.0.0 Safari/537.36	f	\N
 35	17f1f965-430f-47fc-aff3-de9b94bece86	3	\N	google_oauth	2026-02-06 11:31:19.852352+00	2026-02-06 11:31:19.852352+00	2026-02-07 06:01:19.809148+00	{"platform": "\\"macOS\\"", "user_agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/144.0.0.0 Safari/537.36"}	127.0.0.1	Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/144.0.0.0 Safari/537.36	f	\N
 47	c26200e0-47e7-4d05-a7c2-ee2c15bb532b	2	\N	mfa	2026-02-16 18:10:15.606498+00	2026-02-16 18:10:15.606498+00	2026-02-17 12:40:15.523721+00	{"platform": "\\"macOS\\"", "user_agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/144.0.0.0 Safari/537.36"}	127.0.0.1	Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/144.0.0.0 Safari/537.36	t	\N
+49	bc7bc1f8-f51c-4a4e-ac7d-accdabd77a33	2	\N	mfa	2026-02-23 18:55:50.283079+00	2026-02-23 18:55:50.283079+00	2026-02-24 13:25:50.211725+00	{"platform": "\\"macOS\\"", "user_agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/145.0.0.0 Safari/537.36"}	127.0.0.1	Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/145.0.0.0 Safari/537.36	t	\N
+51	2b4733b7-3eb7-4681-8679-222cb85e4712	2	\N	mfa	2026-02-26 01:56:57.998157+00	2026-02-26 01:56:57.998157+00	2026-02-26 20:26:57.883878+00	{"platform": "\\"macOS\\"", "user_agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/145.0.0.0 Safari/537.36"}	127.0.0.1	Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/145.0.0.0 Safari/537.36	t	\N
+53	d328048f-14c3-45be-a651-403fe23fae5f	2	\N	mfa	2026-03-01 16:48:12.71384+00	2026-03-01 16:48:12.71384+00	2026-03-02 11:18:12.712133+00	{"platform": "\\"macOS\\"", "user_agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/145.0.0.0 Safari/537.36"}	127.0.0.1	Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/145.0.0.0 Safari/537.36	t	\N
 29	623c3442-f56c-46ac-9f03-716781629bc5	2	\N	mfa	2026-02-06 01:41:45.521878+00	2026-02-06 01:41:45.521878+00	2026-02-06 20:11:45.474757+00	{"platform": "\\"macOS\\"", "user_agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/144.0.0.0 Safari/537.36"}	127.0.0.1	Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/144.0.0.0 Safari/537.36	f	\N
 36	12002edf-9140-41db-a1a0-58f00d597db9	3	\N	google_oauth	2026-02-06 11:32:22.629342+00	2026-02-06 11:32:22.629342+00	2026-02-07 06:02:22.589963+00	{"platform": "\\"macOS\\"", "user_agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/144.0.0.0 Safari/537.36"}	127.0.0.1	Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/144.0.0.0 Safari/537.36	f	\N
 39	f5cb2776-385a-4c05-847e-919e9226fe7a	3	\N	google_oauth	2026-02-06 12:35:00.978437+00	2026-02-06 12:35:00.978437+00	2026-02-07 07:05:00.930322+00	{"platform": "\\"macOS\\"", "user_agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/144.0.0.0 Safari/537.36"}	127.0.0.1	Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/144.0.0.0 Safari/537.36	f	\N
@@ -4924,6 +5323,10 @@ COPY public.user_sessions (session_id, session_uuid, user_id, company_id, login_
 43	59219a1f-4c43-49a1-b3f3-90baa57de77b	3	\N	google_oauth	2026-02-06 18:11:38.846829+00	2026-02-06 18:11:38.846829+00	2026-02-07 12:41:38.827029+00	{"platform": "\\"macOS\\"", "user_agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/144.0.0.0 Safari/537.36"}	127.0.0.1	Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/144.0.0.0 Safari/537.36	t	\N
 44	e0244d4c-f0a2-4f4b-8478-21eac39cd93d	2	\N	mfa	2026-02-08 03:09:29.627123+00	2026-02-08 03:09:29.627123+00	2026-02-08 21:39:29.527326+00	{"platform": "\\"macOS\\"", "user_agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/144.0.0.0 Safari/537.36"}	127.0.0.1	Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/144.0.0.0 Safari/537.36	t	\N
 46	c0841019-3df4-4b11-8175-c0194261a534	2	\N	mfa	2026-02-14 08:14:29.56507+00	2026-02-14 08:14:29.56507+00	2026-02-15 02:44:29.481545+00	{"platform": "\\"macOS\\"", "user_agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/144.0.0.0 Safari/537.36"}	127.0.0.1	Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/144.0.0.0 Safari/537.36	t	\N
+48	2f9391eb-da97-4d8f-a1c8-8a884e2b1466	2	\N	mfa	2026-02-21 18:38:17.921553+00	2026-02-21 18:38:17.921553+00	2026-02-22 13:08:17.850092+00	{"platform": "\\"macOS\\"", "user_agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/145.0.0.0 Safari/537.36"}	127.0.0.1	Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/145.0.0.0 Safari/537.36	t	\N
+50	72cac85a-0957-4f2c-9133-8067279c3266	2	\N	mfa	2026-02-23 20:13:36.038727+00	2026-02-23 20:13:36.038727+00	2026-02-24 14:43:35.984742+00	{"platform": "\\"macOS\\"", "user_agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/145.0.0.0 Safari/537.36"}	127.0.0.1	Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/145.0.0.0 Safari/537.36	t	\N
+52	1b80677d-296b-4c0b-b38e-b5635cd2df57	2	\N	mfa	2026-02-28 11:31:13.543795+00	2026-02-28 11:31:13.543795+00	2026-03-01 06:01:13.302598+00	{"platform": "\\"macOS\\"", "user_agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/145.0.0.0 Safari/537.36"}	127.0.0.1	Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/145.0.0.0 Safari/537.36	t	\N
+54	8bf0e309-5a9a-4812-83db-3c532115580c	2	\N	mfa	2026-03-02 19:21:52.581582+00	2026-03-02 19:21:52.581582+00	2026-03-03 13:51:52.428547+00	{"platform": "\\"macOS\\"", "user_agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/145.0.0.0 Safari/537.36"}	127.0.0.1	Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/145.0.0.0 Safari/537.36	t	\N
 7	6082cee3-9e12-462f-ab1f-6c43f65fba5d	2	\N	password	2026-01-17 03:27:53.325831+00	2026-01-17 03:27:53.325831+00	2026-01-17 21:57:53.280483+00	{"platform": "\\"macOS\\"", "user_agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/143.0.0.0 Safari/537.36"}	127.0.0.1	Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/143.0.0.0 Safari/537.36	f	\N
 8	c6a4e7b3-713c-4d0b-9e90-8c499f0021f9	2	\N	password	2026-01-17 13:57:38.425488+00	2026-01-17 13:57:38.425488+00	2026-01-18 08:27:38.372698+00	{"platform": "\\"macOS\\"", "user_agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/143.0.0.0 Safari/537.36"}	127.0.0.1	Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/143.0.0.0 Safari/537.36	f	\N
 9	9c09206c-223f-4869-81c0-773a62c71ea3	2	\N	password	2026-01-18 00:03:26.844929+00	2026-01-18 00:03:26.844929+00	2026-01-18 18:33:26.801166+00	{"platform": "\\"macOS\\"", "user_agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/143.0.0.0 Safari/537.36"}	127.0.0.1	Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/143.0.0.0 Safari/537.36	f	\N
@@ -4966,8 +5369,8 @@ COPY public.user_teams (user_team_id, team_id, user_id, role_in_team, joined_at)
 
 COPY public.users (user_id, user_uuid, username, password, first_name, last_name, email, phone, avatar_url, user_type, is_super_admin, ref_table_column, ref_id, ref_uuid, active_status, last_login, deleted_at, created_by, idate, last_updated, enable_2fa, mfa_secret, idle_timeout_minutes) FROM stdin;
 1	ee69037b-55da-444d-91c9-e4bc70362a31	system	system_internal_locked	\N	\N	\N	\N	\N	system	t	\N	\N	\N	1	\N	\N	\N	2026-01-15 23:29:06.137005+00	2026-01-15 23:29:06.137005+00	f	\N	\N
+2	93f32e0d-c9ec-42bc-8cdd-651231135a74	admin	$2b$12$g02erZ8PoPNqaQe8BYkcBue44dd6SaKqGXS9wzD9/Vb8CV.Oj52SO	\N	\N	\N	\N	\N	saas_admin	t	\N	\N	\N	1	2026-03-02 19:21:52.655109+00	\N	\N	2026-01-15 23:29:11.614702+00	2026-01-15 23:29:11.614702+00	t	D7X5M5M3CCRKLUPVIQJ4R77J4SNL4W4W	\N
 3	adad5fca-a277-45df-a629-1f7cf4c27d1e	avkarannellai	$2b$12$WovzF7MG/3wVrK32tGgf9egAFgW/Qgj/Yutlhh71HQxCHJVYu/yxq	Vijay	Karan	avkarannellai@gmail.com	9943604103	\N	tenant_user	f	\N	\N	\N	1	2026-02-06 18:11:38.861391+00	\N	\N	2026-02-06 09:34:12.791741+00	2026-02-06 09:34:12.791741+00	f	\N	\N
-2	93f32e0d-c9ec-42bc-8cdd-651231135a74	admin	$2b$12$g02erZ8PoPNqaQe8BYkcBue44dd6SaKqGXS9wzD9/Vb8CV.Oj52SO	\N	\N	\N	\N	\N	saas_admin	t	\N	\N	\N	1	2026-02-16 18:10:15.688141+00	\N	\N	2026-01-15 23:29:11.614702+00	2026-01-15 23:29:11.614702+00	t	D7X5M5M3CCRKLUPVIQJ4R77J4SNL4W4W	\N
 \.
 
 
@@ -5002,10 +5405,24 @@ SELECT pg_catalog.setval('public.ai_knowledge_relations_relation_id_seq', 3, tru
 
 
 --
+-- Name: alarm_sounds_sound_id_seq; Type: SEQUENCE SET; Schema: public; Owner: noolvan
+--
+
+SELECT pg_catalog.setval('public.alarm_sounds_sound_id_seq', 2, true);
+
+
+--
+-- Name: alarms_alarm_id_seq; Type: SEQUENCE SET; Schema: public; Owner: noolvan
+--
+
+SELECT pg_catalog.setval('public.alarms_alarm_id_seq', 19, true);
+
+
+--
 -- Name: api_endpoints_endpoint_id_seq; Type: SEQUENCE SET; Schema: public; Owner: noolvan
 --
 
-SELECT pg_catalog.setval('public.api_endpoints_endpoint_id_seq', 196, true);
+SELECT pg_catalog.setval('public.api_endpoints_endpoint_id_seq', 216, true);
 
 
 --
@@ -5047,7 +5464,7 @@ SELECT pg_catalog.setval('public.audit_logs_log_id_seq', 1, false);
 -- Name: business_addresses_address_id_seq; Type: SEQUENCE SET; Schema: public; Owner: noolvan
 --
 
-SELECT pg_catalog.setval('public.business_addresses_address_id_seq', 1, false);
+SELECT pg_catalog.setval('public.business_addresses_address_id_seq', 1, true);
 
 
 --
@@ -5061,7 +5478,7 @@ SELECT pg_catalog.setval('public.business_contacts_contact_id_seq', 1, false);
 -- Name: businesses_business_id_seq; Type: SEQUENCE SET; Schema: public; Owner: noolvan
 --
 
-SELECT pg_catalog.setval('public.businesses_business_id_seq', 1, false);
+SELECT pg_catalog.setval('public.businesses_business_id_seq', 1, true);
 
 
 --
@@ -5089,14 +5506,14 @@ SELECT pg_catalog.setval('public.data_flattening_rules_rule_id_seq', 1, false);
 -- Name: data_model_fields_field_id_seq; Type: SEQUENCE SET; Schema: public; Owner: noolvan
 --
 
-SELECT pg_catalog.setval('public.data_model_fields_field_id_seq', 519, true);
+SELECT pg_catalog.setval('public.data_model_fields_field_id_seq', 583, true);
 
 
 --
 -- Name: data_models_model_id_seq; Type: SEQUENCE SET; Schema: public; Owner: noolvan
 --
 
-SELECT pg_catalog.setval('public.data_models_model_id_seq', 57, true);
+SELECT pg_catalog.setval('public.data_models_model_id_seq', 62, true);
 
 
 --
@@ -5145,7 +5562,7 @@ SELECT pg_catalog.setval('public.job_queue_job_id_seq', 1, false);
 -- Name: locations_location_id_seq; Type: SEQUENCE SET; Schema: public; Owner: noolvan
 --
 
-SELECT pg_catalog.setval('public.locations_location_id_seq', 1, false);
+SELECT pg_catalog.setval('public.locations_location_id_seq', 2, true);
 
 
 --
@@ -5187,14 +5604,14 @@ SELECT pg_catalog.setval('public.modules_module_id_seq', 1, false);
 -- Name: my_projects_project_id_seq; Type: SEQUENCE SET; Schema: public; Owner: noolvan
 --
 
-SELECT pg_catalog.setval('public.my_projects_project_id_seq', 1, false);
+SELECT pg_catalog.setval('public.my_projects_project_id_seq', 4, true);
 
 
 --
 -- Name: my_tasks_task_id_seq; Type: SEQUENCE SET; Schema: public; Owner: noolvan
 --
 
-SELECT pg_catalog.setval('public.my_tasks_task_id_seq', 1, false);
+SELECT pg_catalog.setval('public.my_tasks_task_id_seq', 26, true);
 
 
 --
@@ -5208,28 +5625,28 @@ SELECT pg_catalog.setval('public.password_vault_id_seq', 1, false);
 -- Name: person_addresses_address_id_seq; Type: SEQUENCE SET; Schema: public; Owner: noolvan
 --
 
-SELECT pg_catalog.setval('public.person_addresses_address_id_seq', 1, false);
+SELECT pg_catalog.setval('public.person_addresses_address_id_seq', 1, true);
 
 
 --
 -- Name: person_attachments_attachment_id_seq; Type: SEQUENCE SET; Schema: public; Owner: noolvan
 --
 
-SELECT pg_catalog.setval('public.person_attachments_attachment_id_seq', 1, false);
+SELECT pg_catalog.setval('public.person_attachments_attachment_id_seq', 1, true);
 
 
 --
 -- Name: person_business_roles_role_id_seq; Type: SEQUENCE SET; Schema: public; Owner: noolvan
 --
 
-SELECT pg_catalog.setval('public.person_business_roles_role_id_seq', 1, false);
+SELECT pg_catalog.setval('public.person_business_roles_role_id_seq', 1, true);
 
 
 --
 -- Name: person_contacts_contact_id_seq; Type: SEQUENCE SET; Schema: public; Owner: noolvan
 --
 
-SELECT pg_catalog.setval('public.person_contacts_contact_id_seq', 1, false);
+SELECT pg_catalog.setval('public.person_contacts_contact_id_seq', 2, true);
 
 
 --
@@ -5250,7 +5667,7 @@ SELECT pg_catalog.setval('public.personal_access_tokens_pat_id_seq', 1, true);
 -- Name: persons_person_id_seq; Type: SEQUENCE SET; Schema: public; Owner: noolvan
 --
 
-SELECT pg_catalog.setval('public.persons_person_id_seq', 1, false);
+SELECT pg_catalog.setval('public.persons_person_id_seq', 2, true);
 
 
 --
@@ -5282,10 +5699,10 @@ SELECT pg_catalog.setval('public.settings_setting_id_seq', 24, true);
 
 
 --
--- Name: task_attachments_id_seq; Type: SEQUENCE SET; Schema: public; Owner: noolvan
+-- Name: task_attachments_attachment_id_seq; Type: SEQUENCE SET; Schema: public; Owner: noolvan
 --
 
-SELECT pg_catalog.setval('public.task_attachments_id_seq', 1, false);
+SELECT pg_catalog.setval('public.task_attachments_attachment_id_seq', 8, true);
 
 
 --
@@ -5293,6 +5710,13 @@ SELECT pg_catalog.setval('public.task_attachments_id_seq', 1, false);
 --
 
 SELECT pg_catalog.setval('public.task_categories_task_category_id_seq', 4, true);
+
+
+--
+-- Name: task_comments_comment_id_seq; Type: SEQUENCE SET; Schema: public; Owner: noolvan
+--
+
+SELECT pg_catalog.setval('public.task_comments_comment_id_seq', 40, true);
 
 
 --
@@ -5306,7 +5730,7 @@ SELECT pg_catalog.setval('public.task_priorities_priority_id_seq', 1, false);
 -- Name: task_sprints_sprint_id_seq; Type: SEQUENCE SET; Schema: public; Owner: noolvan
 --
 
-SELECT pg_catalog.setval('public.task_sprints_sprint_id_seq', 1, false);
+SELECT pg_catalog.setval('public.task_sprints_sprint_id_seq', 2, true);
 
 
 --
@@ -5328,6 +5752,13 @@ SELECT pg_catalog.setval('public.tenants_tenant_id_seq', 1, true);
 --
 
 SELECT pg_catalog.setval('public.themes_theme_id_seq', 5, true);
+
+
+--
+-- Name: time_slots_time_id_seq; Type: SEQUENCE SET; Schema: public; Owner: noolvan
+--
+
+SELECT pg_catalog.setval('public.time_slots_time_id_seq', 1, true);
 
 
 --
@@ -5383,7 +5814,7 @@ SELECT pg_catalog.setval('public.user_roles_user_role_id_seq', 1, false);
 -- Name: user_sessions_session_id_seq; Type: SEQUENCE SET; Schema: public; Owner: noolvan
 --
 
-SELECT pg_catalog.setval('public.user_sessions_session_id_seq', 47, true);
+SELECT pg_catalog.setval('public.user_sessions_session_id_seq', 54, true);
 
 
 --
@@ -5492,6 +5923,22 @@ ALTER TABLE ONLY public.ai_query_plans
 
 ALTER TABLE ONLY public.ai_rules
     ADD CONSTRAINT ai_rules_pkey PRIMARY KEY (rule_id);
+
+
+--
+-- Name: alarm_sounds alarm_sounds_pkey; Type: CONSTRAINT; Schema: public; Owner: noolvan
+--
+
+ALTER TABLE ONLY public.alarm_sounds
+    ADD CONSTRAINT alarm_sounds_pkey PRIMARY KEY (sound_id);
+
+
+--
+-- Name: alarms alarms_pkey; Type: CONSTRAINT; Schema: public; Owner: noolvan
+--
+
+ALTER TABLE ONLY public.alarms
+    ADD CONSTRAINT alarms_pkey PRIMARY KEY (alarm_id);
 
 
 --
@@ -5959,14 +6406,6 @@ ALTER TABLE ONLY public.password_vault
 
 
 --
--- Name: password_vault password_vault_record_uuid_key; Type: CONSTRAINT; Schema: public; Owner: noolvan
---
-
-ALTER TABLE ONLY public.password_vault
-    ADD CONSTRAINT password_vault_record_uuid_key UNIQUE (record_uuid);
-
-
---
 -- Name: person_addresses person_addresses_pkey; Type: CONSTRAINT; Schema: public; Owner: noolvan
 --
 
@@ -6107,15 +6546,7 @@ ALTER TABLE ONLY public.settings
 --
 
 ALTER TABLE ONLY public.task_attachments
-    ADD CONSTRAINT task_attachments_pkey PRIMARY KEY (id);
-
-
---
--- Name: task_attachments task_attachments_record_uuid_key; Type: CONSTRAINT; Schema: public; Owner: noolvan
---
-
-ALTER TABLE ONLY public.task_attachments
-    ADD CONSTRAINT task_attachments_record_uuid_key UNIQUE (record_uuid);
+    ADD CONSTRAINT task_attachments_pkey PRIMARY KEY (attachment_id);
 
 
 --
@@ -6124,6 +6555,14 @@ ALTER TABLE ONLY public.task_attachments
 
 ALTER TABLE ONLY public.task_categories
     ADD CONSTRAINT task_categories_pkey PRIMARY KEY (task_category_id);
+
+
+--
+-- Name: task_comments task_comments_pkey; Type: CONSTRAINT; Schema: public; Owner: noolvan
+--
+
+ALTER TABLE ONLY public.task_comments
+    ADD CONSTRAINT task_comments_pkey PRIMARY KEY (comment_id);
 
 
 --
@@ -6188,6 +6627,14 @@ ALTER TABLE ONLY public.themes
 
 ALTER TABLE ONLY public.themes
     ADD CONSTRAINT themes_theme_uuid_key UNIQUE (theme_uuid);
+
+
+--
+-- Name: time_slots time_slots_pkey; Type: CONSTRAINT; Schema: public; Owner: noolvan
+--
+
+ALTER TABLE ONLY public.time_slots
+    ADD CONSTRAINT time_slots_pkey PRIMARY KEY (time_id);
 
 
 --
@@ -6769,13 +7216,6 @@ CREATE INDEX idx_settings_tenant ON public.settings USING btree (tenant_id);
 
 
 --
--- Name: idx_task_attachments_task; Type: INDEX; Schema: public; Owner: noolvan
---
-
-CREATE INDEX idx_task_attachments_task ON public.task_attachments USING btree (task_id);
-
-
---
 -- Name: idx_task_queue_company; Type: INDEX; Schema: public; Owner: noolvan
 --
 
@@ -6989,6 +7429,22 @@ ALTER TABLE ONLY public.ai_knowledge_relations
 
 ALTER TABLE ONLY public.ai_knowledge_vectors
     ADD CONSTRAINT ai_knowledge_vectors_target_node_id_fkey FOREIGN KEY (target_node_id) REFERENCES public.ai_knowledge_nodes(node_id) ON DELETE CASCADE;
+
+
+--
+-- Name: alarm_sounds alarm_sounds_created_by_fkey; Type: FK CONSTRAINT; Schema: public; Owner: noolvan
+--
+
+ALTER TABLE ONLY public.alarm_sounds
+    ADD CONSTRAINT alarm_sounds_created_by_fkey FOREIGN KEY (created_by) REFERENCES public.users(user_id);
+
+
+--
+-- Name: alarms alarms_created_by_fkey; Type: FK CONSTRAINT; Schema: public; Owner: noolvan
+--
+
+ALTER TABLE ONLY public.alarms
+    ADD CONSTRAINT alarms_created_by_fkey FOREIGN KEY (created_by) REFERENCES public.users(user_id);
 
 
 --
@@ -7568,11 +8024,27 @@ ALTER TABLE ONLY public.settings
 
 
 --
+-- Name: task_attachments task_attachments_created_by_fkey; Type: FK CONSTRAINT; Schema: public; Owner: noolvan
+--
+
+ALTER TABLE ONLY public.task_attachments
+    ADD CONSTRAINT task_attachments_created_by_fkey FOREIGN KEY (created_by) REFERENCES public.users(user_id);
+
+
+--
 -- Name: task_categories task_categories_created_by_fkey; Type: FK CONSTRAINT; Schema: public; Owner: noolvan
 --
 
 ALTER TABLE ONLY public.task_categories
     ADD CONSTRAINT task_categories_created_by_fkey FOREIGN KEY (created_by) REFERENCES public.users(user_id);
+
+
+--
+-- Name: task_comments task_comments_created_by_fkey; Type: FK CONSTRAINT; Schema: public; Owner: noolvan
+--
+
+ALTER TABLE ONLY public.task_comments
+    ADD CONSTRAINT task_comments_created_by_fkey FOREIGN KEY (created_by) REFERENCES public.users(user_id);
 
 
 --
@@ -7653,6 +8125,14 @@ ALTER TABLE ONLY public.themes
 
 ALTER TABLE ONLY public.themes
     ADD CONSTRAINT themes_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.users(user_id) ON DELETE CASCADE;
+
+
+--
+-- Name: time_slots time_slots_created_by_fkey; Type: FK CONSTRAINT; Schema: public; Owner: noolvan
+--
+
+ALTER TABLE ONLY public.time_slots
+    ADD CONSTRAINT time_slots_created_by_fkey FOREIGN KEY (created_by) REFERENCES public.users(user_id);
 
 
 --
@@ -7843,5 +8323,5 @@ ALTER TABLE ONLY public.workflows
 -- PostgreSQL database dump complete
 --
 
-\unrestrict wQkCq4BmIWYAX7RmbF81OHoNf7grcijcLj0ULVMmY4gfntFQgIWCDD0Pcuoc0h1
+\unrestrict BWWxitOl4X12qECqfKge6TG2C8X396EMxk0fukBAD428eafRgVPXhY0t1LKavo0
 

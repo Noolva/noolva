@@ -1,0 +1,25 @@
+We are building a Structured Interactive Notes Engine based on extended Markdown.
+Instead of plain text notes, the system supports:
+Custom blocks (steps, commands, tasks, callouts, queries)
+Structured parsing (Markdown → AST → JSON)
+Dynamic rendering as UI components
+Conditional logic (role/environment-based visibility)
+Optional execution (run commands, store output)
+PostgreSQL storage (TEXT + JSONB or block-based schema)
+This transforms simple Markdown into a Documentation DSL (Domain-Specific Language) capable of powering interactive documentation, runbooks, and structured knowledge systems.
+🛠 Available Tools
+🔹 React (Frontend / Editor)
+Best options:
+Tiptap – Highly extensible block-based editor (recommended)
+Slate – Fully customizable structured editor
+Lexical – Modern performant editor
+MDX – Markdown + React components
+remark / rehype – Markdown parser with plugin support
+Best choice for your need:
+👉 Tiptap + custom block extensions
+🔹 Python (Backend Parsing)
+Python-Markdown – Supports custom extensions
+Mistune – Fast Markdown parser
+markdown-it-py – Extensible and modern
+Best choice:
+👉 markdown-it-py or Python-Markdown with custom extensions

@@ -26,10 +26,18 @@ NF0010/feature/users-ui-auto-logout-test-users-action-mfa-protection-token-expir
 NF0011/feature/side-bar-search-parent-child-auto-hide-sidebar-theme-google-auth
 NF0012/feature/two-user-switch-testing-and-fixes
 NF0013/feature/url-based-account-tracking-pat-allow-all-to-saas-admin-tenant-admin
+NF0014/feature/data-model-enhancements-import-export-auto-uuid-field-type
+
 current,
 ======
-module-permissions-validation-testing,
+data model-encryption of fields, file/image field support on data models api,
+thumbnail handling,done
+Edge Device Agent (EDA)
 
+Android Agent : Native Kotlin
+Desktop Agent: ios: Swift limited agent
+
+module-permissions-validation-testing,
 default-company logic- and header-finishings
 
 NF0013/feature/collecting-existing-module-features-insert-to-db-permissions-management

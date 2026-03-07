@@ -2,6 +2,19 @@ python version : Python 3.9.6
 /usr/bin/python3 python api/main.py
 /Users/karan/Desktop/noolva.com/noolva/api/app/noolva-venv/bin/activate
 
-python api/cli.py runserver
 
 /Users/karan/Desktop/noolva.com/noolva/api/app/noolva-venv/bin/python3 /Users/karan/Desktop/noolva.com/noolva/api/app/cli.py runserver
+
+---
+How to run decrypt (data model field values)
+  From repo root. Uses same key as app (ENCRYPTION_KEY for AES; fixed key for XOR).
+
+  XOR:
+    python3 api/decrypt_field_value.py xor_cipher "<base64_encrypted_value>"
+
+  AES (set ENCRYPTION_KEY first, e.g. from api/.env):
+    export ENCRYPTION_KEY="<your-32-byte-key-base64-or-raw>"
+    python3 api/decrypt_field_value.py aes "<base64_encrypted_value>"
+
+  With venv:
+    /path/to/noolva/api/app/noolva-venv/bin/python3 api/decrypt_field_value.py aes "<value>"
