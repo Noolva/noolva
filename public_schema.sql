@@ -2,7 +2,7 @@
 -- PostgreSQL database dump
 --
 
-\restrict TRmNcc3U5Bv5umyIBGCAPdn2MqGzrpK6owINlRoSEjHCHAhTZbI7ZV5zSZBtcEa
+\restrict vFTiYNhj3apxKkhz3NJ01f03gJIuKNnMAqXzso3ITYboCwMnb49Kpr3zggodNMx
 
 -- Dumped from database version 16.11 (Ubuntu 16.11-0ubuntu0.24.04.1)
 -- Dumped by pg_dump version 18.1
@@ -256,6 +256,90 @@ CREATE TABLE public.ai_rules (
 
 
 ALTER TABLE public.ai_rules OWNER TO noolvan;
+
+--
+-- Name: alarm_sounds; Type: TABLE; Schema: public; Owner: noolvan
+--
+
+CREATE TABLE public.alarm_sounds (
+    sound_id integer NOT NULL,
+    created_by integer,
+    idate timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
+    last_updated timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
+    alarm_file_path character varying(255),
+    sound_title character varying(100),
+    is_default boolean
+);
+
+
+ALTER TABLE public.alarm_sounds OWNER TO noolvan;
+
+--
+-- Name: alarm_sounds_sound_id_seq; Type: SEQUENCE; Schema: public; Owner: noolvan
+--
+
+CREATE SEQUENCE public.alarm_sounds_sound_id_seq
+    AS integer
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+ALTER SEQUENCE public.alarm_sounds_sound_id_seq OWNER TO noolvan;
+
+--
+-- Name: alarm_sounds_sound_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: noolvan
+--
+
+ALTER SEQUENCE public.alarm_sounds_sound_id_seq OWNED BY public.alarm_sounds.sound_id;
+
+
+--
+-- Name: alarms; Type: TABLE; Schema: public; Owner: noolvan
+--
+
+CREATE TABLE public.alarms (
+    alarm_id integer NOT NULL,
+    created_by integer,
+    idate timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
+    last_updated timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
+    entity_type character varying(50),
+    alarm_mode character varying(255) DEFAULT 'time_based'::character varying NOT NULL,
+    scheduled_for timestamp with time zone,
+    condition_json jsonb,
+    title character varying(255),
+    message text,
+    status character varying(255) DEFAULT 'pending'::character varying NOT NULL,
+    acknowledged_at timestamp with time zone,
+    entity_id numeric
+);
+
+
+ALTER TABLE public.alarms OWNER TO noolvan;
+
+--
+-- Name: alarms_alarm_id_seq; Type: SEQUENCE; Schema: public; Owner: noolvan
+--
+
+CREATE SEQUENCE public.alarms_alarm_id_seq
+    AS integer
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+ALTER SEQUENCE public.alarms_alarm_id_seq OWNER TO noolvan;
+
+--
+-- Name: alarms_alarm_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: noolvan
+--
+
+ALTER SEQUENCE public.alarms_alarm_id_seq OWNED BY public.alarms.alarm_id;
+
 
 --
 -- Name: api_endpoints; Type: TABLE; Schema: public; Owner: noolvan
@@ -560,12 +644,10 @@ CREATE TABLE public.business_addresses (
     address_type character varying(255) DEFAULT 'head_office'::character varying NOT NULL,
     address_line1 character varying(255) NOT NULL,
     address_line2 character varying(255),
-    city character varying(150) NOT NULL,
-    state character varying(150) NOT NULL,
     postal_code character varying(20) NOT NULL,
-    country character varying(150) DEFAULT 'India'::character varying NOT NULL,
-    location point,
-    is_primary boolean DEFAULT false
+    is_primary boolean DEFAULT false,
+    map_location point,
+    location integer
 );
 
 
@@ -1497,12 +1579,14 @@ CREATE TABLE public.my_tasks (
     recurrence_type character varying(255),
     recurrence_interval numeric DEFAULT '1'::numeric,
     recurrence_days text[],
-    do_alarm boolean DEFAULT false,
-    alarm_before numeric,
     estimated_time numeric,
     timebox numeric,
     actual_time numeric,
-    assigned_to integer
+    assigned_to integer,
+    task_uuid uuid DEFAULT gen_random_uuid(),
+    alarm_id integer,
+    person_id integer,
+    business_id integer
 );
 
 
@@ -1544,9 +1628,8 @@ CREATE TABLE public.password_vault (
     login_handler_function character varying(200),
     recovery_info text,
     notes text,
-    updated_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
-    record_uuid uuid DEFAULT gen_random_uuid() NOT NULL,
-    additional_secrets jsonb
+    additional_secrets jsonb,
+    service_uuid uuid DEFAULT gen_random_uuid()
 );
 
 
@@ -1587,12 +1670,10 @@ CREATE TABLE public.person_addresses (
     address_type character varying(255) DEFAULT 'home'::character varying NOT NULL,
     address_line1 character varying(255) NOT NULL,
     address_line2 character varying(255),
-    city character varying(150) NOT NULL,
-    state character varying(150) NOT NULL,
     postal_code character varying(20) NOT NULL,
-    country character varying(150) DEFAULT 'India'::character varying NOT NULL,
-    location point,
-    is_primary boolean DEFAULT false
+    is_primary boolean DEFAULT false,
+    map_location point,
+    location integer
 );
 
 
@@ -1850,7 +1931,8 @@ CREATE TABLE public.persons (
     dob date,
     marital_status character varying(255),
     anniversary_date date,
-    notes text
+    notes text,
+    person_uuid uuid DEFAULT gen_random_uuid()
 );
 
 
@@ -2071,22 +2153,24 @@ ALTER SEQUENCE public.settings_setting_id_seq OWNED BY public.settings.setting_i
 --
 
 CREATE TABLE public.task_attachments (
-    id integer NOT NULL,
-    task_id integer NOT NULL,
-    file_type character varying(30),
-    file_path character varying(500),
-    created_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
-    record_uuid uuid DEFAULT gen_random_uuid() NOT NULL
+    attachment_id integer NOT NULL,
+    created_by integer,
+    idate timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
+    last_updated timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
+    attachment_uuid uuid DEFAULT gen_random_uuid(),
+    attachment_title character varying(100),
+    file_path character varying(255),
+    task integer
 );
 
 
 ALTER TABLE public.task_attachments OWNER TO noolvan;
 
 --
--- Name: task_attachments_id_seq; Type: SEQUENCE; Schema: public; Owner: noolvan
+-- Name: task_attachments_attachment_id_seq; Type: SEQUENCE; Schema: public; Owner: noolvan
 --
 
-CREATE SEQUENCE public.task_attachments_id_seq
+CREATE SEQUENCE public.task_attachments_attachment_id_seq
     AS integer
     START WITH 1
     INCREMENT BY 1
@@ -2095,13 +2179,13 @@ CREATE SEQUENCE public.task_attachments_id_seq
     CACHE 1;
 
 
-ALTER SEQUENCE public.task_attachments_id_seq OWNER TO noolvan;
+ALTER SEQUENCE public.task_attachments_attachment_id_seq OWNER TO noolvan;
 
 --
--- Name: task_attachments_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: noolvan
+-- Name: task_attachments_attachment_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: noolvan
 --
 
-ALTER SEQUENCE public.task_attachments_id_seq OWNED BY public.task_attachments.id;
+ALTER SEQUENCE public.task_attachments_attachment_id_seq OWNED BY public.task_attachments.attachment_id;
 
 
 --
@@ -2145,6 +2229,45 @@ ALTER SEQUENCE public.task_categories_task_category_id_seq OWNER TO noolvan;
 --
 
 ALTER SEQUENCE public.task_categories_task_category_id_seq OWNED BY public.task_categories.task_category_id;
+
+
+--
+-- Name: task_comments; Type: TABLE; Schema: public; Owner: noolvan
+--
+
+CREATE TABLE public.task_comments (
+    comment_id integer NOT NULL,
+    created_by integer,
+    idate timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
+    last_updated timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
+    task integer,
+    message text,
+    comment_title character varying(100)
+);
+
+
+ALTER TABLE public.task_comments OWNER TO noolvan;
+
+--
+-- Name: task_comments_comment_id_seq; Type: SEQUENCE; Schema: public; Owner: noolvan
+--
+
+CREATE SEQUENCE public.task_comments_comment_id_seq
+    AS integer
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+ALTER SEQUENCE public.task_comments_comment_id_seq OWNER TO noolvan;
+
+--
+-- Name: task_comments_comment_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: noolvan
+--
+
+ALTER SEQUENCE public.task_comments_comment_id_seq OWNED BY public.task_comments.comment_id;
 
 
 --
@@ -2364,6 +2487,51 @@ ALTER SEQUENCE public.themes_theme_id_seq OWNER TO noolvan;
 --
 
 ALTER SEQUENCE public.themes_theme_id_seq OWNED BY public.themes.theme_id;
+
+
+--
+-- Name: time_slots; Type: TABLE; Schema: public; Owner: noolvan
+--
+
+CREATE TABLE public.time_slots (
+    time_id integer NOT NULL,
+    created_by integer,
+    idate timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
+    last_updated timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
+    slot_uuid uuid DEFAULT gen_random_uuid(),
+    name character varying(150) NOT NULL,
+    slot_type character varying(255),
+    start_time time without time zone NOT NULL,
+    end_time time without time zone NOT NULL,
+    applies_type character varying(255),
+    applies_value character varying(20),
+    priority_level numeric DEFAULT '1'::numeric,
+    description text
+);
+
+
+ALTER TABLE public.time_slots OWNER TO noolvan;
+
+--
+-- Name: time_slots_time_id_seq; Type: SEQUENCE; Schema: public; Owner: noolvan
+--
+
+CREATE SEQUENCE public.time_slots_time_id_seq
+    AS integer
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+ALTER SEQUENCE public.time_slots_time_id_seq OWNER TO noolvan;
+
+--
+-- Name: time_slots_time_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: noolvan
+--
+
+ALTER SEQUENCE public.time_slots_time_id_seq OWNED BY public.time_slots.time_id;
 
 
 --
@@ -2880,6 +3048,20 @@ ALTER TABLE ONLY public.ai_knowledge_relations ALTER COLUMN relation_id SET DEFA
 
 
 --
+-- Name: alarm_sounds sound_id; Type: DEFAULT; Schema: public; Owner: noolvan
+--
+
+ALTER TABLE ONLY public.alarm_sounds ALTER COLUMN sound_id SET DEFAULT nextval('public.alarm_sounds_sound_id_seq'::regclass);
+
+
+--
+-- Name: alarms alarm_id; Type: DEFAULT; Schema: public; Owner: noolvan
+--
+
+ALTER TABLE ONLY public.alarms ALTER COLUMN alarm_id SET DEFAULT nextval('public.alarms_alarm_id_seq'::regclass);
+
+
+--
 -- Name: api_endpoints endpoint_id; Type: DEFAULT; Schema: public; Owner: noolvan
 --
 
@@ -3160,10 +3342,10 @@ ALTER TABLE ONLY public.settings ALTER COLUMN setting_id SET DEFAULT nextval('pu
 
 
 --
--- Name: task_attachments id; Type: DEFAULT; Schema: public; Owner: noolvan
+-- Name: task_attachments attachment_id; Type: DEFAULT; Schema: public; Owner: noolvan
 --
 
-ALTER TABLE ONLY public.task_attachments ALTER COLUMN id SET DEFAULT nextval('public.task_attachments_id_seq'::regclass);
+ALTER TABLE ONLY public.task_attachments ALTER COLUMN attachment_id SET DEFAULT nextval('public.task_attachments_attachment_id_seq'::regclass);
 
 
 --
@@ -3171,6 +3353,13 @@ ALTER TABLE ONLY public.task_attachments ALTER COLUMN id SET DEFAULT nextval('pu
 --
 
 ALTER TABLE ONLY public.task_categories ALTER COLUMN task_category_id SET DEFAULT nextval('public.task_categories_task_category_id_seq'::regclass);
+
+
+--
+-- Name: task_comments comment_id; Type: DEFAULT; Schema: public; Owner: noolvan
+--
+
+ALTER TABLE ONLY public.task_comments ALTER COLUMN comment_id SET DEFAULT nextval('public.task_comments_comment_id_seq'::regclass);
 
 
 --
@@ -3206,6 +3395,13 @@ ALTER TABLE ONLY public.tenants ALTER COLUMN tenant_id SET DEFAULT nextval('publ
 --
 
 ALTER TABLE ONLY public.themes ALTER COLUMN theme_id SET DEFAULT nextval('public.themes_theme_id_seq'::regclass);
+
+
+--
+-- Name: time_slots time_id; Type: DEFAULT; Schema: public; Owner: noolvan
+--
+
+ALTER TABLE ONLY public.time_slots ALTER COLUMN time_id SET DEFAULT nextval('public.time_slots_time_id_seq'::regclass);
 
 
 --
@@ -3370,6 +3566,22 @@ ALTER TABLE ONLY public.ai_query_plans
 
 ALTER TABLE ONLY public.ai_rules
     ADD CONSTRAINT ai_rules_pkey PRIMARY KEY (rule_id);
+
+
+--
+-- Name: alarm_sounds alarm_sounds_pkey; Type: CONSTRAINT; Schema: public; Owner: noolvan
+--
+
+ALTER TABLE ONLY public.alarm_sounds
+    ADD CONSTRAINT alarm_sounds_pkey PRIMARY KEY (sound_id);
+
+
+--
+-- Name: alarms alarms_pkey; Type: CONSTRAINT; Schema: public; Owner: noolvan
+--
+
+ALTER TABLE ONLY public.alarms
+    ADD CONSTRAINT alarms_pkey PRIMARY KEY (alarm_id);
 
 
 --
@@ -3837,14 +4049,6 @@ ALTER TABLE ONLY public.password_vault
 
 
 --
--- Name: password_vault password_vault_record_uuid_key; Type: CONSTRAINT; Schema: public; Owner: noolvan
---
-
-ALTER TABLE ONLY public.password_vault
-    ADD CONSTRAINT password_vault_record_uuid_key UNIQUE (record_uuid);
-
-
---
 -- Name: person_addresses person_addresses_pkey; Type: CONSTRAINT; Schema: public; Owner: noolvan
 --
 
@@ -3985,15 +4189,7 @@ ALTER TABLE ONLY public.settings
 --
 
 ALTER TABLE ONLY public.task_attachments
-    ADD CONSTRAINT task_attachments_pkey PRIMARY KEY (id);
-
-
---
--- Name: task_attachments task_attachments_record_uuid_key; Type: CONSTRAINT; Schema: public; Owner: noolvan
---
-
-ALTER TABLE ONLY public.task_attachments
-    ADD CONSTRAINT task_attachments_record_uuid_key UNIQUE (record_uuid);
+    ADD CONSTRAINT task_attachments_pkey PRIMARY KEY (attachment_id);
 
 
 --
@@ -4002,6 +4198,14 @@ ALTER TABLE ONLY public.task_attachments
 
 ALTER TABLE ONLY public.task_categories
     ADD CONSTRAINT task_categories_pkey PRIMARY KEY (task_category_id);
+
+
+--
+-- Name: task_comments task_comments_pkey; Type: CONSTRAINT; Schema: public; Owner: noolvan
+--
+
+ALTER TABLE ONLY public.task_comments
+    ADD CONSTRAINT task_comments_pkey PRIMARY KEY (comment_id);
 
 
 --
@@ -4066,6 +4270,14 @@ ALTER TABLE ONLY public.themes
 
 ALTER TABLE ONLY public.themes
     ADD CONSTRAINT themes_theme_uuid_key UNIQUE (theme_uuid);
+
+
+--
+-- Name: time_slots time_slots_pkey; Type: CONSTRAINT; Schema: public; Owner: noolvan
+--
+
+ALTER TABLE ONLY public.time_slots
+    ADD CONSTRAINT time_slots_pkey PRIMARY KEY (time_id);
 
 
 --
@@ -4647,13 +4859,6 @@ CREATE INDEX idx_settings_tenant ON public.settings USING btree (tenant_id);
 
 
 --
--- Name: idx_task_attachments_task; Type: INDEX; Schema: public; Owner: noolvan
---
-
-CREATE INDEX idx_task_attachments_task ON public.task_attachments USING btree (task_id);
-
-
---
 -- Name: idx_task_queue_company; Type: INDEX; Schema: public; Owner: noolvan
 --
 
@@ -4867,6 +5072,22 @@ ALTER TABLE ONLY public.ai_knowledge_relations
 
 ALTER TABLE ONLY public.ai_knowledge_vectors
     ADD CONSTRAINT ai_knowledge_vectors_target_node_id_fkey FOREIGN KEY (target_node_id) REFERENCES public.ai_knowledge_nodes(node_id) ON DELETE CASCADE;
+
+
+--
+-- Name: alarm_sounds alarm_sounds_created_by_fkey; Type: FK CONSTRAINT; Schema: public; Owner: noolvan
+--
+
+ALTER TABLE ONLY public.alarm_sounds
+    ADD CONSTRAINT alarm_sounds_created_by_fkey FOREIGN KEY (created_by) REFERENCES public.users(user_id);
+
+
+--
+-- Name: alarms alarms_created_by_fkey; Type: FK CONSTRAINT; Schema: public; Owner: noolvan
+--
+
+ALTER TABLE ONLY public.alarms
+    ADD CONSTRAINT alarms_created_by_fkey FOREIGN KEY (created_by) REFERENCES public.users(user_id);
 
 
 --
@@ -5446,11 +5667,27 @@ ALTER TABLE ONLY public.settings
 
 
 --
+-- Name: task_attachments task_attachments_created_by_fkey; Type: FK CONSTRAINT; Schema: public; Owner: noolvan
+--
+
+ALTER TABLE ONLY public.task_attachments
+    ADD CONSTRAINT task_attachments_created_by_fkey FOREIGN KEY (created_by) REFERENCES public.users(user_id);
+
+
+--
 -- Name: task_categories task_categories_created_by_fkey; Type: FK CONSTRAINT; Schema: public; Owner: noolvan
 --
 
 ALTER TABLE ONLY public.task_categories
     ADD CONSTRAINT task_categories_created_by_fkey FOREIGN KEY (created_by) REFERENCES public.users(user_id);
+
+
+--
+-- Name: task_comments task_comments_created_by_fkey; Type: FK CONSTRAINT; Schema: public; Owner: noolvan
+--
+
+ALTER TABLE ONLY public.task_comments
+    ADD CONSTRAINT task_comments_created_by_fkey FOREIGN KEY (created_by) REFERENCES public.users(user_id);
 
 
 --
@@ -5531,6 +5768,14 @@ ALTER TABLE ONLY public.themes
 
 ALTER TABLE ONLY public.themes
     ADD CONSTRAINT themes_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.users(user_id) ON DELETE CASCADE;
+
+
+--
+-- Name: time_slots time_slots_created_by_fkey; Type: FK CONSTRAINT; Schema: public; Owner: noolvan
+--
+
+ALTER TABLE ONLY public.time_slots
+    ADD CONSTRAINT time_slots_created_by_fkey FOREIGN KEY (created_by) REFERENCES public.users(user_id);
 
 
 --
@@ -5721,5 +5966,5 @@ ALTER TABLE ONLY public.workflows
 -- PostgreSQL database dump complete
 --
 
-\unrestrict TRmNcc3U5Bv5umyIBGCAPdn2MqGzrpK6owINlRoSEjHCHAhTZbI7ZV5zSZBtcEa
+\unrestrict vFTiYNhj3apxKkhz3NJ01f03gJIuKNnMAqXzso3ITYboCwMnb49Kpr3zggodNMx
 

@@ -224,6 +224,15 @@ except Exception as e:
     logger.error(f"Failed to register personal_access_tokens router: {e}")
     raise
 
+# Import and include upload router (S3 file upload; supports PAT for model-attachments)
+try:
+    from routes import upload
+    app.include_router(upload.router, tags=["Upload"])
+    logger.info("Upload router registered successfully at /upload")
+except Exception as e:
+    logger.error(f"Failed to register upload router: {e}")
+    raise
+
 
 @app.get("/")
 def home():

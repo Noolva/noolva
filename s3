@@ -1,0 +1,7 @@
+User
+   ↓
+CloudFront (cdn.avkaran.com)
+   ├── /public/*   → Open Access
+   └── /private/*  → Signed URL Required
+   ↓
+S3 Bucket (Origin)

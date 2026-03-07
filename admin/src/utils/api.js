@@ -252,8 +252,16 @@ axiosInstance.interceptors.response.use(
                 error.message = errorData.message;
                 error.errorData = errorData;
                 error.isApiError = true;
-            } else if (errorData?.detail) {
-                error.message = errorData.detail;
+            } else if (errorData?.detail !== undefined && errorData?.detail !== null) {
+                // Pydantic validation errors: detail is array of { type, loc, msg, input }
+                const d = errorData.detail;
+                if (typeof d === 'string') {
+                    error.message = d;
+                } else if (Array.isArray(d) && d.length > 0) {
+                    error.message = d.map((e) => (e && typeof e.msg === 'string' ? e.msg : String(e))).join('. ') || 'Validation failed';
+                } else {
+                    error.message = typeof d === 'object' ? JSON.stringify(d) : String(d);
+                }
                 error.errorData = errorData;
                 error.isApiError = true;
             } else if (typeof errorData === 'string') {
