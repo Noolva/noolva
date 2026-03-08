@@ -628,6 +628,18 @@ CREATE TABLE public.collections (
 CREATE INDEX idx_collections_field_type ON public.collections(field_type_id);
 
 -- ==========================================
+-- 1.6a Row Exposure Modes (for per-row visibility in auto CRUD)
+-- ==========================================
+-- When a user has "Current User Mode" set, auto CRUD list/get returns only rows
+-- where row_exposure_mode_id matches and row_exposure_modes.expose_data = true.
+CREATE TABLE public.row_exposure_modes (
+    exposure_mode_id SERIAL PRIMARY KEY,
+    name VARCHAR(100) UNIQUE,
+    description TEXT,
+    expose_data BOOLEAN DEFAULT FALSE
+);
+
+-- ==========================================
 -- 1.7 Icons Table
 -- ==========================================
 -- Stores icons from FontAwesome, Ant Design, Smilies, and Custom SVG icons
@@ -1156,13 +1168,19 @@ CREATE TABLE public.settings (
     
     is_built_in BOOLEAN DEFAULT FALSE,
     
-    last_updated TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+    -- User-specific override: NULL = global/tenant default; set = per-user value
+    user_uuid UUID REFERENCES public.users(user_uuid) ON DELETE CASCADE,
     
-    UNIQUE(setting_key, tenant_id) -- One value per key per tenant (or one global if tenant is null)
+    last_updated TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
 );
+
+-- One global/tenant row per key (user_uuid NULL); one row per user per key when user_uuid set
+CREATE UNIQUE INDEX idx_settings_key_tenant_user_global ON public.settings (setting_key, tenant_id) WHERE user_uuid IS NULL;
+CREATE UNIQUE INDEX idx_settings_key_tenant_user_specific ON public.settings (setting_key, tenant_id, user_uuid) WHERE user_uuid IS NOT NULL;
 
 CREATE INDEX idx_settings_tenant ON public.settings(tenant_id);
 CREATE INDEX idx_settings_key ON public.settings(setting_key);
+CREATE INDEX idx_settings_user_uuid ON public.settings(user_uuid);
 
 -- ==========================================
 -- 4a. Themes Table (Global/User-scoped theme configs)

@@ -12,9 +12,11 @@ import re
 import uuid
 from typing import Optional, List, Tuple, Any
 
-from fastapi import APIRouter, HTTPException, Header, UploadFile, File, Form
+from fastapi import APIRouter, HTTPException, Header, UploadFile, File, Form, Query
+from fastapi.responses import RedirectResponse, StreamingResponse
 from classes.postgres_db import PostgresDB
 from middlewares.auth import resolve_bearer_to_user
+from io import BytesIO
 
 router = APIRouter()
 logger = logging.getLogger(__name__)
@@ -162,13 +164,14 @@ async def _resolve_record_id_column_and_value(table_name: str, record_id: str) -
     return (pk_col, record_id)
 
 
-async def _get_field_config_and_type(model_name: str, field_name: str) -> Tuple[Optional[dict], Optional[str]]:
-    """Get (field_config_json, type_code) for a file/image field. type_code is 'file' or 'image'."""
+async def _get_field_config_and_type(model_name: str, field_name: str) -> Tuple[Optional[dict], Optional[str], Optional[str]]:
+    """Get (field_config_json, type_code, encryption_method) for a file/image field. type_code is 'file' or 'image'."""
     if not _is_safe_identifier(model_name) or not _is_safe_identifier(field_name):
-        return (None, None)
+        return (None, None, None)
     row = await PostgresDB.fetchrow(
         """
-        SELECT dmf.field_config_json, LOWER(ft.type_code) AS type_code
+        SELECT dmf.field_config_json, LOWER(ft.type_code) AS type_code,
+               COALESCE(LOWER(TRIM(dmf.encryption_method::text)), 'none') AS encryption_method
         FROM public.data_models dm
         JOIN public.data_model_fields dmf ON dmf.model_id = dm.model_id
         JOIN public.field_types ft ON ft.field_type_id = dmf.field_type_id
@@ -181,9 +184,10 @@ async def _get_field_config_and_type(model_name: str, field_name: str) -> Tuple[
         field_name,
     )
     if not row:
-        return (None, None)
+        return (None, None, None)
     val = row.get("field_config_json")
     type_code = (row.get("type_code") or "").strip() or None
+    encryption_method = (row.get("encryption_method") or "none").strip() or None
     if isinstance(val, dict):
         config = val
     elif isinstance(val, str):
@@ -194,7 +198,7 @@ async def _get_field_config_and_type(model_name: str, field_name: str) -> Tuple[
             config = None
     else:
         config = None
-    return (config, type_code)
+    return (config, type_code, encryption_method)
 
 
 def _thumbnail_key_from_main_key(main_key: str) -> str:
@@ -334,11 +338,12 @@ async def upload_to_default_s3(
 
     is_public_bool = (is_public or "true").strip().lower() in ("true", "1", "yes")
 
-    # Optional field config and type for validation and thumbnail (when model_name + field_name and field is file/image)
+    # Optional field config, type, and encryption for validation, thumbnail, and file-content encryption
     field_config: Optional[dict] = None
     field_type_code: Optional[str] = None
+    field_encryption_method: Optional[str] = None
     if model_name and field_name and _is_safe_identifier(model_name) and _is_safe_identifier(field_name):
-        field_config, field_type_code = await _get_field_config_and_type(model_name, field_name)
+        field_config, field_type_code, field_encryption_method = await _get_field_config_and_type(model_name, field_name)
 
     # Delete old attachment(s) and their thumbnails when replacing
     if model_name and record_id and field_name and _is_safe_identifier(field_name) and len(file_list) >= 1:
@@ -369,6 +374,14 @@ async def upload_to_default_s3(
             raise HTTPException(status_code=400, detail=f"Could not read file {filename}: {str(e)}") from e
 
         _validate_file_against_field_config(filename, file_size, field_config)
+
+        # For file/image fields with encryption: encrypt file content before upload (path stays plain in DB)
+        method = (field_encryption_method or "none").strip().lower() if field_encryption_method else "none"
+        if field_type_code in ("file", "image") and method in ("xor_cipher", "aes"):
+            from utils.field_encryption import encrypt_file_content
+            encrypted_content = encrypt_file_content(method, content)
+            if encrypted_content is not None:
+                content = encrypted_content
 
         ext = os.path.splitext(filename or "")[1] or ""
         unique_id = f"{uuid.uuid4().hex}{ext}"
@@ -457,3 +470,70 @@ async def upload_to_default_s3(
         "uploads": uploads_result,
         "count": len(uploads_result),
     }
+
+
+@router.get("/private-file")
+async def get_private_file(
+    path: str = Query(..., description="S3 storage path (e.g. private/model-attachments/model_name/uuid.ext)"),
+    redirect: bool = Query(True, description="If True, redirect to signed URL; if False, return JSON with url"),
+    decrypt: bool = Query(False, description="If True, stream decrypted file content instead of signed URL (requires model_name, field_name)"),
+    model_name: Optional[str] = Query(None, description="Model name (required when decrypt=true)"),
+    field_name: Optional[str] = Query(None, description="Field name (required when decrypt=true)"),
+    authorization: Optional[str] = Header(None),
+):
+    """
+    Access a private file by path. Requires Bearer auth (JWT or PAT).
+    - redirect=true (default): redirect to presigned S3 URL.
+    - redirect=false: return JSON { "url": "<presigned_url>" }.
+    - decrypt=true: require model_name and field_name; fetch file from S3, decrypt content (for encrypted file/image fields), and stream the decrypted file. No redirect.
+    """
+    user = await _require_user(authorization)
+    company_id = _get_company_id_for_s3(user)
+    s3 = await _get_default_s3_service(company_id)
+
+    path = (path or "").strip().lstrip("/")
+    if not path:
+        raise HTTPException(status_code=400, detail="path is required")
+
+    if decrypt:
+        if not model_name or not _is_safe_identifier(model_name) or not field_name or not _is_safe_identifier(field_name):
+            raise HTTPException(
+                status_code=400,
+                detail="When decrypt=true, model_name and field_name are required",
+            )
+        _, _, encryption_method = await _get_field_config_and_type(model_name, field_name)
+        method = (encryption_method or "none").strip().lower()
+
+        stream, metadata = s3.get_file_stream(path)
+        if stream is None:
+            raise HTTPException(status_code=404, detail="File not found or inaccessible")
+        try:
+            raw_bytes = stream.read()
+        finally:
+            try:
+                stream.close()
+            except Exception:
+                pass
+
+        if method in ("xor_cipher", "aes"):
+            from utils.field_encryption import decrypt_file_content
+            decrypted = decrypt_file_content(method, raw_bytes)
+            if decrypted is None:
+                raise HTTPException(status_code=500, detail="Decryption failed")
+            raw_bytes = decrypted
+
+        content_type = (metadata.get("content_type") or "application/octet-stream") if isinstance(metadata, dict) else "application/octet-stream"
+        return StreamingResponse(
+            BytesIO(raw_bytes),
+            media_type=content_type,
+            headers={"Content-Disposition": f'inline; filename="{os.path.basename(path)}"'},
+        )
+
+    # Signed URL (redirect or JSON)
+    presigned_url = s3.generate_presigned_url(path)
+    if not presigned_url:
+        raise HTTPException(status_code=500, detail="Could not generate signed URL")
+
+    if redirect:
+        return RedirectResponse(url=presigned_url)
+    return {"url": presigned_url}

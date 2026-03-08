@@ -27,11 +27,11 @@ NF0011/feature/side-bar-search-parent-child-auto-hide-sidebar-theme-google-auth
 NF0012/feature/two-user-switch-testing-and-fixes
 NF0013/feature/url-based-account-tracking-pat-allow-all-to-saas-admin-tenant-admin
 NF0014/feature/data-model-enhancements-import-export-auto-uuid-field-type
-
+NF0015/feature/data-model-encryption-fields-file-or-image-field-support-thumbnail-handling
 current,
 ======
-data model-encryption of fields, file/image field support on data models api,
-thumbnail handling,done
+NF0016/feature/file-encryption-on-behalf-of-field-value-encryption
+
 Edge Device Agent (EDA)
 
 Android Agent : Native Kotlin

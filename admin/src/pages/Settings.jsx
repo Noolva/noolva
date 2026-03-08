@@ -265,7 +265,19 @@ export default function Settings() {
       setLoading(true);
       try {
         const res = await api.getSettingsDefinitions({ scope: "global" });
-        const rows = res?.settings || [];
+        let rows = res?.settings || [];
+        // Load options for settings that use options_source: row_exposure_modes (e.g. current_user_mode)
+        try {
+          const modesRes = await api.getRowExposureModes();
+          const options = modesRes?.options || [];
+          rows = rows.map((r) => {
+            const cfg = typeof r.field_config_json === "string" ? (() => { try { return JSON.parse(r.field_config_json); } catch { return {}; } })() : (r.field_config_json || {});
+            if (cfg.options_source === "row_exposure_modes" && options.length) {
+              return { ...r, field_config_json: { ...cfg, options } };
+            }
+            return r;
+          });
+        } catch (_) {}
         if (!mounted) return;
         setSettingsRows(rows);
         setActiveGroup(rows?.[0]?.group_name || null);
@@ -524,6 +536,8 @@ export default function Settings() {
     }));
   }, [settingsRows]);
 
+  const USER_SCOPED_SETTING_KEYS = ["current_user_mode"];
+
   const saveGroup = async (groupName) => {
     setSaving((prev) => ({ ...prev, [groupName]: true }));
     try {
@@ -537,9 +551,19 @@ export default function Settings() {
           }
         });
       }
-      await api.updateSettings({ scope: "global", settings: groupSettings });
+      const userScoped = {};
+      const globalScoped = {};
+      Object.entries(groupSettings).forEach(([k, v]) => {
+        if (USER_SCOPED_SETTING_KEYS.includes(k)) userScoped[k] = v;
+        else globalScoped[k] = v;
+      });
+      if (Object.keys(userScoped).length) {
+        await api.updateSettings({ scope: "user", settings: userScoped });
+      }
+      if (Object.keys(globalScoped).length) {
+        await api.updateSettings({ scope: "global", settings: globalScoped });
+      }
       msgApi.success(`Settings saved for ${groupName}`);
-      // Update initial values after save
       setInitialValues((prev) => ({ ...prev, ...groupSettings }));
     } catch (e) {
       msgApi.error(e?.message || `Failed to save settings for ${groupName}`);
