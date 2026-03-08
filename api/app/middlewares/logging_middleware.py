@@ -24,16 +24,19 @@ class LoggingMiddleware(BaseHTTPMiddleware):
         user_info = "anonymous"
         auth_header = request.headers.get("Authorization", "")
         if auth_header.startswith("Bearer "):
-            try:
-                token = auth_header.replace("Bearer ", "")
-                # Decode token to get user info (without verification for logging)
-                import jwt
-                # Get secret from auth module (same as auth middleware)
-                from middlewares.auth import SECRET_KEY
-                payload = jwt.decode(token, SECRET_KEY, algorithms=["HS256"], options={"verify_signature": False})
-                user_info = payload.get("username", f"user_id:{payload.get('user_id', 'unknown')}")
-            except Exception:
-                pass
+            token = auth_header.replace("Bearer ", "").strip()
+            # PAT tokens are not JWT; don't try to decode them
+            from middlewares.auth import PAT_PREFIX
+            if token.startswith(PAT_PREFIX):
+                user_info = "pat"
+            else:
+                try:
+                    import jwt
+                    from middlewares.auth import SECRET_KEY
+                    payload = jwt.decode(token, SECRET_KEY, algorithms=["HS256"], options={"verify_signature": False})
+                    user_info = payload.get("username", f"user_id:{payload.get('user_id', 'unknown')}")
+                except Exception:
+                    pass
         
         # Process request - let exceptions propagate to exception handlers
         response = await call_next(request)

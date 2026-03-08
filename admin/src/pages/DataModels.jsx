@@ -155,12 +155,13 @@ const DataModels = () => {
     const loadModelFields = async (modelId) => {
         try {
             const response = await api.getDataModel(modelId);
-            // Filter out system fields (idate, created_by, last_updated) from UI display
+            // Filter out system fields (idate, created_by, last_updated, row_exposure_mode_id) from UI display
             const allFields = response.fields || [];
             const visibleFields = allFields.filter(f =>
                 f.field_name !== 'idate' &&
                 f.field_name !== 'created_by' &&
-                f.field_name !== 'last_updated'
+                f.field_name !== 'last_updated' &&
+                f.field_name !== 'row_exposure_mode_id'
             );
             setFields(visibleFields);
         } catch (error) {
@@ -197,12 +198,13 @@ const DataModels = () => {
                 is_active: response.is_active,
                 description: response.description,
             });
-            // Filter out system fields (idate, created_by, last_updated) from UI display
+            // Filter out system fields (idate, created_by, last_updated, row_exposure_mode_id) from UI display
             const allFields = response.fields || [];
             const visibleFields = allFields.filter(f =>
                 f.field_name !== 'idate' &&
                 f.field_name !== 'created_by' &&
-                f.field_name !== 'last_updated'
+                f.field_name !== 'last_updated' &&
+                f.field_name !== 'row_exposure_mode_id'
             );
             setFields(visibleFields);
             setModalVisible(true);

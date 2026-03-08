@@ -131,7 +131,7 @@ class LoginService:
         """
         user = await PostgresDB.fetchrow(
             """
-            SELECT user_id, username, password, user_type, is_super_admin, enable_2fa, mfa_secret
+            SELECT user_id, user_uuid, username, password, user_type, is_super_admin, enable_2fa, mfa_secret
             FROM public.users WHERE user_id = $1
             """,
             user_id
@@ -149,6 +149,7 @@ class LoginService:
                 raise ERPError("Invalid or expired two-factor code", ErrorType.AUTHENTICATION_ERROR)
         token_payload = {
             "user_id": user["user_id"],
+            "user_uuid": str(user["user_uuid"]) if user.get("user_uuid") is not None else None,
             "username": user["username"],
             "user_type": user["user_type"],
             "is_super_admin": user["is_super_admin"],
@@ -194,7 +195,7 @@ class LoginService:
         """
         # 1. Fetch User - support username, email, or phone; include enable_2fa for 2FA flow
         query = """
-            SELECT user_id, username, password, email, phone, user_type, active_status, is_super_admin, enable_2fa, mfa_secret
+            SELECT user_id, user_uuid, username, password, email, phone, user_type, active_status, is_super_admin, enable_2fa, mfa_secret
             FROM public.users
             WHERE username = $1 OR email = $1 OR phone = $1
         """
@@ -250,6 +251,7 @@ class LoginService:
         # 5. No 2FA: generate token and create session
         token_payload = {
             "user_id": user["user_id"],
+            "user_uuid": str(user["user_uuid"]) if user.get("user_uuid") is not None else None,
             "username": user["username"],
             "user_type": user["user_type"],
             "is_super_admin": user["is_super_admin"],
@@ -292,7 +294,7 @@ class LoginService:
         """
         user = await PostgresDB.fetchrow(
             """
-            SELECT user_id, username, user_type, is_super_admin, enable_2fa, mfa_secret
+            SELECT user_id, user_uuid, username, user_type, is_super_admin, enable_2fa, mfa_secret
             FROM public.users WHERE user_id = $1
             """,
             user_id,
@@ -305,6 +307,7 @@ class LoginService:
             raise ERPError("Invalid or expired two-factor code", ErrorType.AUTHENTICATION_ERROR)
         token_payload = {
             "user_id": user["user_id"],
+            "user_uuid": str(user["user_uuid"]) if user.get("user_uuid") is not None else None,
             "username": user["username"],
             "user_type": user["user_type"],
             "is_super_admin": user["is_super_admin"],
@@ -345,7 +348,7 @@ class LoginService:
         Authenticates via Google Email. No auto-signup.
         """
         query = """
-            SELECT user_id, username, user_type, active_status, is_super_admin 
+            SELECT user_id, user_uuid, username, user_type, active_status, is_super_admin 
             FROM public.users 
             WHERE username = $1 OR email = $1
         """
@@ -359,6 +362,7 @@ class LoginService:
 
         token_payload = {
             "user_id": user["user_id"],
+            "user_uuid": str(user["user_uuid"]) if user.get("user_uuid") is not None else None,
             "username": user["username"],
             "user_type": user["user_type"],
             "is_super_admin": user["is_super_admin"],

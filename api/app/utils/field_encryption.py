@@ -4,6 +4,9 @@ Data model field encryption: XOR cipher and AES (same as EncryptionService).
 Used by auto-crud for fields with encryption_method = 'xor_cipher' or 'aes'.
 AES uses the same key (ENCRYPTION_KEY) as login credentials and other app secrets.
 See ENCRYPTION_SPEC.md in this directory for algorithm details so other apps can decrypt.
+
+For file/image fields with encryption: encrypt the file content (bytes), not the DB column value.
+Use encrypt_file_content / decrypt_file_content for binary data.
 """
 import base64
 from typing import Optional
@@ -92,3 +95,56 @@ def decrypt_field_value(
         out = aes_decrypt_field(encrypted_value)
         return out if out is not None else encrypted_value
     return encrypted_value
+
+
+# --- File content encryption (for file/image fields: encrypt bytes, not the path) ---
+
+def xor_encrypt_bytes(data: bytes, key: str = XOR_DEFAULT_KEY) -> bytes:
+    """Encrypt raw bytes with XOR cipher. Key is repeated to match data length."""
+    if not data:
+        return data
+    key_bytes = (key or XOR_DEFAULT_KEY).encode("utf-8")
+    return bytes([b ^ key_bytes[i % len(key_bytes)] for i, b in enumerate(data)])
+
+
+def xor_decrypt_bytes(data: bytes, key: str = XOR_DEFAULT_KEY) -> bytes:
+    """Decrypt bytes encrypted with xor_encrypt_bytes (XOR is symmetric)."""
+    return xor_encrypt_bytes(data, key)
+
+
+def encrypt_file_content(method: str, data: bytes, xor_key: str = XOR_DEFAULT_KEY) -> Optional[bytes]:
+    """
+    Encrypt file/content bytes by method ('xor_cipher' or 'aes').
+    Returns encrypted bytes to store in S3. For 'aes', format is 12-byte nonce + ciphertext.
+    Returns None for None/empty or method 'none'.
+    """
+    if data is None or method == "none" or not method:
+        return data
+    method = (method or "").strip().lower()
+    if method == "xor_cipher":
+        return xor_encrypt_bytes(data, xor_key)
+    if method == "aes":
+        from utils.encryption_service import get_encryption_service
+        enc = get_encryption_service()
+        return enc.encrypt_bytes(data)
+    return data
+
+
+def decrypt_file_content(method: str, data: bytes, xor_key: str = XOR_DEFAULT_KEY) -> Optional[bytes]:
+    """
+    Decrypt file/content bytes by method ('xor_cipher' or 'aes').
+    Returns decrypted bytes. On failure returns None.
+    """
+    if data is None or method == "none" or not method:
+        return data
+    method = (method or "").strip().lower()
+    if method == "xor_cipher":
+        return xor_decrypt_bytes(data, xor_key)
+    if method == "aes":
+        from utils.encryption_service import get_encryption_service
+        enc = get_encryption_service()
+        try:
+            return enc.decrypt_bytes(data)
+        except Exception:
+            return None
+    return data

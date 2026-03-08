@@ -283,8 +283,9 @@ BEGIN
     ('Security', 'password_min_length', 'Minimum Password Length', 'Enforced complexity', ft_number, '8', '8', 'global', true, '{"min":6,"max":64,"step":1}'::jsonb),
     ('Security', 'enable_2fa', 'Enable 2FA', 'Allow users to enable Two-Factor Auth', ft_bool, 'false', 'false', 'global', true, '{}'::jsonb),
     ('Security', 'idle_timeout_minutes', 'Idle session lock (minutes)', 'Lock session after this many minutes of inactivity; user must re-enter password (and 2FA if enabled). Use -1 for no lock.', ft_duration, '15', '15', 'global', true, '{"min":-1,"max":1440,"step":1,"unit":"minutes"}'::jsonb),
-    ('UI', 'auto_hide_sidebar', 'Auto Hide Sidebar', 'When Yes, the app sidebar is hidden by default.', ft_bool, 'false', 'false', 'global', true, '{}'::jsonb)
-    ON CONFLICT DO NOTHING;
+    ('UI', 'auto_hide_sidebar', 'Auto Hide Sidebar', 'When Yes, the app sidebar is hidden by default.', ft_bool, 'false', 'false', 'global', true, '{}'::jsonb),
+    ('General', 'current_user_mode', 'Current User Mode', 'When set, auto CRUD list returns only rows whose row_exposure_mode matches this mode and expose_data is Yes. Null = show all.', ft_single_choice, NULL, NULL, 'global', true, '{"options_source": "row_exposure_modes"}'::jsonb)
+    ON CONFLICT (setting_key, tenant_id) WHERE user_uuid IS NULL DO NOTHING;
 END $$;
 
 -- ==========================================
