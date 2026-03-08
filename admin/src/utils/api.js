@@ -484,6 +484,11 @@ export const api = {
         return response.data;
     },
 
+    getRowExposureModes: async () => {
+        const response = await axiosInstance.get("/settings/row-exposure-modes");
+        return response.data;
+    },
+
     // Themes
     getThemes: async ({ scope = "saas", user_id = null, tenant_id = null } = {}) => {
         const params = { scope };

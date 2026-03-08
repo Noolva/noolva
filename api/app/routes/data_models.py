@@ -12,6 +12,7 @@ from classes.postgres_db import PostgresDB
 from datetime import datetime, date
 import json
 import re
+import uuid
 import time
 import logging
 
@@ -173,6 +174,34 @@ def _coerce_value_for_db(type_code: Optional[str], actual_db_type: Optional[str]
     except (ValueError, TypeError):
         pass
     return value
+
+
+def _coerce_filter_value(
+    field_name: str,
+    raw_value: Any,
+    field_type_map: Dict[str, Tuple[Optional[str], Optional[str]]],
+) -> Any:
+    """
+    Coerce a filter value (e.g. from query param or POST body) for use in WHERE clause.
+    Handles integer, UUID, date/datetime, and leaves the rest to the DB.
+    """
+    if raw_value is None or (isinstance(raw_value, str) and raw_value.strip() == ""):
+        return None
+    tc, db_type = field_type_map.get(field_name, (None, None))
+    type_code = (tc or "").strip().lower()
+    actual_db_type = (db_type or "").upper()
+    if actual_db_type in ("INTEGER", "BIGINT", "SMALLINT", "SERIAL", "BIGSERIAL"):
+        try:
+            return int(raw_value)
+        except (ValueError, TypeError):
+            return raw_value
+    if actual_db_type == "UUID" or type_code == "auto_uuid":
+        try:
+            s = str(raw_value).strip()
+            return uuid.UUID(s) if s else None
+        except (ValueError, TypeError, AttributeError):
+            return raw_value
+    return _coerce_value_for_db(tc, db_type, raw_value)
 
 
 def _normalize_user_values(raw: Any) -> List[str]:
@@ -711,6 +740,8 @@ async def create_data_model(
             columns.append("created_by INTEGER REFERENCES public.users(user_id)")
             columns.append("idate TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP NOT NULL")
             columns.append("last_updated TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP NOT NULL")
+            # Row exposure: link to row_exposure_modes for user-mode filtering in auto CRUD
+            columns.append("row_exposure_mode_id INTEGER REFERENCES public.row_exposure_modes(exposure_mode_id)")
             
             create_table_sql = f'CREATE TABLE public."{payload.table_name}" ({", ".join(columns)})'
             
@@ -857,6 +888,30 @@ async def create_data_model(
                 "none",
                 None,
                 system_fields_start_order + 2
+            )
+        
+        # Insert row_exposure_mode_id field (hidden in UI like idate/last_updated)
+        if integer_field_type_id:
+            await PostgresDB.execute(
+                """
+                INSERT INTO public.data_model_fields (
+                    model_id, field_name, display_name, field_type_id,
+                    field_config_json, is_required, is_unique, is_primary_key,
+                    default_value, encryption_method, ui_component, order_no
+                ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
+                """,
+                model_id,
+                "row_exposure_mode_id",
+                "Row Exposure Mode",
+                integer_field_type_id,
+                "{}",
+                False,
+                False,
+                False,
+                None,
+                "none",
+                None,
+                system_fields_start_order + 3
             )
         
         # Insert api_endpoints for auto_crud (GET, POST, PUT, DELETE)
@@ -1786,6 +1841,36 @@ def _user_bypasses_row_and_field_policies(user: Optional[Dict[str, Any]]) -> boo
     return ut in ("saas_admin", "tenant_admin")
 
 
+async def _get_current_user_mode_id(user: Optional[Dict[str, Any]]) -> Optional[int]:
+    """Return the current user's 'current_user_mode' setting (exposure_mode_id) or None."""
+    if not user:
+        return None
+    user_uuid = user.get("user_uuid")
+    if not user_uuid:
+        return None
+    row = await PostgresDB.fetchrow(
+        """
+        SELECT value FROM public.settings
+        WHERE setting_key = 'current_user_mode'
+          AND (user_uuid = $1 OR user_uuid IS NULL)
+        ORDER BY user_uuid DESC NULLS LAST
+        LIMIT 1
+        """,
+        user_uuid,
+    )
+    if not row or row.get("value") is None:
+        return None
+    try:
+        v = row["value"]
+        if isinstance(v, (int, float)):
+            return int(v)
+        if isinstance(v, str):
+            return int(v.strip()) if v.strip() else None
+        return None
+    except (TypeError, ValueError):
+        return None
+
+
 async def _build_row_policy_where(
     model_id: int,
     action_bit: int,
@@ -1843,11 +1928,15 @@ def _apply_field_masking(
     requested_fields: List[str],
     readable_fields: set,
     encryption_by_field: Dict[str, str],
+    file_image_encryption_fields: Optional[set] = None,
 ) -> List[Dict[str, Any]]:
     """
     Ensures every requested field exists in each row; unauthorized fields become "AuthFailed".
     Decrypts values for readable encrypted fields when possible (same key as credentials).
+    For file/image fields with encryption, the DB stores the path only; file content is encrypted in S3.
+    So we do not decrypt the path (leave as-is) when field is in file_image_encryption_fields.
     """
+    file_image_encryption_fields = file_image_encryption_fields or set()
     out: List[Dict[str, Any]] = []
     for r in rows or []:
         item: Dict[str, Any] = {}
@@ -1857,11 +1946,96 @@ def _apply_field_masking(
                 continue
 
             val = r.get(f)
+            # File/image encrypted fields: path is stored plain; only file content in S3 is encrypted
+            if f in file_image_encryption_fields:
+                item[f] = val
+                continue
             method = encryption_by_field.get(f) or "none"
             decrypted = field_encryption.decrypt_field_value(method, str(val) if val is not None else None)
             item[f] = decrypted if decrypted is not None else val
         out.append(item)
     return out
+
+
+async def _auto_list_records_impl(
+    model: Dict[str, Any],
+    fields_meta: List[Dict[str, Any]],
+    request: Request,
+    user: Optional[Dict[str, Any]],
+    limit: int,
+    offset: int,
+    requested_fields: List[str],
+    filter_dict: Dict[str, Any],
+) -> Dict[str, Any]:
+    """
+    Shared list logic for GET (query params) and POST (body.filter) list-with-filter.
+    """
+    model_name = model["model_name"]
+    table_name = model.get("table_name")
+    model_id = model["model_id"]
+    all_fields = [f["field_name"] for f in fields_meta] if fields_meta else []
+    encryption_by_field = {f["field_name"]: f.get("encryption_method") for f in fields_meta or []}
+    field_type_map = {f["field_name"]: (f.get("type_code"), f.get("actual_db_type")) for f in fields_meta or []}
+
+    # Coerce filter values (POST may send raw types; ensure DB-compatible)
+    coerced_filter: Dict[str, Any] = {}
+    for k, v in filter_dict.items():
+        if k not in all_fields or not _is_safe_identifier(k):
+            raise HTTPException(status_code=400, detail=f"Invalid filter field: {k}")
+        coerced_filter[k] = _coerce_filter_value(k, v, field_type_map)
+
+    where_sql, where_args = await _build_row_policy_where(model_id, ACTION_READ, user, request)
+    for k, v in coerced_filter.items():
+        clause = f'"{k}" = ${len(where_args) + 1}'
+        where_sql = where_sql + (" AND " + clause if where_sql else " WHERE " + clause)
+        where_args.append(v)
+
+    use_exposure_join = False
+    user_mode_id = await _get_current_user_mode_id(user) if user else None
+    if user_mode_id is not None and "row_exposure_mode_id" in all_fields:
+        use_exposure_join = True
+
+    readable_fields = set(requested_fields)
+    if user and not _user_bypasses_row_and_field_policies(user):
+        role_ids = await _get_user_role_ids(user["user_id"], user.get("company_id"))
+        masks = await _get_field_permission_masks(model_id, role_ids)
+        readable_fields = {f for f in requested_fields if (masks.get(f, 0) & ACTION_READ) != 0}
+
+    pk_col = await _get_primary_key_column(table_name)
+    select_fields = [f for f in requested_fields if f in readable_fields]
+    if pk_col and pk_col not in select_fields:
+        select_fields = [pk_col] + select_fields
+    if not select_fields:
+        fallback = pk_col or (all_fields[0] if all_fields else None)
+        if not fallback:
+            raise HTTPException(status_code=500, detail="Model has no fields")
+        select_fields = [fallback]
+
+    if use_exposure_join:
+        cols_sql = ", ".join([f't."{c}"' for c in select_fields])
+        from_clause = f'public."{table_name}" t'
+        exposure_condition = "(t.row_exposure_mode_id IS NULL OR t.row_exposure_mode_id = 0 OR t.row_exposure_mode_id = $%d)" % (len(where_args) + 1)
+        exposure_where = (" WHERE " + exposure_condition) if not where_sql else (" AND " + exposure_condition)
+        args = list(where_args) + [user_mode_id]
+    else:
+        cols_sql = ", ".join([f'"{c}"' for c in select_fields])
+        from_clause = f'public."{table_name}"'
+        exposure_where = ""
+        args = list(where_args)
+    args.append(limit)
+    args.append(offset)
+    limit_idx = len(args) - 1
+    offset_idx = len(args)
+    sql = f'SELECT {cols_sql} FROM {from_clause}{where_sql}{exposure_where} LIMIT ${limit_idx} OFFSET ${offset_idx}'
+    raw_rows = await PostgresDB.fetch(sql, *args)
+
+    file_image_encryption_fields = {
+        f["field_name"] for f in (fields_meta or [])
+        if (f.get("type_code") or "").strip().lower() in ("file", "image")
+        and (f.get("encryption_method") or "").strip().lower() in ("xor_cipher", "aes")
+    }
+    masked = _apply_field_masking(raw_rows, requested_fields, readable_fields, encryption_by_field, file_image_encryption_fields)
+    return {"model_name": model_name, "records": masked, "limit": limit, "offset": offset}
 
 
 @router.get("/auto/{model_name}/records")
@@ -1875,6 +2049,7 @@ async def auto_list_records(
 ):
     """
     Automatic READ (list) endpoint for models registered in public.data_models.
+    Supports limit, offset, fields, and optional filter query params (field name = value).
     Enforces model_row_access_policies + field_permissions masking.
     """
     model = await _get_model_by_name(model_name)
@@ -1894,56 +2069,25 @@ async def auto_list_records(
     model_id = model["model_id"]
     fields_meta = await _get_model_fields_meta(model_id)
     all_fields = [f["field_name"] for f in fields_meta] if fields_meta else []
-    encryption_by_field = {f["field_name"]: f.get("encryption_method") for f in fields_meta or []}
 
     if fields:
         requested_fields = [x.strip() for x in fields.split(",") if x.strip()]
     else:
         requested_fields = all_fields
 
-    # Validate identifiers and existence in model fields
     for f in requested_fields:
         if not _is_safe_identifier(f) or f not in all_fields:
             raise HTTPException(status_code=400, detail=f"Invalid field requested: {f}")
 
-    # Row-level policies (saas_admin, tenant_admin bypass)
-    where_sql, where_args = await _build_row_policy_where(model_id, ACTION_READ, user, request)
+    # GET filters: any query param that is a model field (not limit/offset/fields) = equality filter
+    field_type_map = {f["field_name"]: (f.get("type_code"), f.get("actual_db_type")) for f in fields_meta or []}
+    reserved = {"limit", "offset", "fields"}
+    filter_dict = {}
+    for key in request.query_params.keys():
+        if key in all_fields and key not in reserved and _is_safe_identifier(key):
+            filter_dict[key] = _coerce_filter_value(key, request.query_params.get(key), field_type_map)
 
-    # Field-level permissions (public requests without token can read all fields; admins bypass)
-    readable_fields = set(requested_fields)
-    if user and not _user_bypasses_row_and_field_policies(user):
-        role_ids = await _get_user_role_ids(user["user_id"], user.get("company_id"))
-        masks = await _get_field_permission_masks(model_id, role_ids)
-        readable_fields = {f for f in requested_fields if (masks.get(f, 0) & ACTION_READ) != 0}
-
-    # Always select at least one column for paging; use primary key if present
-    pk_col = await _get_primary_key_column(table_name)
-    select_fields = [f for f in requested_fields if f in readable_fields]
-    if pk_col and pk_col not in select_fields:
-        select_fields = [pk_col] + select_fields
-
-    if not select_fields:
-        # Fallback: select primary key or any safe column from model fields
-        fallback = pk_col or (all_fields[0] if all_fields else None)
-        if not fallback:
-            raise HTTPException(status_code=500, detail="Model has no fields")
-        select_fields = [fallback]
-
-    # Build SQL
-    cols_sql = ", ".join([f'"{c}"' for c in select_fields])
-    # Append LIMIT/OFFSET placeholders
-    args = list(where_args)
-    args.append(limit)
-    args.append(offset)
-    limit_idx = len(args) - 1
-    offset_idx = len(args)
-
-    sql = f'SELECT {cols_sql} FROM public."{table_name}"{where_sql} LIMIT ${limit_idx} OFFSET ${offset_idx}'
-    raw_rows = await PostgresDB.fetch(sql, *args)
-
-    # Ensure we can return all requested fields (mask unauthorized)
-    masked = _apply_field_masking(raw_rows, requested_fields, readable_fields, encryption_by_field)
-    return {"model_name": model_name, "records": masked, "limit": limit, "offset": offset}
+    return await _auto_list_records_impl(model, fields_meta, request, user, limit, offset, requested_fields, filter_dict)
 
 
 @router.get("/auto/{model_name}/records/{record_id}")
@@ -1989,6 +2133,9 @@ async def auto_get_one_record(
             raise HTTPException(status_code=400, detail=f"Invalid field requested: {f}")
 
     where_sql, where_args = await _build_row_policy_where(model_id, ACTION_READ, user, request)
+    user_mode_id = await _get_current_user_mode_id(user) if user else None
+    use_exposure_filter = user_mode_id is not None and "row_exposure_mode_id" in all_fields
+
     readable_fields = set(requested_fields)
     if user and not _user_bypasses_row_and_field_policies(user):
         role_ids = await _get_user_role_ids(user["user_id"], user.get("company_id"))
@@ -2007,11 +2154,21 @@ async def auto_get_one_record(
     where = f'WHERE "{id_col}" = $1'
     if where_sql:
         where += " AND " + where_sql.replace(" WHERE ", "", 1)
+    if use_exposure_filter:
+        param_idx = len(args) + 1
+        # NULL or 0 = always expose; else show row if row_exposure_mode_id matches user's current_user_mode (e.g. private mode shows private rows)
+        where += f" AND (\"row_exposure_mode_id\" IS NULL OR \"row_exposure_mode_id\" = 0 OR \"row_exposure_mode_id\" = ${param_idx})"
+        args.append(user_mode_id)
     sql = f'SELECT {cols_sql} FROM public."{table_name}" {where} LIMIT 1'
     row = await PostgresDB.fetchrow(sql, *args)
     if not row:
         raise HTTPException(status_code=404, detail="Record not found (or not permitted)")
-    masked = _apply_field_masking([row], requested_fields, readable_fields, encryption_by_field)
+    file_image_encryption_fields = {
+        f["field_name"] for f in (fields_meta or [])
+        if (f.get("type_code") or "").strip().lower() in ("file", "image")
+        and (f.get("encryption_method") or "").strip().lower() in ("xor_cipher", "aes")
+    }
+    masked = _apply_field_masking([row], requested_fields, readable_fields, encryption_by_field, file_image_encryption_fields)
     return {"model_name": model_name, "record": masked[0] if masked else {}}
 
 
@@ -2019,13 +2176,54 @@ async def auto_get_one_record(
 async def auto_create_record(
     model_name: str,
     request: Request,
-    payload: AutoRecordPayload,
     authorization: Optional[str] = Header(None),
 ):
     """
-    Automatic CREATE endpoint (WRITE) for models registered in public.data_models.
-    Enforces model_row_access_policies + field_permissions.
+    Automatic CREATE (body with "data") or list-with-filter (body with "filter", no "data").
+    Create: body must be { "data": { ... } }. List-with-filter: body { "filter": { "<field>": <value>, ... }, optional "limit", "offset", "fields" }.
     """
+    try:
+        body = await request.json()
+    except Exception:
+        body = {}
+    if not isinstance(body, dict):
+        body = {}
+
+    # List-with-filter: POST with "filter" and no "data" → run filtered list (same as GET with filter params)
+    has_filter = isinstance(body.get("filter"), dict) and len(body.get("filter", {})) > 0
+    has_data = isinstance(body.get("data"), dict) and len(body.get("data", {})) > 0
+    if has_filter and not has_data:
+        model = await _get_model_by_name(model_name)
+        if not model:
+            raise HTTPException(status_code=404, detail="Model not found")
+        user = await resolve_bearer_to_user(authorization)
+        if not model.get("is_public") and not user:
+            raise HTTPException(status_code=401, detail="Authentication required")
+        if user:
+            _assert_user_type_allowed(user)
+        if not model.get("table_name") or not _is_safe_identifier(model.get("table_name")):
+            raise HTTPException(status_code=500, detail="Invalid model configuration")
+        fields_meta = await _get_model_fields_meta(model["model_id"])
+        all_fields = [f["field_name"] for f in fields_meta] if fields_meta else []
+        limit = body.get("limit", 100)
+        offset = body.get("offset", 0)
+        if not isinstance(limit, int) or limit < 1 or limit > 1000:
+            limit = 100
+        if not isinstance(offset, int) or offset < 0:
+            offset = 0
+        fields_param = body.get("fields")
+        requested_fields = [x.strip() for x in fields_param.split(",") if x.strip()] if isinstance(fields_param, str) and fields_param.strip() else all_fields
+        for f in requested_fields:
+            if not _is_safe_identifier(f) or f not in all_fields:
+                raise HTTPException(status_code=400, detail=f"Invalid field requested: {f}")
+        filter_dict = body.get("filter", {})
+        return await _auto_list_records_impl(model, fields_meta, request, user, limit, offset, requested_fields, filter_dict)
+
+    # Create: require "data"
+    data = body.get("data") or {}
+    if not isinstance(data, dict) or not data:
+        raise HTTPException(status_code=400, detail="data must be a non-empty object (use filter for list-with-filter)")
+
     model = await _get_model_by_name(model_name)
     if not model:
         raise HTTPException(status_code=404, detail="Model not found")
@@ -2043,8 +2241,6 @@ async def auto_create_record(
     fields_meta = await _get_model_fields_meta(model_id)
     all_fields = [f["field_name"] for f in fields_meta] if fields_meta else []
     encryption_by_field = {f["field_name"]: f.get("encryption_method") for f in fields_meta or []}
-
-    data = payload.data or {}
     if not isinstance(data, dict) or not data:
         raise HTTPException(status_code=400, detail="data must be a non-empty object")
 
@@ -2103,9 +2299,15 @@ async def auto_create_record(
         data[k] = _coerce_value_for_db(tc, db_type, v)
 
     # Apply encryption (same key as credentials / EncryptionService).
-    # Only overwrite when we actually encrypt; for method "none", encrypt_field_value returns the
-    # value as-is (string), which would overwrite coerced date/datetime objects and break asyncpg.
+    # Exception: file/image fields with encryption store the path in DB as plain text; only file content in S3 is encrypted.
+    file_image_encryption_fields = {
+        f["field_name"] for f in (fields_meta or [])
+        if (f.get("type_code") or "").strip().lower() in ("file", "image")
+        and (f.get("encryption_method") or "").strip().lower() in ("xor_cipher", "aes")
+    }
     for k, v in list(data.items()):
+        if k in file_image_encryption_fields:
+            continue  # Do not encrypt path for file/image; content is encrypted on upload
         method = (encryption_by_field.get(k) or "none").strip().lower()
         if method in ("none", "") or v is None:
             continue
@@ -2125,7 +2327,7 @@ async def auto_create_record(
     fields_param = ",".join(all_fields)
     requested_fields = [x.strip() for x in fields_param.split(",") if x.strip()]
     readable_fields = set(requested_fields) if masks is None else {f for f in requested_fields if (masks.get(f, 0) & ACTION_READ) != 0}
-    masked = _apply_field_masking([inserted or {}], requested_fields, readable_fields, encryption_by_field)
+    masked = _apply_field_masking([inserted or {}], requested_fields, readable_fields, encryption_by_field, file_image_encryption_fields)
     return {"model_name": model_name, "record": masked[0] if masked else {}}
 
 
@@ -2195,8 +2397,15 @@ async def auto_update_record(
         updates[k] = _coerce_value_for_db(tc, db_type, v)
 
     # Apply encryption (same key as credentials / EncryptionService).
-    # Only overwrite when we actually encrypt (see INSERT comment re date/datetime).
+    # Exception: file/image fields with encryption: do not encrypt path; only file content in S3 is encrypted.
+    file_image_encryption_fields = {
+        f["field_name"] for f in (fields_meta or [])
+        if (f.get("type_code") or "").strip().lower() in ("file", "image")
+        and (f.get("encryption_method") or "").strip().lower() in ("xor_cipher", "aes")
+    }
     for k, v in list(updates.items()):
+        if k in file_image_encryption_fields:
+            continue
         method = (encryption_by_field.get(k) or "none").strip().lower()
         if method in ("none", "") or v is None:
             continue
@@ -2272,7 +2481,7 @@ async def auto_update_record(
         role_ids = await _get_user_role_ids(user["user_id"], user.get("company_id"))
         masks = await _get_field_permission_masks(model_id, role_ids)
         readable_fields = {f for f in requested_fields if (masks.get(f, 0) & ACTION_READ) != 0}
-    masked = _apply_field_masking([updated], requested_fields, readable_fields, encryption_by_field)
+    masked = _apply_field_masking([updated], requested_fields, readable_fields, encryption_by_field, file_image_encryption_fields)
     return {"model_name": model_name, "record": masked[0] if masked else {}}
 
 
