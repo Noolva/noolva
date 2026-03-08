@@ -2,7 +2,7 @@
 -- PostgreSQL database dump
 --
 
-\restrict vFTiYNhj3apxKkhz3NJ01f03gJIuKNnMAqXzso3ITYboCwMnb49Kpr3zggodNMx
+\restrict bomdYDkcpi1Aa91RfJM5lf9LeBKg9uzAk2rQzw7yojROdMcOjgD3Qjn0HfYlr4W
 
 -- Dumped from database version 16.11 (Ubuntu 16.11-0ubuntu0.24.04.1)
 -- Dumped by pg_dump version 18.1
@@ -268,7 +268,8 @@ CREATE TABLE public.alarm_sounds (
     last_updated timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
     alarm_file_path character varying(255),
     sound_title character varying(100),
-    is_default boolean
+    is_default boolean,
+    row_exposure_mode_id integer
 );
 
 
@@ -313,7 +314,8 @@ CREATE TABLE public.alarms (
     message text,
     status character varying(255) DEFAULT 'pending'::character varying NOT NULL,
     acknowledged_at timestamp with time zone,
-    entity_id numeric
+    entity_id numeric,
+    row_exposure_mode_id integer
 );
 
 
@@ -647,7 +649,8 @@ CREATE TABLE public.business_addresses (
     postal_code character varying(20) NOT NULL,
     is_primary boolean DEFAULT false,
     map_location point,
-    location integer
+    location integer,
+    row_exposure_mode_id integer
 );
 
 
@@ -691,7 +694,8 @@ CREATE TABLE public.business_contacts (
     is_primary boolean DEFAULT false,
     is_verified boolean DEFAULT false,
     verified_at timestamp with time zone,
-    notes text
+    notes text,
+    row_exposure_mode_id integer
 );
 
 
@@ -734,7 +738,8 @@ CREATE TABLE public.businesses (
     website character varying(255),
     is_active boolean,
     gst_number character varying(100),
-    notes text
+    notes text,
+    row_exposure_mode_id integer
 );
 
 
@@ -823,7 +828,8 @@ CREATE TABLE public.companies (
     is_active boolean DEFAULT true,
     created_by integer,
     idate timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
-    last_updated timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL
+    last_updated timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
+    row_exposure_mode_id integer
 );
 
 
@@ -1270,7 +1276,8 @@ CREATE TABLE public.locations (
     state character varying(150) NOT NULL,
     country character varying(150) NOT NULL,
     display_name character varying(300) NOT NULL,
-    is_active boolean DEFAULT true NOT NULL
+    is_active boolean DEFAULT true NOT NULL,
+    row_exposure_mode_id integer
 );
 
 
@@ -1528,7 +1535,8 @@ CREATE TABLE public.my_projects (
     start_date date,
     end_date date,
     created_at timestamp with time zone DEFAULT '2026-02-14 22:26:10.746709+00'::timestamp with time zone,
-    is_active boolean DEFAULT true
+    is_active boolean DEFAULT true,
+    row_exposure_mode_id integer
 );
 
 
@@ -1586,7 +1594,8 @@ CREATE TABLE public.my_tasks (
     task_uuid uuid DEFAULT gen_random_uuid(),
     alarm_id integer,
     person_id integer,
-    business_id integer
+    business_id integer,
+    row_exposure_mode_id integer
 );
 
 
@@ -1629,7 +1638,8 @@ CREATE TABLE public.password_vault (
     recovery_info text,
     notes text,
     additional_secrets jsonb,
-    service_uuid uuid DEFAULT gen_random_uuid()
+    service_uuid uuid DEFAULT gen_random_uuid(),
+    row_exposure_mode_id integer
 );
 
 
@@ -1673,7 +1683,8 @@ CREATE TABLE public.person_addresses (
     postal_code character varying(20) NOT NULL,
     is_primary boolean DEFAULT false,
     map_location point,
-    location integer
+    location integer,
+    row_exposure_mode_id integer
 );
 
 
@@ -1717,8 +1728,7 @@ CREATE TABLE public.person_attachments (
     file_size numeric,
     mime_type character varying(100),
     description text,
-    is_private boolean DEFAULT true,
-    expiry_date date
+    row_exposure_mode_id integer
 );
 
 
@@ -1762,7 +1772,8 @@ CREATE TABLE public.person_business_roles (
     to_date date,
     is_active boolean DEFAULT true,
     ownership_percentage numeric,
-    notes text
+    notes text,
+    row_exposure_mode_id integer
 );
 
 
@@ -1806,7 +1817,8 @@ CREATE TABLE public.person_contacts (
     is_primary boolean DEFAULT false,
     is_verified boolean DEFAULT false,
     verified_at timestamp with time zone,
-    notes text
+    notes text,
+    row_exposure_mode_id integer
 );
 
 
@@ -1846,7 +1858,8 @@ CREATE TABLE public.person_relationships (
     person_id integer NOT NULL,
     related_person_id integer NOT NULL,
     relation_type character varying(255) NOT NULL,
-    notes text
+    notes text,
+    row_exposure_mode_id integer
 );
 
 
@@ -1932,7 +1945,8 @@ CREATE TABLE public.persons (
     marital_status character varying(255),
     anniversary_date date,
     notes text,
-    person_uuid uuid DEFAULT gen_random_uuid()
+    person_uuid uuid DEFAULT gen_random_uuid(),
+    row_exposure_mode_id integer
 );
 
 
@@ -1995,7 +2009,8 @@ CREATE TABLE public.products (
     test_file character varying(255),
     test_releative_roles integer,
     test_rich_text text,
-    test_icon character varying(255)
+    test_icon character varying(255),
+    row_exposure_mode_id integer
 );
 
 
@@ -2075,7 +2090,8 @@ CREATE TABLE public.roles (
     is_system_role boolean DEFAULT false,
     created_by integer,
     idate timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
-    last_updated timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL
+    last_updated timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
+    row_exposure_mode_id integer
 );
 
 
@@ -2104,6 +2120,42 @@ ALTER SEQUENCE public.roles_role_id_seq OWNED BY public.roles.role_id;
 
 
 --
+-- Name: row_exposure_modes; Type: TABLE; Schema: public; Owner: noolvan
+--
+
+CREATE TABLE public.row_exposure_modes (
+    exposure_mode_id integer NOT NULL,
+    name character varying(100),
+    description text,
+    expose_data boolean DEFAULT false
+);
+
+
+ALTER TABLE public.row_exposure_modes OWNER TO noolvan;
+
+--
+-- Name: row_exposure_modes_exposure_mode_id_seq; Type: SEQUENCE; Schema: public; Owner: noolvan
+--
+
+CREATE SEQUENCE public.row_exposure_modes_exposure_mode_id_seq
+    AS integer
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+ALTER SEQUENCE public.row_exposure_modes_exposure_mode_id_seq OWNER TO noolvan;
+
+--
+-- Name: row_exposure_modes_exposure_mode_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: noolvan
+--
+
+ALTER SEQUENCE public.row_exposure_modes_exposure_mode_id_seq OWNED BY public.row_exposure_modes.exposure_mode_id;
+
+
+--
 -- Name: settings; Type: TABLE; Schema: public; Owner: noolvan
 --
 
@@ -2120,7 +2172,8 @@ CREATE TABLE public.settings (
     tenant_id integer,
     is_built_in boolean DEFAULT false,
     last_updated timestamp with time zone DEFAULT CURRENT_TIMESTAMP,
-    field_config_json jsonb DEFAULT '{}'::jsonb
+    field_config_json jsonb DEFAULT '{}'::jsonb,
+    user_uuid uuid
 );
 
 
@@ -2160,7 +2213,8 @@ CREATE TABLE public.task_attachments (
     attachment_uuid uuid DEFAULT gen_random_uuid(),
     attachment_title character varying(100),
     file_path character varying(255),
-    task integer
+    task integer,
+    row_exposure_mode_id integer
 );
 
 
@@ -2203,7 +2257,8 @@ CREATE TABLE public.task_categories (
     color character varying(100),
     icon character varying(100),
     is_active boolean,
-    order_no numeric
+    order_no numeric,
+    row_exposure_mode_id integer
 );
 
 
@@ -2242,7 +2297,8 @@ CREATE TABLE public.task_comments (
     last_updated timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
     task integer,
     message text,
-    comment_title character varying(100)
+    comment_title character varying(100),
+    row_exposure_mode_id integer
 );
 
 
@@ -2286,7 +2342,8 @@ CREATE TABLE public.task_priorities (
     is_mandatory boolean DEFAULT false NOT NULL,
     is_ignorable boolean DEFAULT false NOT NULL,
     is_delegatable boolean DEFAULT false NOT NULL,
-    regret_level numeric DEFAULT '0'::numeric NOT NULL
+    regret_level numeric DEFAULT '0'::numeric NOT NULL,
+    row_exposure_mode_id integer
 );
 
 
@@ -2330,7 +2387,8 @@ CREATE TABLE public.task_sprints (
     end_date date,
     status character varying(255) DEFAULT 'planned'::character varying,
     completed_at timestamp with time zone,
-    is_active boolean DEFAULT true
+    is_active boolean DEFAULT true,
+    row_exposure_mode_id integer
 );
 
 
@@ -2372,7 +2430,8 @@ CREATE TABLE public.teams (
     manager_id integer,
     created_by integer,
     idate timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
-    last_updated timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL
+    last_updated timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
+    row_exposure_mode_id integer
 );
 
 
@@ -2506,7 +2565,8 @@ CREATE TABLE public.time_slots (
     applies_type character varying(255),
     applies_value character varying(20),
     priority_level numeric DEFAULT '1'::numeric,
-    description text
+    description text,
+    row_exposure_mode_id integer
 );
 
 
@@ -2700,7 +2760,8 @@ CREATE TABLE public.user_groups (
     company_id integer NOT NULL,
     created_by integer,
     idate timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
-    last_updated timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL
+    last_updated timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
+    row_exposure_mode_id integer
 );
 
 
@@ -2915,6 +2976,7 @@ CREATE TABLE public.users (
     enable_2fa boolean DEFAULT false,
     mfa_secret character varying(255),
     idle_timeout_minutes integer,
+    row_exposure_mode_id integer,
     CONSTRAINT users_active_status_check CHECK ((active_status = ANY (ARRAY[0, 1, 2]))),
     CONSTRAINT users_user_type_check CHECK (((user_type)::text = ANY ((ARRAY['saas_admin'::character varying, 'saas_employee'::character varying, 'saas_reseller'::character varying, 'saas_promoter'::character varying, 'tenant_admin'::character varying, 'tenant_user'::character varying, 'system'::character varying])::text[])))
 );
@@ -3332,6 +3394,13 @@ ALTER TABLE ONLY public.role_module_features ALTER COLUMN role_module_feature_id
 --
 
 ALTER TABLE ONLY public.roles ALTER COLUMN role_id SET DEFAULT nextval('public.roles_role_id_seq'::regclass);
+
+
+--
+-- Name: row_exposure_modes exposure_mode_id; Type: DEFAULT; Schema: public; Owner: noolvan
+--
+
+ALTER TABLE ONLY public.row_exposure_modes ALTER COLUMN exposure_mode_id SET DEFAULT nextval('public.row_exposure_modes_exposure_mode_id_seq'::regclass);
 
 
 --
@@ -4169,19 +4238,27 @@ ALTER TABLE ONLY public.roles
 
 
 --
+-- Name: row_exposure_modes row_exposure_modes_name_key; Type: CONSTRAINT; Schema: public; Owner: noolvan
+--
+
+ALTER TABLE ONLY public.row_exposure_modes
+    ADD CONSTRAINT row_exposure_modes_name_key UNIQUE (name);
+
+
+--
+-- Name: row_exposure_modes row_exposure_modes_pkey; Type: CONSTRAINT; Schema: public; Owner: noolvan
+--
+
+ALTER TABLE ONLY public.row_exposure_modes
+    ADD CONSTRAINT row_exposure_modes_pkey PRIMARY KEY (exposure_mode_id);
+
+
+--
 -- Name: settings settings_pkey; Type: CONSTRAINT; Schema: public; Owner: noolvan
 --
 
 ALTER TABLE ONLY public.settings
     ADD CONSTRAINT settings_pkey PRIMARY KEY (setting_id);
-
-
---
--- Name: settings settings_setting_key_tenant_id_key; Type: CONSTRAINT; Schema: public; Owner: noolvan
---
-
-ALTER TABLE ONLY public.settings
-    ADD CONSTRAINT settings_setting_key_tenant_id_key UNIQUE (setting_key, tenant_id);
 
 
 --
@@ -4852,10 +4929,31 @@ CREATE INDEX idx_settings_key ON public.settings USING btree (setting_key);
 
 
 --
+-- Name: idx_settings_key_tenant_user_global; Type: INDEX; Schema: public; Owner: noolvan
+--
+
+CREATE UNIQUE INDEX idx_settings_key_tenant_user_global ON public.settings USING btree (setting_key, tenant_id) WHERE (user_uuid IS NULL);
+
+
+--
+-- Name: idx_settings_key_tenant_user_specific; Type: INDEX; Schema: public; Owner: noolvan
+--
+
+CREATE UNIQUE INDEX idx_settings_key_tenant_user_specific ON public.settings USING btree (setting_key, tenant_id, user_uuid) WHERE (user_uuid IS NOT NULL);
+
+
+--
 -- Name: idx_settings_tenant; Type: INDEX; Schema: public; Owner: noolvan
 --
 
 CREATE INDEX idx_settings_tenant ON public.settings USING btree (tenant_id);
+
+
+--
+-- Name: idx_settings_user_uuid; Type: INDEX; Schema: public; Owner: noolvan
+--
+
+CREATE INDEX idx_settings_user_uuid ON public.settings USING btree (user_uuid);
 
 
 --
@@ -5083,11 +5181,27 @@ ALTER TABLE ONLY public.alarm_sounds
 
 
 --
+-- Name: alarm_sounds alarm_sounds_row_exposure_mode_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: noolvan
+--
+
+ALTER TABLE ONLY public.alarm_sounds
+    ADD CONSTRAINT alarm_sounds_row_exposure_mode_id_fkey FOREIGN KEY (row_exposure_mode_id) REFERENCES public.row_exposure_modes(exposure_mode_id);
+
+
+--
 -- Name: alarms alarms_created_by_fkey; Type: FK CONSTRAINT; Schema: public; Owner: noolvan
 --
 
 ALTER TABLE ONLY public.alarms
     ADD CONSTRAINT alarms_created_by_fkey FOREIGN KEY (created_by) REFERENCES public.users(user_id);
+
+
+--
+-- Name: alarms alarms_row_exposure_mode_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: noolvan
+--
+
+ALTER TABLE ONLY public.alarms
+    ADD CONSTRAINT alarms_row_exposure_mode_id_fkey FOREIGN KEY (row_exposure_mode_id) REFERENCES public.row_exposure_modes(exposure_mode_id);
 
 
 --
@@ -5195,6 +5309,14 @@ ALTER TABLE ONLY public.business_addresses
 
 
 --
+-- Name: business_addresses business_addresses_row_exposure_mode_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: noolvan
+--
+
+ALTER TABLE ONLY public.business_addresses
+    ADD CONSTRAINT business_addresses_row_exposure_mode_id_fkey FOREIGN KEY (row_exposure_mode_id) REFERENCES public.row_exposure_modes(exposure_mode_id);
+
+
+--
 -- Name: business_contacts business_contacts_created_by_fkey; Type: FK CONSTRAINT; Schema: public; Owner: noolvan
 --
 
@@ -5203,11 +5325,27 @@ ALTER TABLE ONLY public.business_contacts
 
 
 --
+-- Name: business_contacts business_contacts_row_exposure_mode_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: noolvan
+--
+
+ALTER TABLE ONLY public.business_contacts
+    ADD CONSTRAINT business_contacts_row_exposure_mode_id_fkey FOREIGN KEY (row_exposure_mode_id) REFERENCES public.row_exposure_modes(exposure_mode_id);
+
+
+--
 -- Name: businesses businesses_created_by_fkey; Type: FK CONSTRAINT; Schema: public; Owner: noolvan
 --
 
 ALTER TABLE ONLY public.businesses
     ADD CONSTRAINT businesses_created_by_fkey FOREIGN KEY (created_by) REFERENCES public.users(user_id);
+
+
+--
+-- Name: businesses businesses_row_exposure_mode_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: noolvan
+--
+
+ALTER TABLE ONLY public.businesses
+    ADD CONSTRAINT businesses_row_exposure_mode_id_fkey FOREIGN KEY (row_exposure_mode_id) REFERENCES public.row_exposure_modes(exposure_mode_id);
 
 
 --
@@ -5248,6 +5386,14 @@ ALTER TABLE ONLY public.companies
 
 ALTER TABLE ONLY public.companies
     ADD CONSTRAINT companies_parent_company_id_fkey FOREIGN KEY (parent_company_id) REFERENCES public.companies(company_id);
+
+
+--
+-- Name: companies companies_row_exposure_mode_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: noolvan
+--
+
+ALTER TABLE ONLY public.companies
+    ADD CONSTRAINT companies_row_exposure_mode_id_fkey FOREIGN KEY (row_exposure_mode_id) REFERENCES public.row_exposure_modes(exposure_mode_id);
 
 
 --
@@ -5419,6 +5565,14 @@ ALTER TABLE ONLY public.locations
 
 
 --
+-- Name: locations locations_row_exposure_mode_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: noolvan
+--
+
+ALTER TABLE ONLY public.locations
+    ADD CONSTRAINT locations_row_exposure_mode_id_fkey FOREIGN KEY (row_exposure_mode_id) REFERENCES public.row_exposure_modes(exposure_mode_id);
+
+
+--
 -- Name: menu_permissions menu_permissions_menu_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: noolvan
 --
 
@@ -5531,11 +5685,35 @@ ALTER TABLE ONLY public.my_projects
 
 
 --
+-- Name: my_projects my_projects_row_exposure_mode_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: noolvan
+--
+
+ALTER TABLE ONLY public.my_projects
+    ADD CONSTRAINT my_projects_row_exposure_mode_id_fkey FOREIGN KEY (row_exposure_mode_id) REFERENCES public.row_exposure_modes(exposure_mode_id);
+
+
+--
 -- Name: my_tasks my_tasks_created_by_fkey; Type: FK CONSTRAINT; Schema: public; Owner: noolvan
 --
 
 ALTER TABLE ONLY public.my_tasks
     ADD CONSTRAINT my_tasks_created_by_fkey FOREIGN KEY (created_by) REFERENCES public.users(user_id);
+
+
+--
+-- Name: my_tasks my_tasks_row_exposure_mode_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: noolvan
+--
+
+ALTER TABLE ONLY public.my_tasks
+    ADD CONSTRAINT my_tasks_row_exposure_mode_id_fkey FOREIGN KEY (row_exposure_mode_id) REFERENCES public.row_exposure_modes(exposure_mode_id);
+
+
+--
+-- Name: password_vault password_vault_row_exposure_mode_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: noolvan
+--
+
+ALTER TABLE ONLY public.password_vault
+    ADD CONSTRAINT password_vault_row_exposure_mode_id_fkey FOREIGN KEY (row_exposure_mode_id) REFERENCES public.row_exposure_modes(exposure_mode_id);
 
 
 --
@@ -5547,11 +5725,27 @@ ALTER TABLE ONLY public.person_addresses
 
 
 --
+-- Name: person_addresses person_addresses_row_exposure_mode_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: noolvan
+--
+
+ALTER TABLE ONLY public.person_addresses
+    ADD CONSTRAINT person_addresses_row_exposure_mode_id_fkey FOREIGN KEY (row_exposure_mode_id) REFERENCES public.row_exposure_modes(exposure_mode_id);
+
+
+--
 -- Name: person_attachments person_attachments_created_by_fkey; Type: FK CONSTRAINT; Schema: public; Owner: noolvan
 --
 
 ALTER TABLE ONLY public.person_attachments
     ADD CONSTRAINT person_attachments_created_by_fkey FOREIGN KEY (created_by) REFERENCES public.users(user_id);
+
+
+--
+-- Name: person_attachments person_attachments_row_exposure_mode_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: noolvan
+--
+
+ALTER TABLE ONLY public.person_attachments
+    ADD CONSTRAINT person_attachments_row_exposure_mode_id_fkey FOREIGN KEY (row_exposure_mode_id) REFERENCES public.row_exposure_modes(exposure_mode_id);
 
 
 --
@@ -5563,6 +5757,14 @@ ALTER TABLE ONLY public.person_business_roles
 
 
 --
+-- Name: person_business_roles person_business_roles_row_exposure_mode_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: noolvan
+--
+
+ALTER TABLE ONLY public.person_business_roles
+    ADD CONSTRAINT person_business_roles_row_exposure_mode_id_fkey FOREIGN KEY (row_exposure_mode_id) REFERENCES public.row_exposure_modes(exposure_mode_id);
+
+
+--
 -- Name: person_contacts person_contacts_created_by_fkey; Type: FK CONSTRAINT; Schema: public; Owner: noolvan
 --
 
@@ -5571,11 +5773,27 @@ ALTER TABLE ONLY public.person_contacts
 
 
 --
+-- Name: person_contacts person_contacts_row_exposure_mode_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: noolvan
+--
+
+ALTER TABLE ONLY public.person_contacts
+    ADD CONSTRAINT person_contacts_row_exposure_mode_id_fkey FOREIGN KEY (row_exposure_mode_id) REFERENCES public.row_exposure_modes(exposure_mode_id);
+
+
+--
 -- Name: person_relationships person_relationships_created_by_fkey; Type: FK CONSTRAINT; Schema: public; Owner: noolvan
 --
 
 ALTER TABLE ONLY public.person_relationships
     ADD CONSTRAINT person_relationships_created_by_fkey FOREIGN KEY (created_by) REFERENCES public.users(user_id);
+
+
+--
+-- Name: person_relationships person_relationships_row_exposure_mode_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: noolvan
+--
+
+ALTER TABLE ONLY public.person_relationships
+    ADD CONSTRAINT person_relationships_row_exposure_mode_id_fkey FOREIGN KEY (row_exposure_mode_id) REFERENCES public.row_exposure_modes(exposure_mode_id);
 
 
 --
@@ -5603,11 +5821,27 @@ ALTER TABLE ONLY public.persons
 
 
 --
+-- Name: persons persons_row_exposure_mode_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: noolvan
+--
+
+ALTER TABLE ONLY public.persons
+    ADD CONSTRAINT persons_row_exposure_mode_id_fkey FOREIGN KEY (row_exposure_mode_id) REFERENCES public.row_exposure_modes(exposure_mode_id);
+
+
+--
 -- Name: products products_created_by_fkey; Type: FK CONSTRAINT; Schema: public; Owner: noolvan
 --
 
 ALTER TABLE ONLY public.products
     ADD CONSTRAINT products_created_by_fkey FOREIGN KEY (created_by) REFERENCES public.users(user_id);
+
+
+--
+-- Name: products products_row_exposure_mode_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: noolvan
+--
+
+ALTER TABLE ONLY public.products
+    ADD CONSTRAINT products_row_exposure_mode_id_fkey FOREIGN KEY (row_exposure_mode_id) REFERENCES public.row_exposure_modes(exposure_mode_id);
 
 
 --
@@ -5651,6 +5885,14 @@ ALTER TABLE ONLY public.roles
 
 
 --
+-- Name: roles roles_row_exposure_mode_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: noolvan
+--
+
+ALTER TABLE ONLY public.roles
+    ADD CONSTRAINT roles_row_exposure_mode_id_fkey FOREIGN KEY (row_exposure_mode_id) REFERENCES public.row_exposure_modes(exposure_mode_id);
+
+
+--
 -- Name: settings settings_field_type_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: noolvan
 --
 
@@ -5667,11 +5909,27 @@ ALTER TABLE ONLY public.settings
 
 
 --
+-- Name: settings settings_user_uuid_fkey; Type: FK CONSTRAINT; Schema: public; Owner: noolvan
+--
+
+ALTER TABLE ONLY public.settings
+    ADD CONSTRAINT settings_user_uuid_fkey FOREIGN KEY (user_uuid) REFERENCES public.users(user_uuid) ON DELETE CASCADE;
+
+
+--
 -- Name: task_attachments task_attachments_created_by_fkey; Type: FK CONSTRAINT; Schema: public; Owner: noolvan
 --
 
 ALTER TABLE ONLY public.task_attachments
     ADD CONSTRAINT task_attachments_created_by_fkey FOREIGN KEY (created_by) REFERENCES public.users(user_id);
+
+
+--
+-- Name: task_attachments task_attachments_row_exposure_mode_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: noolvan
+--
+
+ALTER TABLE ONLY public.task_attachments
+    ADD CONSTRAINT task_attachments_row_exposure_mode_id_fkey FOREIGN KEY (row_exposure_mode_id) REFERENCES public.row_exposure_modes(exposure_mode_id);
 
 
 --
@@ -5683,11 +5941,27 @@ ALTER TABLE ONLY public.task_categories
 
 
 --
+-- Name: task_categories task_categories_row_exposure_mode_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: noolvan
+--
+
+ALTER TABLE ONLY public.task_categories
+    ADD CONSTRAINT task_categories_row_exposure_mode_id_fkey FOREIGN KEY (row_exposure_mode_id) REFERENCES public.row_exposure_modes(exposure_mode_id);
+
+
+--
 -- Name: task_comments task_comments_created_by_fkey; Type: FK CONSTRAINT; Schema: public; Owner: noolvan
 --
 
 ALTER TABLE ONLY public.task_comments
     ADD CONSTRAINT task_comments_created_by_fkey FOREIGN KEY (created_by) REFERENCES public.users(user_id);
+
+
+--
+-- Name: task_comments task_comments_row_exposure_mode_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: noolvan
+--
+
+ALTER TABLE ONLY public.task_comments
+    ADD CONSTRAINT task_comments_row_exposure_mode_id_fkey FOREIGN KEY (row_exposure_mode_id) REFERENCES public.row_exposure_modes(exposure_mode_id);
 
 
 --
@@ -5699,11 +5973,27 @@ ALTER TABLE ONLY public.task_priorities
 
 
 --
+-- Name: task_priorities task_priorities_row_exposure_mode_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: noolvan
+--
+
+ALTER TABLE ONLY public.task_priorities
+    ADD CONSTRAINT task_priorities_row_exposure_mode_id_fkey FOREIGN KEY (row_exposure_mode_id) REFERENCES public.row_exposure_modes(exposure_mode_id);
+
+
+--
 -- Name: task_sprints task_sprints_created_by_fkey; Type: FK CONSTRAINT; Schema: public; Owner: noolvan
 --
 
 ALTER TABLE ONLY public.task_sprints
     ADD CONSTRAINT task_sprints_created_by_fkey FOREIGN KEY (created_by) REFERENCES public.users(user_id);
+
+
+--
+-- Name: task_sprints task_sprints_row_exposure_mode_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: noolvan
+--
+
+ALTER TABLE ONLY public.task_sprints
+    ADD CONSTRAINT task_sprints_row_exposure_mode_id_fkey FOREIGN KEY (row_exposure_mode_id) REFERENCES public.row_exposure_modes(exposure_mode_id);
 
 
 --
@@ -5736,6 +6026,14 @@ ALTER TABLE ONLY public.teams
 
 ALTER TABLE ONLY public.teams
     ADD CONSTRAINT teams_parent_team_id_fkey FOREIGN KEY (parent_team_id) REFERENCES public.teams(team_id);
+
+
+--
+-- Name: teams teams_row_exposure_mode_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: noolvan
+--
+
+ALTER TABLE ONLY public.teams
+    ADD CONSTRAINT teams_row_exposure_mode_id_fkey FOREIGN KEY (row_exposure_mode_id) REFERENCES public.row_exposure_modes(exposure_mode_id);
 
 
 --
@@ -5776,6 +6074,14 @@ ALTER TABLE ONLY public.themes
 
 ALTER TABLE ONLY public.time_slots
     ADD CONSTRAINT time_slots_created_by_fkey FOREIGN KEY (created_by) REFERENCES public.users(user_id);
+
+
+--
+-- Name: time_slots time_slots_row_exposure_mode_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: noolvan
+--
+
+ALTER TABLE ONLY public.time_slots
+    ADD CONSTRAINT time_slots_row_exposure_mode_id_fkey FOREIGN KEY (row_exposure_mode_id) REFERENCES public.row_exposure_modes(exposure_mode_id);
 
 
 --
@@ -5840,6 +6146,14 @@ ALTER TABLE ONLY public.user_groups
 
 ALTER TABLE ONLY public.user_groups
     ADD CONSTRAINT user_groups_created_by_fkey FOREIGN KEY (created_by) REFERENCES public.users(user_id);
+
+
+--
+-- Name: user_groups user_groups_row_exposure_mode_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: noolvan
+--
+
+ALTER TABLE ONLY public.user_groups
+    ADD CONSTRAINT user_groups_row_exposure_mode_id_fkey FOREIGN KEY (row_exposure_mode_id) REFERENCES public.row_exposure_modes(exposure_mode_id);
 
 
 --
@@ -5947,6 +6261,14 @@ ALTER TABLE ONLY public.users
 
 
 --
+-- Name: users users_row_exposure_mode_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: noolvan
+--
+
+ALTER TABLE ONLY public.users
+    ADD CONSTRAINT users_row_exposure_mode_id_fkey FOREIGN KEY (row_exposure_mode_id) REFERENCES public.row_exposure_modes(exposure_mode_id);
+
+
+--
 -- Name: workflow_runs workflow_runs_workflow_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: noolvan
 --
 
@@ -5966,5 +6288,5 @@ ALTER TABLE ONLY public.workflows
 -- PostgreSQL database dump complete
 --
 
-\unrestrict vFTiYNhj3apxKkhz3NJ01f03gJIuKNnMAqXzso3ITYboCwMnb49Kpr3zggodNMx
+\unrestrict bomdYDkcpi1Aa91RfJM5lf9LeBKg9uzAk2rQzw7yojROdMcOjgD3Qjn0HfYlr4W
 

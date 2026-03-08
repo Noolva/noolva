@@ -6,6 +6,24 @@ python version : Python 3.9.6
 /Users/karan/Desktop/noolva.com/noolva/api/app/noolva-venv/bin/python3 /Users/karan/Desktop/noolva.com/noolva/api/app/cli.py runserver
 
 ---
+Connecting from external clients (PAT)
+  Endpoints that accept PAT (e.g. PUT /settings, POST /upload, data-models auto CRUD) require a
+  Personal Access Token (PAT), not the session JWT.
+
+  • Use the PAT string that starts with "nvpat_" (e.g. nvpat_abc123...). Create it in admin:
+    Organization → Personal Access Tokens → Create; copy the token once (it is not shown again).
+
+  • Do NOT use the JWT/session token (the one that starts with "eyJ..." from login). If you send
+    a JWT where a PAT is required, the API returns 401 and logs show:
+      Auth: JWT decode failed for eyJhbGciOi...(121 chars): InvalidSignatureError
+      PAT lookup: no row for token hash (token may be wrong or expired)
+      Auth: token eyJ... -> not valid JWT and PAT lookup failed
+    Fix: send the PAT (nvpat_...) in the Authorization header, not the JWT.
+
+  • Header format:   Authorization: Bearer nvpat_YOUR_FULL_TOKEN
+  • Full details and examples: see how_to_use_pat.md (§2a and §3a).
+
+---
 How to run decrypt (data model field values)
   From repo root. Uses same key as app (ENCRYPTION_KEY for AES; fixed key for XOR).
 

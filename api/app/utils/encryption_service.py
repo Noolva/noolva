@@ -189,6 +189,28 @@ class EncryptionService:
         
         except Exception as e:
             raise ValueError(f"Decryption failed: {str(e)}")
+
+    def encrypt_bytes(self, data: bytes) -> bytes:
+        """
+        Encrypt raw bytes (e.g. file content) with AES-GCM.
+        Output format: 12-byte nonce + ciphertext (stored as-is in S3 or on disk).
+        """
+        aesgcm = AESGCM(self.key)
+        nonce = os.urandom(12)
+        ciphertext = aesgcm.encrypt(nonce, data, None)
+        return nonce + ciphertext
+
+    def decrypt_bytes(self, data: bytes) -> bytes:
+        """
+        Decrypt bytes produced by encrypt_bytes.
+        Expects: 12-byte nonce + ciphertext.
+        """
+        if len(data) < 13:
+            raise ValueError("Invalid encrypted data format (too short)")
+        nonce = data[:12]
+        ciphertext = data[12:]
+        aesgcm = AESGCM(self.key)
+        return aesgcm.decrypt(nonce, ciphertext, None)
     
     @staticmethod
     def generate_key() -> str:

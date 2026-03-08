@@ -51,12 +51,129 @@ r = requests.get("http://localhost:9001/data-models/auto/users/records", headers
 
 ---
 
+## 2a. External integration – exact requirements (share with external teams)
+
+Use this section when sharing PAT usage with external developers or scripts.
+
+### Required: Authorization header
+
+Every authenticated request **must** send exactly:
+
+- **Header name:** `Authorization` (case-insensitive per HTTP; typical is `Authorization`)
+- **Header value:** `Bearer ` (capital B, one space) followed by the **full token** with no extra spaces
+
+**Correct:**
+
+```http
+Authorization: Bearer nvpat_abc123def456...
+```
+
+**Wrong (will cause 401):**
+
+- Missing header
+- `Bearer` with no space before the token
+- `bearer` (lowercase) — some servers accept it, but always use `Bearer `
+- Token in query string or body instead of header
+- Truncated or modified token (e.g. copy-paste error)
+- Sending a **JWT** (session token from login) instead of the **PAT** — use the PAT string that starts with `nvpat_`
+
+### PUT /settings (e.g. Current User Mode) – minimal examples
+
+**cURL:**
+
+```bash
+curl -X PUT "https://YOUR_API_BASE/settings" \
+  -H "Authorization: Bearer nvpat_YOUR_FULL_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{"scope":"user","settings":{"current_user_mode":2}}'
+```
+
+**Python (requests):**
+
+```python
+import requests
+url = "https://YOUR_API_BASE/settings"
+headers = {
+    "Authorization": f"Bearer {pat}",   # pat = full string, e.g. nvpat_...
+    "Content-Type": "application/json",
+}
+payload = {"scope": "user", "settings": {"current_user_mode": 2}}
+r = requests.put(url, headers=headers, json=payload)
+# 200 = success; 401 = check header and token
+```
+
+**JavaScript (fetch):**
+
+```javascript
+const response = await fetch('https://YOUR_API_BASE/settings', {
+  method: 'PUT',
+  headers: {
+    'Authorization': `Bearer ${pat}`,
+    'Content-Type': 'application/json',
+  },
+  body: JSON.stringify({ scope: 'user', settings: { current_user_mode: 2 } }),
+});
+```
+
+**Common mistakes:**
+
+| Mistake | Result | Fix |
+|--------|--------|-----|
+| No `Authorization` header | 401 | Add header: `Authorization: Bearer <token>` |
+| Token in body or query | 401 | Send token only in the `Authorization` header |
+| Using JWT (login token) instead of PAT | 401 or wrong user | Use the PAT value that starts with `nvpat_` |
+| Wrong or expired PAT | 401 | Create a new PAT in admin and use the new value |
+| PAT has scopes but not `settings`/`*` | 403 | Create PAT with no scopes, or add scope `settings` or `*` |
+
+### If you get 401 – what the server logs show
+
+The API logs a **detailed line** for each failed auth so you can debug:
+
+- **`PUT /settings 401: Authorization header missing or empty`** → The request did not include an `Authorization` header or it was empty. Add the header.
+- **`PUT /settings 401: token rejected (invalid/expired/wrong). Token prefix=...`** → The token was sent but not accepted (wrong token, expired PAT, or not a valid JWT). Check you are sending the full PAT (starts with `nvpat_`) and that it has not been revoked or expired.
+- **`Auth: no Authorization header or empty value`** → Same as above; no header.
+- **`Auth: Authorization header present but does not start with 'Bearer '`** → Header value must be exactly `Bearer ` + token.
+- **`PAT lookup: no row for token hash (token may be wrong or expired)`** → The PAT string does not match any active token in the database (typo, wrong token, or expired). Create a new PAT if needed.
+
+**If you see "JWT decode failed" and "PAT lookup: no row" together** → You are sending a **JWT** (session token), not a PAT. JWTs start with `eyJ...` (base64). Use the **PAT** string that starts with `nvpat_` (from Organization → Personal Access Tokens). Do not use the token returned at login for PAT-only endpoints; create and use a PAT. See §2 and "JWT vs PAT" below.
+
+### JWT vs PAT – do not mix them up
+
+| Token type | Looks like | Where you get it | Use for |
+|------------|------------|-------------------|--------|
+| **PAT** | `nvpat_` + 64 hex chars | Admin: Organization → Personal Access Tokens → Create (copy once) | External scripts, PUT /settings, POST /upload, auto CRUD from other apps |
+| **JWT** | `eyJ...` (long base64 string) | Returned at login (e.g. `/auth/login`) | Browser/admin app session only; many API routes accept **only JWT**, not PAT |
+
+For **PUT /settings**, **POST /upload**, and **data-models auto CRUD**, you must send the **PAT** in the header:
+
+```http
+Authorization: Bearer nvpat_abc123def456...
+```
+
+If you send a JWT (`eyJ...`) instead, the server will try to verify it (and may fail with `InvalidSignatureError` if it’s from another env or expired), then try PAT lookup and find no row. You will get **401** and logs like:
+
+- `Auth: JWT decode failed for eyJhbGciOi...(121 chars): InvalidSignatureError`
+- `PAT lookup: no row for token hash (token may be wrong or expired); token prefix: eyJhbGciOi...(121 chars)`
+- `Auth: token eyJhbGciOi...(121 chars) -> not valid JWT and PAT lookup failed`
+
+**Fix:** Use the PAT value (starts with `nvpat_`), not the login/session JWT.
+
+Share the **exact request** (headers only; never log the full token) and the **log line** with your API admin to confirm the server received the right header and why it rejected the token.
+
+---
+
 ## 3. Which endpoints accept PAT?
 
 **PAT is accepted only on routes that use Bearer resolution (JWT or PAT):**
 
 - **Data-models CRUD (auto):** e.g. `GET/POST/PUT/DELETE /data-models/auto/<model_name>/records` — these accept PAT.
 - **File upload (S3):** `POST /upload` — upload files to the default S3 bucket; accepts PAT (see §5a below).
+- **Private file access:** `GET /private-file` — get a signed URL or stream decrypted file content; accepts PAT (see §5c below).
+
+**Settings (user-scoped) and row exposure modes accept PAT:**
+
+- **GET** `/settings/row-exposure-modes` — returns the list of available modes (no auth required).
+- **PUT** `/settings` with `scope: "user"` and `current_user_mode` — update the current user’s “Current User Mode” (JWT or PAT). See §3a below.
 
 **These endpoints accept only JWT (login session token), not PAT:**
 
@@ -74,9 +191,194 @@ curl -s -H "Authorization: Bearer nvpat_YOUR_FULL_TOKEN" \
 
 ---
 
+## 3a. Current User Mode (settings) and list of modes — with PAT
+
+The **Current User Mode** setting controls which rows are returned by auto CRUD list/get when the model has a `row_exposure_mode_id` column: if set, only rows with that mode (and `expose_data = true`) or with `row_exposure_mode_id` NULL/0 are returned; if not set (null), all rows are returned.
+
+You can **get the list of available modes** and **set the current user’s mode** using a PAT.
+
+### Get list of modes (no auth)
+
+**Endpoint:** `GET /settings/row-exposure-modes`
+
+Returns all row exposure modes. No `Authorization` header required.
+
+**Response:**
+
+```json
+{
+  "options": [
+    { "label": "normal", "value": 1 },
+    { "label": "private", "value": 2 },
+    { "label": "travel", "value": 3 }
+  ],
+  "modes": [
+    { "exposure_mode_id": 1, "name": "normal", "description": "Default / normal visibility", "expose_data": true },
+    { "exposure_mode_id": 2, "name": "private", "description": "Private mode", "expose_data": false }
+  ]
+}
+```
+
+- **`options`** — for dropdowns: `label` (name), `value` (exposure_mode_id).
+- **`modes`** — full rows: `exposure_mode_id`, `name`, `description`, `expose_data`.
+
+**cURL:**
+
+```bash
+curl -s "http://localhost:9001/settings/row-exposure-modes"
+```
+
+### Get current user mode (JWT or PAT)
+
+To **read** the current user’s settings (including `current_user_mode`), use **GET /settings** with `scope=user`. Auth is required (JWT or PAT).
+
+**Endpoint:** `GET /settings`
+
+**Query params:**
+
+- `scope=user` — required to get per-user settings.
+- `keys=current_user_mode` — optional; comma-separated keys. Omit to get all user-scoped settings.
+
+**Auth:** `Authorization: Bearer <JWT or PAT>`
+
+**Example response:**
+
+```json
+{
+  "settings": {
+    "current_user_mode": 2
+  },
+  "scope": "user",
+  "tenant_id": null
+}
+```
+
+If the mode is not set, `current_user_mode` may be `null`.
+
+**cURL (with PAT):**
+
+```bash
+# Get only current_user_mode
+curl -s -H "Authorization: Bearer nvpat_YOUR_TOKEN" \
+  "http://localhost:9001/settings?scope=user&keys=current_user_mode"
+
+# Get all user-scoped settings
+curl -s -H "Authorization: Bearer nvpat_YOUR_TOKEN" \
+  "http://localhost:9001/settings?scope=user"
+```
+
+**Python (requests):**
+
+```python
+import requests
+pat = "nvpat_YOUR_FULL_TOKEN"
+base = "http://localhost:9001"
+headers = {"Authorization": f"Bearer {pat}"}
+
+# Get current_user_mode
+r = requests.get(f"{base}/settings", params={"scope": "user", "keys": "current_user_mode"}, headers=headers)
+data = r.json()  # {"settings": {"current_user_mode": 2}, "scope": "user", "tenant_id": null}
+mode_id = data.get("settings", {}).get("current_user_mode")  # 2 or None
+```
+
+**JavaScript (fetch):**
+
+```javascript
+const pat = "nvpat_YOUR_FULL_TOKEN";
+const base = "http://localhost:9001";
+
+const r = await fetch(`${base}/settings?scope=user&keys=current_user_mode`, {
+  headers: { Authorization: `Bearer ${pat}` },
+});
+const data = await r.json();
+const currentUserMode = data.settings?.current_user_mode ?? null;
+```
+
+### Set Current User Mode (JWT or PAT)
+
+**Endpoint:** `PUT /settings`
+
+**Auth:** `Authorization: Bearer <JWT or PAT>` — the header is required. Use the full token (JWT or PAT starting with `nvpat_`). If the PAT has scopes set, it must include one of: `settings`, `user_settings`, or `*` (PATs with no scopes or empty scopes can always call this endpoint).
+
+Set the **current user’s** mode (stored per user). Use `scope: "user"` and only the key `current_user_mode`. Value is the **exposure_mode_id** (integer) from the list of modes, or `null` to clear (show all rows).
+
+**Request body:**
+
+```json
+{
+  "scope": "user",
+  "settings": {
+    "current_user_mode": 2
+  }
+}
+```
+
+- Use an **integer** (e.g. `2`) to set the mode; use `null` to unset and show all rows.
+- Only `current_user_mode` is allowed when `scope` is `"user"`.
+
+**cURL (with PAT):**
+
+```bash
+curl -X PUT -H "Authorization: Bearer nvpat_YOUR_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{"scope":"user","settings":{"current_user_mode":2}}' \
+  "http://localhost:9001/settings"
+```
+
+**Clear the mode (show all rows):**
+
+```bash
+curl -X PUT -H "Authorization: Bearer nvpat_YOUR_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{"scope":"user","settings":{"current_user_mode":null}}' \
+  "http://localhost:9001/settings"
+```
+
+**Python (requests):**
+
+```python
+import requests
+
+pat = "nvpat_YOUR_FULL_TOKEN"
+base = "http://localhost:9001"
+
+# 1) Get available modes (optional; no auth)
+r = requests.get(f"{base}/settings/row-exposure-modes")
+modes = r.json()  # {"options": [...], "modes": [...]}
+
+# 2) Get current user mode
+r = requests.get(f"{base}/settings", params={"scope": "user", "keys": "current_user_mode"}, headers={"Authorization": f"Bearer {pat}"})
+current_mode = r.json().get("settings", {}).get("current_user_mode")  # int or None
+
+# 3) Set current user mode (e.g. "private" = 2)
+requests.put(
+    f"{base}/settings",
+    headers={"Authorization": f"Bearer {pat}", "Content-Type": "application/json"},
+    json={"scope": "user", "settings": {"current_user_mode": 2}},
+)
+
+# 4) Clear mode (show all rows)
+requests.put(
+    f"{base}/settings",
+    headers={"Authorization": f"Bearer {pat}", "Content-Type": "application/json"},
+    json={"scope": "user", "settings": {"current_user_mode": None}},
+)
+```
+
+**Summary:**
+
+| Action              | Endpoint                        | Auth   | Body / params |
+|---------------------|----------------------------------|--------|----------------|
+| List modes          | `GET /settings/row-exposure-modes` | None   | —              |
+| Get current user mode | `GET /settings?scope=user&keys=current_user_mode` | JWT or PAT | —              |
+| Set current user mode | `PUT /settings`                 | JWT or PAT | `{"scope":"user","settings":{"current_user_mode": <id or null>}}` |
+
+---
+
 ## 4. Request body format (POST and PUT)
 
-For **creating** and **updating** records, the body must wrap the field values in a **`data`** object. Field names must match the model’s fields (as in Studio).
+For **creating** and **updating** records, the body must wrap the field values in a **`data`** object. Field names must match the model’s fields (as in Studio).  
+**Note:** POST to the same path with a body containing **`filter`** (and no `data`) is treated as **list-with-filter**, not create — see §5.
 
 **POST** (create): `POST /data-models/auto/<model_name>/records`
 
@@ -110,7 +412,7 @@ For **creating** and **updating** records, the body must wrap the field values i
 
 ---
 
-## 5. List (GET) and pagination
+## 5. List (GET) and pagination — with optional filtering
 
 **GET** `GET /data-models/auto/<model_name>/records`
 
@@ -118,22 +420,73 @@ For **creating** and **updating** records, the body must wrap the field values i
   - `limit` — max records per page (default 100, max 1000).
   - `offset` — skip N records for pagination.
   - `fields` — comma-separated field names to return (default: all model fields).
+  - **Filter by field:** any **other** query param whose name is a **model field name** is treated as an **equality filter**. Only rows where that column equals the given value are returned. Multiple filter params are combined with AND. Use this to list records for a single “parent” (e.g. only comments for one task) without loading the full table.
 
-Example:
+**Reserved param names:** `limit`, `offset`, `fields`. All other param names that match a model field become filters.
+
+**Examples:**
+
+List all persons (paginated):
 
 ```bash
 curl -s -H "Authorization: Bearer nvpat_YOUR_TOKEN" \
   "http://localhost:9001/data-models/auto/persons/records?limit=20&offset=0&fields=name,dob,notes"
 ```
 
+List only records for a given parent (e.g. task_comments for task 40):
+
+```bash
+# If the model has a field named "task" or "task_id", pass it as query param:
+curl -s -H "Authorization: Bearer nvpat_YOUR_TOKEN" \
+  "http://localhost:9001/data-models/auto/task_comments/records?task=40&limit=100"
+# or
+curl -s -H "Authorization: Bearer nvpat_YOUR_TOKEN" \
+  "http://localhost:9001/data-models/auto/task_comments/records?task_id=40&fields=id,body,created_at"
+```
+
+Filter values are coerced to the field type (integer, UUID, date, etc.). Filter params work together with `limit`, `offset`, and `fields`.
+
+---
+
+### POST: create vs list-with-filter
+
+**POST** to the same path can do two different things depending on the body:
+
+| Body shape | Behaviour |
+|------------|-----------|
+| `{ "data": { ... } }` (non-empty `data` object) | **Create** one record (INSERT). Same as before. |
+| `{ "filter": { "<field>": <value>, ... } }` and **no** `data` (or empty `data`) | **List with filter** (SELECT). Returns the same list shape as GET with filter params; not a create. |
+
+- **Create** remains the only way to insert: body must be `{ "data": { ... } }`. Field names in `data` must match the model.
+- **List-with-filter:** send a body with **`filter`** (object of field name → value). You can also send optional `limit`, `offset`, and `fields` in the same body. The API performs a **filtered list** (read), not a create. Use this when you prefer to send filter criteria in the request body (e.g. complex or many filters) or when the client uses POST for all list operations.
+
+**Example – list task_comments for task 40 via POST:**
+
+```bash
+curl -s -X POST -H "Authorization: Bearer nvpat_YOUR_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{"filter":{"task":40},"limit":100,"fields":"id,body,created_at"}' \
+  "http://localhost:9001/data-models/auto/task_comments/records"
+```
+
+Response shape is the same as GET list: `{ "model_name": "...", "records": [ ... ], "limit": 100, "offset": 0 }`.
+
 **Summary of auto CRUD endpoints:**
 
 | Method | Path | Purpose |
 |--------|------|---------|
-| GET | `/data-models/auto/<model_name>/records` | List records (supports `limit`, `offset`, `fields`) |
-| POST | `/data-models/auto/<model_name>/records` | Create one record (body: `{ "data": { ... } }`) |
+| GET | `/data-models/auto/<model_name>/records` | List records (supports `limit`, `offset`, `fields`, and **filter by field** via query params) |
+| POST | `/data-models/auto/<model_name>/records` | Create one record (body: `{ "data": { ... } }`) **or** list with filter (body: `{ "filter": { ... }, optional "limit", "offset", "fields" }` — no `data`) |
 | PUT | `/data-models/auto/<model_name>/records/<record_id>` | Update one record (body: `{ "data": { ... } }`) |
 | DELETE | `/data-models/auto/<model_name>/records/<record_id>` | Delete one record |
+
+**Settings (Current User Mode) and modes:**
+
+| Method | Path | Purpose |
+|--------|------|---------|
+| GET | `/settings/row-exposure-modes` | List available row exposure modes (no auth) |
+| GET | `/settings?scope=user&keys=current_user_mode` | Get current user mode (JWT or PAT) |
+| PUT | `/settings` | Set current user mode: body `{"scope":"user","settings":{"current_user_mode":<id\|null>}}` (JWT or PAT) |
 
 ---
 
@@ -327,6 +680,95 @@ The API treats fields whose type is **file** or **image** as attachment fields: 
 
 Use the **same base URL** as your admin API (e.g. `http://localhost:9001`). If you get "Route not found: /upload", ensure the request goes to the API server and that the upload router is registered (API restart may be required after deployment).
 
+### 5c. Private file access (GET /private-file) and encrypted file/image fields
+
+**Endpoint:** `GET /private-file`  
+**Auth:** `Authorization: Bearer <JWT or PAT>`
+
+Use this endpoint to access **private** files (stored under `private/` in S3). You can either get a **signed URL** (redirect or JSON) or, for **encrypted** file/image fields, stream the **decrypted** content directly from the API.
+
+**Query parameters:**
+
+| Parameter      | Required | Description |
+|----------------|----------|-------------|
+| `path`         | Yes      | S3 storage path (e.g. `private/model-attachments/task_attachments/36d7dcb368a147f686074e9b25a7491e.png`). Same value stored in the record’s file/image field. |
+| `redirect`     | No       | `true` (default): redirect to the presigned URL. `false`: return JSON `{ "url": "<presigned_url>" }`. Ignored when `decrypt=true`. |
+| `decrypt`      | No       | `false` (default): return signed URL (redirect or JSON). `true`: stream decrypted file content (see below). |
+| `model_name`   | If decrypt | Data model name (e.g. `task_attachments`). **Required when `decrypt=true`.** |
+| `field_name`   | If decrypt | Field name (e.g. `attachment`). **Required when `decrypt=true`.** |
+
+**When to use `decrypt=true`:**  
+When the file/image field has **encryption** (`encryption_method` = `xor_cipher` or `aes`), the **file content** in S3 is encrypted; the **path** in the DB is stored plain. To download the actual file content, call with `decrypt=true` and pass `model_name` and `field_name` so the API can look up the encryption method, fetch the object from S3, decrypt it, and stream it back. Without `decrypt=true`, you only get a signed URL to the **encrypted** object (which is not useful for viewing the file).
+
+**Encrypted file/image fields – summary for external apps:**
+
+- **Upload:** No change. Use `POST /upload` with `model_name`, `field_name`, and `record_id` as usual. If the field has encryption, the API encrypts the file content before storing in S3; the returned `path` is stored in the record as-is (plain).
+- **Read record:** The API returns the **path** (plain) in the file/image field. It does not decrypt the path.
+- **Download (no decryption):** For **non-encrypted** private files, use `GET /private-file?path=...&redirect=false` to get a signed URL, then fetch the file from that URL.
+- **Download (decrypted):** For **encrypted** file/image fields, use `GET /private-file?path=...&decrypt=true&model_name=<model>&field_name=<field>`. The response is the decrypted file stream (same `Content-Type` as the original file). Do not use the signed-URL flow for encrypted content.
+
+**Example – get signed URL (private, non-encrypted):**
+
+```bash
+curl -s -H "Authorization: Bearer nvpat_YOUR_TOKEN" \
+  "http://localhost:9001/private-file?path=private%2Fmodel-attachments%2Ftask_attachments%2F36d7dcb368a147f686074e9b25a7491e.png&redirect=false"
+```
+
+Response: `{ "url": "https://cdn.example.com/...?Expires=...&Signature=..." }`
+
+**Example – stream decrypted file (encrypted file/image field):**
+
+```bash
+curl -H "Authorization: Bearer nvpat_YOUR_TOKEN" \
+  "http://localhost:9001/private-file?path=private%2Fmodel-attachments%2Ftask_attachments%2F36d7dcb368a147f686074e9b25a7491e.png&decrypt=true&model_name=task_attachments&field_name=attachment" \
+  -o downloaded.png
+```
+
+**Example – Python (decrypt and save):**
+
+```python
+import requests
+
+pat = "nvpat_YOUR_FULL_TOKEN"
+base = "http://localhost:9001"
+path = "private/model-attachments/task_attachments/36d7dcb368a147f686074e9b25a7491e.png"
+
+# Option A: Get signed URL (for non-encrypted private files)
+r = requests.get(
+    f"{base}/private-file",
+    headers={"Authorization": f"Bearer {pat}"},
+    params={"path": path, "redirect": "false"},
+)
+r.raise_for_status()
+url = r.json()["url"]
+# Then fetch file from url if needed
+
+# Option B: Stream decrypted content (for encrypted file/image fields)
+r = requests.get(
+    f"{base}/private-file",
+    headers={"Authorization": f"Bearer {pat}"},
+    params={
+        "path": path,
+        "decrypt": "true",
+        "model_name": "task_attachments",
+        "field_name": "attachment",
+    },
+    stream=True,
+)
+r.raise_for_status()
+with open("downloaded.png", "wb") as f:
+    for chunk in r.iter_content(chunk_size=8192):
+        f.write(chunk)
+```
+
+**Summary:**
+
+| Use case                         | Query params                                      | Response / action |
+|----------------------------------|---------------------------------------------------|-------------------|
+| Get signed URL                   | `path=...`, `redirect=false`                      | JSON `{ "url": "..." }` |
+| Redirect to signed URL           | `path=...` (default `redirect=true`)               | HTTP redirect to CDN |
+| Download decrypted file content  | `path=...`, `decrypt=true`, `model_name=...`, `field_name=...` | Binary stream (decrypted file) |
+
 ---
 
 ## 6. How the API treats the token
@@ -344,7 +786,7 @@ Use the **same base URL** as your admin API (e.g. `http://localhost:9001`). If y
 | **Base URL** | Same as admin API (e.g. `http://localhost:9001` or `http://localhost:8080` — port depends on your setup). |
 | **Auth**     | `Authorization: Bearer nvpat_<rest_of_token>`.                             |
 | **Token**    | Use the **full plaintext** token (starts with `nvpat_`).                    |
-| **Endpoints**| Use **data-models** auto CRUD and **POST /upload** (S3); avoid app-menus/auth for PAT. |
+| **Endpoints**| Use **data-models** auto CRUD, **POST /upload** (S3), and **GET /private-file** (signed URL or decrypted stream); avoid app-menus/auth for PAT. |
 | **HTTPS**    | Use HTTPS in production; do not send PAT over plain HTTP.                  |
 | **Expiry**   | Create a new PAT when it expires; list/revoke via admin or `/personal-access-tokens` with a JWT. |
 
