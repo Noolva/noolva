@@ -393,6 +393,22 @@ BEGIN
         INSERT INTO public.menus (menu_title,parent_id,type,route_path,icon,app_id,scope,is_builtin,order_no,created_by)
         VALUES ('Db Query',NULL,'item','dev_console_db_query','code',dev_console_app_id,'saas',TRUE,20,system_user_id);
     END IF;
+    IF NOT EXISTS (SELECT 1 FROM public.menus WHERE app_id=dev_console_app_id AND parent_id IS NULL AND menu_title='Scheduler Workers') THEN
+        INSERT INTO public.menus (menu_title,parent_id,type,route_path,icon,app_id,scope,is_builtin,order_no,created_by)
+        VALUES ('Scheduler Workers',NULL,'item','dev_console_scheduler_workers','team',dev_console_app_id,'saas',TRUE,30,system_user_id);
+    END IF;
+    IF NOT EXISTS (SELECT 1 FROM public.menus WHERE app_id=dev_console_app_id AND parent_id IS NULL AND menu_title='Job Templates') THEN
+        INSERT INTO public.menus (menu_title,parent_id,type,route_path,icon,app_id,scope,is_builtin,order_no,created_by)
+        VALUES ('Job Templates',NULL,'item','dev_console_job_templates','file-text',dev_console_app_id,'saas',TRUE,40,system_user_id);
+    END IF;
+    IF NOT EXISTS (SELECT 1 FROM public.menus WHERE app_id=dev_console_app_id AND parent_id IS NULL AND menu_title='Jobs') THEN
+        INSERT INTO public.menus (menu_title,parent_id,type,route_path,icon,app_id,scope,is_builtin,order_no,created_by)
+        VALUES ('Jobs',NULL,'item','dev_console_jobs','unordered-list',dev_console_app_id,'saas',TRUE,50,system_user_id);
+    END IF;
+    IF NOT EXISTS (SELECT 1 FROM public.menus WHERE app_id=dev_console_app_id AND parent_id IS NULL AND menu_title='Schedulers') THEN
+        INSERT INTO public.menus (menu_title,parent_id,type,route_path,icon,app_id,scope,is_builtin,order_no,created_by)
+        VALUES ('Schedulers',NULL,'item','dev_console_schedulers','clock-circle',dev_console_app_id,'saas',TRUE,55,system_user_id);
+    END IF;
 
     -- Menus for Organization app (all direct children, parent_id = NULL)
     IF NOT EXISTS (SELECT 1 FROM public.menus WHERE app_id=organization_app_id AND parent_id IS NULL AND menu_title='Companies') THEN

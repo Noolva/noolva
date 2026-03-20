@@ -594,6 +594,74 @@ export const api = {
         return response.data;
     },
 
+    // Jobs / Scheduler (Dev Console)
+    getWorkers: async () => {
+        const response = await axiosInstance.get("/workers");
+        return response.data;
+    },
+    getJobTemplates: async (activeOnly = false) => {
+        const response = await axiosInstance.get("/job-templates", { params: activeOnly ? { active_only: true } : {} });
+        return response.data;
+    },
+    getJobTemplate: async (templateId) => {
+        const response = await axiosInstance.get(`/job-templates/${templateId}`);
+        return response.data;
+    },
+    createJobTemplate: async (data) => {
+        const response = await axiosInstance.post("/job-templates", data);
+        return response.data;
+    },
+    updateJobTemplate: async (templateId, data) => {
+        const response = await axiosInstance.put(`/job-templates/${templateId}`, data);
+        return response.data;
+    },
+    getJobs: async (params = {}) => {
+        const response = await axiosInstance.get("/jobs", { params: { limit: params.limit || 100, status: params.status || undefined } });
+        return response.data;
+    },
+    getJobStatus: async (jobId) => {
+        const response = await axiosInstance.get(`/jobs/${jobId}`);
+        return response.data;
+    },
+    submitJob: async (data) => {
+        const response = await axiosInstance.post("/jobs", data);
+        return response.data;
+    },
+    cancelJob: async (jobId) => {
+        const response = await axiosInstance.post(`/jobs/${jobId}/cancel`);
+        return response.data;
+    },
+
+    getDisplayConfig: async () => {
+        const response = await axiosInstance.get("/config/display");
+        return response.data;
+    },
+
+    getSchedulers: async () => {
+        const response = await axiosInstance.get("/schedulers");
+        return response.data;
+    },
+    getCronNextRuns: async (cron, count = 3) => {
+        const response = await axiosInstance.get("/schedulers/next-runs", { params: { cron, count } });
+        return response.data;
+    },
+    getScheduler: async (schedulerId) => {
+        const response = await axiosInstance.get(`/schedulers/${schedulerId}`);
+        return response.data;
+    },
+    createScheduler: async (data) => {
+        const response = await axiosInstance.post("/schedulers", data);
+        return response.data;
+    },
+    updateScheduler: async (schedulerId, data) => {
+        const response = await axiosInstance.put(`/schedulers/${schedulerId}`, data);
+        return response.data;
+    },
+    deleteScheduler: async (schedulerId) => {
+        const response = await axiosInstance.delete(`/schedulers/${schedulerId}`);
+        return response.data;
+    },
+
     // Companies
     getCompanies: async () => {
         const response = await axiosInstance.get("/companies");

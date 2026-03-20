@@ -2,6 +2,7 @@ import traceback
 import json
 from datetime import datetime, date
 from decimal import Decimal
+import uuid
 
 def json_serializer(obj):
     """JSON serializer for objects not serializable by default json code"""
@@ -57,6 +58,10 @@ class ERPError(Exception):
             return obj.isoformat()
         elif isinstance(obj, Decimal):
             return float(obj)
+        elif isinstance(obj, uuid.UUID):
+            return str(obj)
+        elif isinstance(obj, set):
+            return [self._clean_for_json(item) for item in obj]
         elif hasattr(obj, '__dict__'):
             return self._clean_for_json(obj.__dict__)
         else:

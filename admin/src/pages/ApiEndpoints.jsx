@@ -155,8 +155,16 @@ const ApiEndpoints = () => {
         try {
             const response = await api.getApiEndpoint(record.endpoint_id);
             setEditingEndpoint(response);
-            const customJson = response.custom_json || {};
-            const query = typeof customJson === 'object' ? (customJson.query || '') : '';
+            let customJson = response.custom_json ?? {};
+            if (typeof customJson === 'string') {
+                try {
+                    customJson = JSON.parse(customJson);
+                } catch {
+                    customJson = {};
+                }
+            }
+            if (!customJson || typeof customJson !== 'object') customJson = {};
+            const query = customJson.query ?? '';
             setCustomQuerySql(query);
             form.setFieldsValue({
                 path: response.path,

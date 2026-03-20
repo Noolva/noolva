@@ -1,0 +1,91 @@
+# How to run the remote worker
+
+The remote worker runs on a separate machine (or same host) and claims jobs from the Noolva API. It registers as a worker, polls for jobs, runs the handler (core_function) in-process, and submits the result back.
+
+## Requirements
+
+- Python 3.9+ with the same venv/dependencies as the API (so handler code can run). Use the API’s venv or install from `api/app/requirements.txt`.
+- Network access to the Noolva API (API_BASE_URL).
+- A valid auth token: **PAT (recommended)** or JWT. Use PAT for long-lived workers (see below).
+
+## Environment variables
+
+| Variable           | Required | Default                    | Description |
+|--------------------|----------|----------------------------|-------------|
+| API_BASE_URL       | No       | http://localhost:9001     | Base URL of the Noolva API (no trailing slash). |
+| AUTH_TOKEN         | Yes*     | —                          | Bearer token for API calls. Use PAT (nvpat_...) or JWT. |
+| PAT                | No       | —                          | Alternative to AUTH_TOKEN (same value). |
+| WORKER_ID          | No       | remote-worker-1           | Unique ID for this worker (e.g. vm-worker-1, karan-laptop). |
+| WORKER_TYPE        | No       | remote                    | One of: local, remote, websocket, mobile. |
+| HOSTNAME           | No       | —                          | Optional hostname sent on register. |
+| POLL_INTERVAL      | No       | 5                          | Seconds between claim polls when no job is returned. |
+
+\* Either AUTH_TOKEN or PAT must be set.
+
+## Authentication (PAT recommended)
+
+- **PAT (Personal Access Token):** Create in admin: Organization → Personal Access Tokens → Create. Copy the token once (starts with `nvpat_`). Use for scripts and long-lived workers.
+- **JWT:** Session token from login (starts with `eyJ...`). Use only for short-lived tests; it expires.
+- Header: `Authorization: Bearer <token>`
+
+## Run from API app directory (recommended)
+
+Using the API’s venv so handler imports resolve:
+
+  cd /Users/karan/Desktop/noolva.com/noolva/api/app
+  source noolva-venv/bin/activate   # or: . noolva-venv/bin/activate
+
+  export AUTH_TOKEN="nvpat_YOUR_PAT_HERE"
+  export API_BASE_URL="http://localhost:9001"
+  export WORKER_ID="vm-worker-1"
+
+  python3 -m app.jobs.remote_worker
+
+Or in one line with env vars:
+
+  AUTH_TOKEN=nvpat_xxx API_BASE_URL=http://localhost:9001 WORKER_ID=vm-worker-1 python3 -m app.jobs.remote_worker
+
+## Run from repo root
+
+Ensure the `api/app` directory is on `PYTHONPATH` so `app.jobs` can be imported:
+
+  cd /Users/karan/Desktop/noolva.com/noolva
+  export PYTHONPATH="${PYTHONPATH:+$PYTHONPATH:}api/app"
+  export AUTH_TOKEN="nvpat_YOUR_PAT_HERE"
+  export API_BASE_URL="http://localhost:9001"
+
+  api/app/noolva-venv/bin/python3 -m app.jobs.remote_worker
+
+(If your venv lives under `api/app/noolva-venv`, use that interpreter; if under `api/`, use `api/noolva-venv/bin/python3`.)
+
+## Example: second host (e.g. VM)
+
+On the machine where the API runs (e.g. api.example.com):
+
+  API_BASE_URL=https://api.example.com AUTH_TOKEN=nvpat_xxx WORKER_ID=vm-worker-1 python3 -m app.jobs.remote_worker
+
+Run as a service (systemd, supervisor, or a simple loop with restart on exit).
+
+## What the worker does
+
+1. **Register** – POST /workers/register with worker_id, worker_type, hostname.
+2. **Poll** – GET /jobs/claim?worker_id=... until a job is returned.
+3. **Load template** – GET /job-templates/{template_id} to get handler_type and handler_function_name.
+4. **Run** – Executes the core_function handler in-process (same code as API handlers).
+5. **Submit result** – POST /jobs/{job_id}/result with status (success/failed) and result payload.
+6. Repeats from step 2.
+
+Only **core_function** handlers are supported in the remote worker. custom_script and workflow steps that need the full API are not run by this script.
+
+## Troubleshooting
+
+- **"Set AUTH_TOKEN or PAT"** – Export AUTH_TOKEN (or PAT) before running.
+- **401 on register/claim** – Token invalid or expired. Use a valid PAT; ensure header is `Authorization: Bearer <token>`.
+- **No jobs claimed** – Jobs must be in status `queued`. Ensure the main API scheduler is running (ENABLE_SCHEDULER=true) so pending jobs are moved to queued; or jobs are enqueued by some other process.
+- **Import errors (e.g. app.jobs.handlers)** – Run from `api/app` with that directory on PYTHONPATH, and use the venv that has the API dependencies (see “Run from API app directory” above).
+
+## See also
+
+- Job scheduler design and API: docs/job-scheduler-implementation-plan.md
+- PAT usage and examples: how_to_use_pat.md
+- API run instructions: how-to-run-api

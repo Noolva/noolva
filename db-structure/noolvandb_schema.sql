@@ -946,95 +946,102 @@ CREATE INDEX idx_flattening_rules_source ON public.data_flattening_rules(source_
 CREATE INDEX idx_api_endpoints_path ON public.api_endpoints(path);
 -- 07_system_utilities.sql
 -- Classification: Operational Utilities
--- Description: Helper tables for Async Jobs, Third-Party Integrations, and File Assets.
+-- Description: Job Scheduler (workers, templates, jobs), Integrations, Assets.
 -- Dependencies: users, companies
 
 -- ==========================================
--- 1. Actions & Workflows
+-- 1. Job Scheduler (Workers, Templates, Jobs)
 -- ==========================================
 
--- 1.1 Actions Registry (Atomic Units of Work)
-CREATE TABLE public.actions (
-    action_id SERIAL PRIMARY KEY,
-    action_code VARCHAR(50) NOT NULL UNIQUE, -- 'send_email', 'app_clone'
-    action_name VARCHAR(100) NOT NULL,
+-- 1.1 Workers Registry (local | remote | websocket | mobile)
+CREATE TABLE public.workers (
+    worker_id TEXT PRIMARY KEY,
+    worker_type TEXT NOT NULL,
+    hostname TEXT,
+    ip_address TEXT,
+    status TEXT DEFAULT 'idle',
+    capabilities JSONB DEFAULT '{}'::jsonb,
+    max_concurrency INT DEFAULT 1,
+    running_jobs INT DEFAULT 0,
+    last_heartbeat TIMESTAMPTZ,
+    registered_at TIMESTAMPTZ DEFAULT now(),
+    metadata JSONB DEFAULT '{}'::jsonb
+);
+
+-- 1.2 Job Templates (handler: core_function | custom_script | dedicated_worker)
+CREATE TABLE public.job_templates (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    name TEXT UNIQUE NOT NULL,
     description TEXT,
-    
-    handler_function VARCHAR(100) NOT NULL, -- Internal code handler e.g. 'NotificationService.sendEmail'
-    
-    -- Schemas for Validation
-    inputs_schema_json JSONB DEFAULT '{}'::jsonb, -- { "to": { "type": "email" } }
-    outputs_schema_json JSONB DEFAULT '{}'::jsonb, -- { "message_id": { "type": "string" } }
-    
-    is_idempotent BOOLEAN DEFAULT FALSE,
-    
-    -- Execution / Queue Config
-    queue_concurrency_mode VARCHAR(20) DEFAULT 'parallel', -- 'sequential', 'parallel'
-    queue_concurrency_limit INTEGER DEFAULT 0,
-    default_timeout_seconds INTEGER DEFAULT 3600,
-    retry_policy_json JSONB DEFAULT '{"max_retries": 3, "backoff": "exponential"}'::jsonb,
-    
-    is_active BOOLEAN DEFAULT TRUE
+    template_category TEXT DEFAULT 'task' CHECK (template_category IN ('task', 'workflow', 'system')),
+    version INT DEFAULT 1,
+    input_schema JSONB,
+    workflow_definition JSONB,
+    output_schema JSONB,
+    handler_type TEXT,
+    handler_function_name TEXT,
+    script_path TEXT,
+    runnable_in TEXT[],
+    capabilities TEXT[],
+    is_idempotent BOOLEAN DEFAULT false,
+    queue_concurrency_mode TEXT DEFAULT 'parallel',
+    queue_concurrency_limit INT DEFAULT 0,
+    default_timeout_seconds INT DEFAULT 3600,
+    retry_policy_json JSONB DEFAULT '{"backoff":"exponential","max_retries":3}'::jsonb,
+    is_active BOOLEAN DEFAULT true,
+    created_at TIMESTAMPTZ DEFAULT now()
 );
 
--- 1.2 Workflows (Orchestration)
-CREATE TABLE public.workflows (
-    workflow_id SERIAL PRIMARY KEY,
-    workflow_uuid UUID DEFAULT gen_random_uuid() NOT NULL UNIQUE,
-    company_id INTEGER REFERENCES public.companies(company_id) ON DELETE CASCADE,
-    
-    workflow_name VARCHAR(100) NOT NULL,
-    workflow_code VARCHAR(100) UNIQUE,
-    
-    -- Triggers: { "type": "event", "event": "user.created" } or { "type": "schedule", "cron": "..." }
-    trigger_config_json JSONB,
-    
-    -- The Logic: Sequence of Actions
-    steps_json JSONB NOT NULL DEFAULT '[]'::jsonb, 
-    
-    is_active BOOLEAN DEFAULT TRUE,
-    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
-);
-
--- 1.3 Workflow Runs (History)
-CREATE TABLE public.workflow_runs (
-    run_id SERIAL PRIMARY KEY,
-    run_uuid UUID DEFAULT gen_random_uuid() NOT NULL UNIQUE,
-    workflow_id INTEGER REFERENCES public.workflows(workflow_id) ON DELETE CASCADE,
-    
-    status VARCHAR(20) DEFAULT 'pending', -- 'pending', 'running', 'completed', 'failed', 'cancelled'
-    trigger_context_json JSONB, -- Event payload that triggered this run
-    
-    started_at TIMESTAMPTZ,
-    completed_at TIMESTAMPTZ,
-    error_details JSONB
-);
-
--- 1.4 Job Queue (Execution Engine)
-CREATE TABLE public.job_queue (
-    job_id SERIAL PRIMARY KEY,
-    job_uuid UUID DEFAULT gen_random_uuid() NOT NULL UNIQUE,
-    company_id INTEGER REFERENCES public.companies(company_id) ON DELETE CASCADE,
-    
-    -- Linkage
-    action_id INTEGER REFERENCES public.actions(action_id),
-    related_workflow_id INTEGER REFERENCES public.workflows(workflow_id) ON DELETE SET NULL,
-    related_workflow_run_id INTEGER REFERENCES public.workflow_runs(run_id) ON DELETE CASCADE,
-    
-    status VARCHAR(20) DEFAULT 'pending',
-    priority INTEGER DEFAULT 0,
-    retry_count INTEGER DEFAULT 0,
-    
-    payload JSONB, -- Execution Arguments
+-- 1.3 Jobs (execution instances)
+CREATE TABLE public.jobs (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    template_id UUID REFERENCES public.job_templates(id) ON DELETE SET NULL,
+    payload JSONB,
+    schedule_time TIMESTAMPTZ,
+    status TEXT DEFAULT 'pending',
+    retry_count INT DEFAULT 0,
     result JSONB,
-    
+    worker_id TEXT REFERENCES public.workers(worker_id) ON DELETE SET NULL,
     started_at TIMESTAMPTZ,
     completed_at TIMESTAMPTZ,
-    
-    created_by INTEGER REFERENCES public.users(user_id),
-    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
+    created_at TIMESTAMPTZ DEFAULT now(),
+    updated_at TIMESTAMPTZ
 );
+
+-- 1.4 Job Step Runs (per-step execution for workflows)
+CREATE TABLE public.job_step_runs (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    job_id UUID NOT NULL REFERENCES public.jobs(id) ON DELETE CASCADE,
+    step_id TEXT NOT NULL,
+    worker_id TEXT REFERENCES public.workers(worker_id) ON DELETE SET NULL,
+    status TEXT,
+    input_data JSONB,
+    output_data JSONB,
+    started_at TIMESTAMPTZ,
+    finished_at TIMESTAMPTZ
+);
+
+CREATE INDEX idx_jobs_status ON public.jobs(status);
+CREATE INDEX idx_jobs_schedule_time ON public.jobs(schedule_time);
+CREATE INDEX idx_jobs_template_id ON public.jobs(template_id);
+CREATE INDEX idx_job_step_runs_job_id ON public.job_step_runs(job_id);
+CREATE INDEX idx_workers_type_status ON public.workers(worker_type, status);
+
+-- 1.5 Schedulers (cron-based job creation)
+CREATE TABLE public.schedulers (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    name TEXT NOT NULL,
+    description TEXT,
+    cron_expression TEXT NOT NULL,
+    template_id UUID NOT NULL REFERENCES public.job_templates(id) ON DELETE CASCADE,
+    payload JSONB DEFAULT '{}'::jsonb,
+    is_enabled BOOLEAN DEFAULT true,
+    last_run_at TIMESTAMPTZ,
+    next_run_at TIMESTAMPTZ,
+    created_at TIMESTAMPTZ DEFAULT now(),
+    updated_at TIMESTAMPTZ
+);
+CREATE INDEX idx_schedulers_enabled_next ON public.schedulers(is_enabled, next_run_at) WHERE is_enabled = true;
 
 -- ==========================================
 -- 2. Integration Providers (Template Registry)
@@ -1132,8 +1139,6 @@ CREATE TABLE public.assets (
 );
 
 -- Indexes
-CREATE INDEX idx_task_queue_company ON public.job_queue(company_id);
-CREATE INDEX idx_task_queue_status ON public.job_queue(status);
 CREATE INDEX idx_integration_providers_name ON public.integration_providers(provider_name);
 CREATE INDEX idx_integration_providers_category ON public.integration_providers(provider_category);
 CREATE INDEX idx_integrations_company ON public.integrations(company_id);
@@ -1730,26 +1735,37 @@ INSERT INTO public.ai_entity_aliases (alias, canonical_node_id) VALUES
 ('boss_man', 'person:karan'),
 ('proj_alpha', 'concept:project_alpha')
 ON CONFLICT DO NOTHING;
--- 97_seed_actions.sql
--- Classification: Seed Data
--- Description: Standard System Actions (Atomic Units of Work).
-
-INSERT INTO public.actions (action_code, action_name, handler_function, queue_concurrency_mode, queue_concurrency_limit, default_timeout_seconds, is_idempotent, inputs_schema_json) VALUES
--- Heavy Operations -> Sequential
-('app_clone', 'Clone Application', 'AppService.clone', 'sequential', 1, 600, false, '{"app_id": {"type": "integer"}, "target_company_id": {"type": "integer"}}'),
-('tenant_provision', 'Provision New Tenant', 'TenantService.provision', 'sequential', 2, 300, false, '{"tenant_name": {"type": "string"}}'),
-
--- Data Operations -> Limited Parallelism
-('data_import', 'Bulk Data Import', 'DataService.import', 'parallel', 3, 1800, false, '{"file_url": {"type": "string"}, "target_model": {"type": "string"}}'),
-('data_export', 'Data Export', 'DataService.export', 'parallel', 5, 1800, true, '{"model_id": {"type": "integer"}, "filters": {"type": "object"}}'),
-
--- Communications -> High Parallelism
-('send_email', 'Send Email', 'CommsService.sendEmail', 'parallel', 20, 300, true, '{"to": {"type": "email"}, "subject": {"type": "string"}, "body": {"type": "text"}}'),
-('notification_push', 'Send Push Notification', 'CommsService.sendPush', 'parallel', 50, 60, true, '{"user_id": {"type": "integer"}, "message": {"type": "string"}}'),
-
--- Maintenance
-('system_cleanup', 'Daily Cleanup', 'MaintenanceService.cleanup', 'sequential', 1, 3600, true, '{}'),
-('search_reindex', 'Re-index Search', 'SearchService.reindex', 'sequential', 1, 7200, true, '{}')
-
-ON CONFLICT (action_code) DO NOTHING;
+-- Seed Job Templates (core_function handlers; runnable on local by default)
+INSERT INTO public.job_templates (
+    name,
+    description,
+    template_category,
+    handler_type,
+    handler_function_name,
+    runnable_in,
+    default_timeout_seconds,
+    is_idempotent,
+    queue_concurrency_mode,
+    queue_concurrency_limit
+) VALUES
+('send_email', 'Send Email', 'task', 'core_function', 'send_email', ARRAY['local','remote'], 300, true, 'parallel', 20),
+('notification_push', 'Send Push Notification', 'task', 'core_function', 'notification_push', ARRAY['local','remote'], 60, true, 'parallel', 50),
+('generate_report', 'Generate Report', 'task', 'core_function', 'generate_report', ARRAY['local','remote'], 600, false, 'parallel', 5),
+(
+  'custom_query_endpoint',
+  'Execute a saved Custom Query API endpoint and return rows',
+  'task',
+  'core_function',
+  'run_custom_query_endpoint',
+  ARRAY['local','remote'],
+  300,
+  true,
+  'parallel',
+  0
+)
+ON CONFLICT (name) DO NOTHING;
+-- Seed 2 local workers (API uses these when WORKER_COUNT=2)
+INSERT INTO public.workers (worker_id, worker_type, status, max_concurrency)
+VALUES ('api-local-1', 'local', 'idle', 3), ('api-local-2', 'local', 'idle', 3)
+ON CONFLICT (worker_id) DO NOTHING;
 -- Note: UI Component Types and Field Types seed data has been moved to noolvandb_feeds.sql

@@ -1,0 +1,379 @@
+# How to connect via WebSocket
+
+The Noolva API exposes a WebSocket endpoint for persistent connections. Use it from **browsers**, **Flutter (Android & iOS)**, **Python**, or any WebSocket client. It supports connect, optional auth, and ping/pong; future use includes job push to workers and real-time notifications (e.g. for mobile apps using Firebase).
+
+## Server and port (no separate process)
+
+The WebSocket runs on the **same server and port** as the HTTP API. When you start the API with `runserver` (see how-to-run-api), the `/ws` endpoint is available immediately—**no separate process or port**.
+
+- **Port:** Use the same port as the API (env `APPLICATION_PORT`, default **9001**). There is **no** separate WebSocket port or env.
+- **URL:** `ws://<host>:<port>/ws` (e.g. `ws://localhost:9001/ws`)
+- **TLS:** Use `wss://` when the API is served over HTTPS (e.g. `wss://api.example.com/ws`).
+
+## Authentication
+
+You must authenticate so the server accepts the connection. Two options:
+
+### 1. Token in query string (e.g. browser, simple clients)
+
+Append the Bearer token as a query parameter:
+
+  ws://localhost:9001/ws?token=nvpat_YOUR_PAT_HERE
+
+or with JWT:
+
+  ws://localhost:9001/ws?token=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+
+Use a **PAT** (starts with `nvpat_`) for long-lived or scripted connections. Create in admin: Organization → Personal Access Tokens. See how_to_use_pat.md.
+
+### 2. Token in first message (when query is not suitable)
+
+Connect without a query, then send a single JSON text frame:
+
+  {"type": "auth", "token": "nvpat_YOUR_PAT_HERE"}
+
+or with JWT:
+
+  {"type": "auth", "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."}
+
+If the token is invalid or missing, the server closes the connection with code 4001.
+
+## After connect
+
+- The server sends a JSON text frame: `{"type": "connected", "message": "WebSocket connected"}`.
+- You can send `{"type": "ping"}` and the server replies with `{"type": "pong"}` (useful for keepalive).
+- All messages are JSON text frames (no binary protocol for now).
+
+## Receiving alarms (device connection)
+
+To receive alarm pushes from the job workflow, connect with a **device_id** in the path so the server can route alarms to your connection:
+
+- **URL:** `ws://<host>:<port>/ws/<device_id>?token=...` (e.g. `ws://localhost:9001/ws/device123?token=nvpat_...`).
+
+The server registers this connection for that device_id. When the **process_pending_alarms** workflow runs and creates **process_alarm** jobs, each job can push an alarm to the device if the alarm record has a matching `device_id` and the device is connected.
+
+**Message shape when an alarm is pushed:**
+
+  {"type": "alarm", "alarm_id": "<id>", "payload": { ... }}
+
+Handle it in your client:
+
+  ws.onmessage = (e) => {
+    const msg = JSON.parse(e.data);
+    if (msg.type === "alarm") {
+      // Show notification, play sound, etc.
+      console.log("Alarm:", msg.alarm_id, msg.payload);
+    } else if (msg.type === "pong") { /* keepalive */ }
+  };
+
+If the device is offline when the alarm is processed, the job still completes but no push is sent; `pushed_to_device` is false in the job result. See docs/workflow_alarm_and_reusable_templates_plan.md for the full flow.
+
+---
+
+## Steps: How to handle alarm sent by WebSocket (external apps)
+
+Use these steps when implementing alarm handling in your external app (Flutter, React Native, Python, etc.).
+
+### Step 1: Choose a device_id
+
+- Pick a unique **device_id** for this app instance (e.g. user ID, device UUID, or `user_123_device_456`).
+- The alarm record in the database must have `alarm_target` (or `device_id`) set to this same value so the server routes the alarm to your connection.
+
+### Step 2: Connect with device_id in the path
+
+- **URL:** `ws://<host>:<port>/ws/<device_id>?token=<PAT_or_JWT>`
+- Example: `ws://localhost:9001/ws/my-device-001?token=nvpat_abc123...`
+- Use a **PAT** for long-lived connections (create in admin: Organization → Personal Access Tokens).
+- The server registers this connection for `<device_id>`.
+
+### Step 3: Parse incoming messages
+
+- All messages are JSON text frames.
+- Parse each message and branch on `msg.type`:
+
+  - `connected` – initial greeting after connect
+  - `pong` – response to your ping (keepalive)
+  - `alarm` – alarm pushed from the workflow (see Step 4)
+
+### Step 4: Handle alarm messages
+
+When `msg.type === "alarm"`:
+
+- **Fields:**
+  - `msg.alarm_id` – ID of the alarm record
+  - `msg.payload` – object with alarm data (e.g. `alarm_id`, `title`, `scheduled_for`, etc., depending on your workflow payload_mapping)
+
+- **Typical actions:**
+  1. Show a local notification (e.g. system notification, in-app banner)
+  2. Play a sound or vibration
+  3. Update UI (e.g. alarm list, badge)
+  4. Optionally call your API to acknowledge or update alarm status (e.g. mark as notified)
+
+### Step 5: Implement reconnection and keepalive
+
+- If the connection drops, reconnect with the same `device_id` and token.
+- Send `{"type": "ping"}` periodically (e.g. every 30s); the server replies with `{"type": "pong"}`.
+- On reconnect, alarms that fired while offline will not be re-sent; only alarms processed while connected are pushed.
+
+### Step 6: Set alarm_target (who receives the alarm)
+
+The `alarm_target` column (mapped to `device_id` in the workflow) controls who receives the alarm push.
+
+**Format (TEXT column):**
+
+| Value        | Meaning                                      |
+|--------------|----------------------------------------------|
+| `null` / empty | Broadcast to **all connected devices**       |
+| `all_devices`  | Broadcast to **all connected devices**       |
+| `device123`    | Push only to the device with that `device_id` |
+
+**Format (JSONB column):** If your table uses a JSON column for targets:
+
+```json
+"device123"
+```
+Single device.
+
+```json
+"all_devices"
+```
+Broadcast to all.
+
+```json
+{"device_ids": ["device1", "device2"]}
+```
+Multiple devices (future: process_alarm may support this).
+
+**Steps to fill alarm_target:**
+
+1. **Broadcast to all devices (default):** Leave `alarm_target` as `null` or set to `"all_devices"`. Any device connected at `ws://host/ws/<device_id>` will receive the alarm.
+
+2. **Target a specific device:** Set `alarm_target` = `"my-device-001"` (or your app’s `device_id`). Only that device receives the alarm.
+
+3. **Insert/update example (SQL):**
+   ```sql
+   -- Broadcast to all (default)
+   INSERT INTO public.alarms (..., alarm_target) VALUES (..., NULL);
+
+   -- Or explicitly
+   INSERT INTO public.alarms (..., alarm_target) VALUES (..., 'all_devices');
+
+   -- Target one device
+   INSERT INTO public.alarms (..., alarm_target) VALUES (..., 'my-device-001');
+   ```
+
+4. **If using JSONB:** Store a string value: `'"all_devices"'::jsonb` or `'"device123"'::jsonb`. The workflow reads the string from the JSON.
+
+### Example: JavaScript (browser / Node)
+
+  const deviceId = "my-device-001";
+  const token = "nvpat_YOUR_PAT";
+  const ws = new WebSocket(`ws://localhost:9001/ws/${deviceId}?token=${encodeURIComponent(token)}`);
+
+  ws.onmessage = (e) => {
+    const msg = JSON.parse(e.data);
+    if (msg.type === "alarm") {
+      // Your alarm handling
+      showNotification(msg.alarm_id, msg.payload);
+      playAlarmSound();
+    } else if (msg.type === "pong") { /* keepalive ok */ }
+  };
+
+  setInterval(() => ws.send(JSON.stringify({ type: "ping" })), 30000);
+
+### Example: Python (websockets)
+
+  import asyncio, json
+  import websockets
+
+  device_id = "my-device-001"
+  token = "nvpat_YOUR_PAT"
+  uri = f"ws://localhost:9001/ws/{device_id}?token={token}"
+
+  async def handle_alarm(msg):
+      if msg.get("type") == "alarm":
+          print("Alarm:", msg["alarm_id"], msg["payload"])
+          # show_notification(msg["alarm_id"], msg["payload"])
+
+  async def run():
+      async with websockets.connect(uri) as ws:
+          async for raw in ws:
+              msg = json.loads(raw)
+              await handle_alarm(msg)
+
+  asyncio.run(run())
+
+### Example: Flutter (Dart)
+
+  final deviceId = 'my-device-001';
+  final token = 'nvpat_YOUR_PAT';
+  final uri = Uri.parse('wss://api.example.com/ws/$deviceId?token=${Uri.encodeComponent(token)}');
+  final channel = WebSocketChannel.connect(uri);
+
+  channel.stream.listen((data) {
+    final msg = jsonDecode(data);
+    if (msg['type'] == 'alarm') {
+      _showAlarmNotification(msg['alarm_id'], msg['payload']);
+      _playAlarmSound();
+    }
+  });
+
+### See also (alarm workflow)
+
+- docs/workflow_alarm_and_reusable_templates_plan.md – workflow design and payload_mapping
+- db-structure/update_old_db_workflow_alarm_templates.sql – alarm_target → device_id mapping
+
+## Browser (JavaScript)
+
+  const token = "nvpat_YOUR_PAT_OR_JWT";
+  const url = `ws://localhost:9001/ws?token=${encodeURIComponent(token)}`;
+  const ws = new WebSocket(url);
+
+  ws.onopen = () => console.log("Connected");
+  ws.onmessage = (e) => console.log("Message:", JSON.parse(e.data));
+  ws.onerror = (e) => console.error("Error", e);
+  ws.onclose = (e) => console.log("Closed", e.code, e.reason);
+
+  // Optional: ping every 30s
+  setInterval(() => ws.send(JSON.stringify({ type: "ping" })), 30000);
+
+  // Send auth in first message instead of query (if you didn't use ?token=):
+  // ws.onopen = () => ws.send(JSON.stringify({ type: "auth", token: "nvpat_..." }));
+
+## Python (websockets or similar)
+
+  import asyncio
+  import json
+  import os
+  # pip install websockets
+  import websockets
+
+  async def run():
+      token = os.environ.get("AUTH_TOKEN") or os.environ.get("PAT")
+      uri = f"ws://localhost:9001/ws?token={token}"
+      async with websockets.connect(uri) as ws:
+          msg = await ws.recv()
+          print("Server:", json.loads(msg))
+          await ws.send(json.dumps({"type": "ping"}))
+          pong = await ws.recv()
+          print("Pong:", json.loads(pong))
+
+  asyncio.run(run())
+
+## Flutter (Android & iOS)
+
+Use the same WebSocket URL and auth from a **Flutter** app so one codebase works on **Android**, **iOS**, and other platforms. Use `web_socket_channel` (or `dart:io` / `dart:html` WebSocket) and pass the token in the query or in the first message.
+
+### 1. Add dependency
+
+  # pubspec.yaml
+  dependencies:
+    web_socket_channel: ^3.0.0
+
+### 2. Connect with token in URL (recommended)
+
+  import 'dart:async';
+  import 'dart:convert';
+  import 'package:web_socket_channel/web_socket_channel.dart';
+
+  final token = 'nvpat_YOUR_PAT_OR_JWT';  // or get from secure storage / Firebase
+  final uri = Uri.parse('wss://api.example.com/ws?token=${Uri.encodeComponent(token)}');
+  final channel = WebSocketChannel.connect(uri);
+
+  channel.stream.listen((data) {
+    final msg = jsonDecode(data);
+    if (msg['type'] == 'connected') print('Connected');
+    if (msg['type'] == 'pong') print('Pong');
+    // Handle job push, etc., when implemented
+  });
+
+  // Ping keepalive (e.g. every 30s)
+  Timer.periodic(Duration(seconds: 30), (_) {
+    channel.sink.add(jsonEncode({'type': 'ping'}));
+  });
+
+  // Later: channel.sink.close();
+
+### 3. Auth in first message (e.g. when token is not in URL)
+
+  final uri = Uri.parse('wss://api.example.com/ws');
+  final channel = WebSocketChannel.connect(uri);
+
+  channel.sink.add(jsonEncode({'type': 'auth', 'token': token}));
+  channel.stream.listen((data) { ... });
+
+### 4. Android / iOS specifics
+
+- **URL:** Use `wss://` in production (HTTPS). For local dev, Android emulator can use `ws://10.0.2.2:9001/ws`; iOS simulator `ws://localhost:9001/ws`; real devices use your machine’s IP or a deployed API URL.
+- **Token:** Prefer storing PAT or JWT in **flutter_secure_storage** (or similar) and passing it into the WebSocket URL or first message. If you use **Firebase Auth**, you can use the Firebase ID token as the `token` (same Bearer format the API expects if you’ve wired Firebase auth to your backend).
+- **Firebase:** For **job workers** or **notifications**, the job scheduler supports worker type `mobile` (e.g. Firebase Cloud Messaging). WebSocket is for a persistent app connection; FCM can be used for wake-up or alerts. When WebSocket job push is implemented, the Flutter app can register as a worker (e.g. `worker_type: "websocket"` or `"mobile"`) and receive jobs over the same socket or via HTTP claim.
+
+### 5. Minimal full example (Flutter)
+
+  import 'dart:async';
+  import 'dart:convert';
+  import 'package:web_socket_channel/web_socket_channel.dart';
+
+  class NoolvaWebSocket {
+    WebSocketChannel? _channel;
+    final String baseUrl;
+    final String token;
+
+    NoolvaWebSocket({required this.baseUrl, required this.token});
+
+    void connect() {
+      final scheme = baseUrl.startsWith('https') ? 'wss' : 'ws';
+      final host = baseUrl.replaceFirst(RegExp(r'^https?://'), '').split('/').first;
+      final uri = Uri.parse('$scheme://$host/ws?token=${Uri.encodeComponent(token)}');
+      _channel = WebSocketChannel.connect(uri);
+      _channel!.stream.listen(_onMessage, onError: _onError, onDone: _onDone);
+    }
+
+    void _onMessage(dynamic data) {
+      final msg = jsonDecode(data);
+      if (msg['type'] == 'connected') {}
+      if (msg['type'] == 'pong') {}
+    }
+    void _onError(e) {}
+    void _onDone() {}
+
+    void ping() => _channel?.sink.add(jsonEncode({'type': 'ping'}));
+    void disconnect() => _channel?.sink.close();
+  }
+
+  // Usage: NoolvaWebSocket(baseUrl: 'https://api.example.com', token: myPatOrJwt).connect();
+
+## curl (test from CLI)
+
+  # Install websocat if needed: brew install websocat
+  websocat "ws://localhost:9001/ws?token=nvpat_YOUR_PAT"
+
+Or use a GUI client (e.g. Postman, Insomnia) that supports WebSocket; set URL to `ws://localhost:9001/ws?token=<your_token>`.
+
+## Job workers over WebSocket (planned)
+
+The job scheduler design (docs/job-scheduler-implementation-plan.md) includes **websocket** and **mobile** worker types (e.g. laptops, Android/iOS Flutter apps). Today, remote workers use **HTTP** (GET /jobs/claim, POST /jobs/{id}/result). When WebSocket job push is implemented:
+
+- Register as a worker with type `websocket` or `mobile` (e.g. POST /workers/register or over WS).
+- Server may push job assignments over the same WebSocket; client runs the job and sends the result (e.g. `{"type": "job_result", "job_id": "...", "status": "success", "result": {...}}`).
+- **Flutter (Android/iOS):** Use the Flutter section above to open the WebSocket; when job push is available, handle incoming job messages and submit results over the same connection or via HTTP.
+- **Firebase:** Use FCM for push/wake-up if needed; the app can still use this WebSocket for the persistent channel and (when implemented) job delivery.
+
+Until then, use the HTTP remote worker (see how-to-run-remote-worker) for running jobs from another machine.
+
+## Troubleshooting
+
+- **Connection refused** – API not running or wrong host/port. Start with `cli.py runserver` (see how-to-run-api).
+- **Close code 4001** – Auth failed. Check token (PAT or JWT), no extra spaces; use query `?token=...` or first message `{"type":"auth","token":"..."}`.
+- **CORS** – Browser same-origin or API CORS allows your frontend origin. For `ws://` same host/port is usually fine.
+- **wss://** – If the API is behind HTTPS, use `wss://` and the same path (`/ws`).
+- **Flutter Android emulator** – Use `ws://10.0.2.2:9001/ws` to reach host machine’s localhost.
+- **Flutter iOS simulator** – Use `ws://localhost:9001/ws`; on a real device use the host IP or deployed API URL with `wss://`.
+- **Firebase / mobile token** – If using Firebase Auth, pass the ID token in `token`; ensure your API accepts it (e.g. JWT validation or Firebase Admin verification).
+
+## See also
+
+- how-to-run-api – start the API and base URL
+- how_to_use_pat.md – create and use PAT
+- how-to-run-remote-worker – HTTP-based job worker
+- docs/job-scheduler-implementation-plan.md – worker types and future WebSocket job push
