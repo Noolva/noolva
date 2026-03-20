@@ -1,3 +1,7 @@
+"""
+DEPRECATED: Use the job scheduler (POST /jobs, GET /jobs/{id}) and background workers instead.
+See docs/job-scheduler-implementation-plan.md. This in-memory queue is not persisted.
+"""
 import queue
 import threading
 import uuid

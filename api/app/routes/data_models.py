@@ -2575,6 +2575,98 @@ async def auto_delete_record(
 
 # --- Custom Endpoint (custom_query with model_row_access_policies) ---
 
+
+async def execute_custom_endpoint_direct(
+    endpoint_id: int,
+    limit: int = 100,
+    offset: int = 0,
+    user: Optional[Dict[str, Any]] = None,
+    request: Optional[Request] = None,
+) -> Dict[str, Any]:
+    """
+    Execute a custom_query endpoint directly (no HTTP). Used by jobs running in the API process.
+    When user is None (job context), row policies are skipped.
+    Returns same shape as HTTP response: { endpoint_id, columns, records, limit, offset, row_count }.
+    """
+    row = await PostgresDB.fetchrow(
+        """
+        SELECT ae.endpoint_id, ae.path, ae.method, ae.type, ae.related_model_id,
+               ae.reference_model_ids, ae.custom_json
+        FROM public.api_endpoints ae
+        WHERE ae.endpoint_id = $1
+        """,
+        endpoint_id,
+    )
+    if not row:
+        raise ValueError(f"API endpoint not found: endpoint_id={endpoint_id}")
+    if row.get("type") != "custom_query":
+        raise ValueError(f"Endpoint is not custom_query type: endpoint_id={endpoint_id}")
+
+    custom_json = row.get("custom_json") or {}
+    if isinstance(custom_json, str):
+        try:
+            custom_json = json.loads(custom_json)
+        except Exception:
+            custom_json = {}
+    query_sql = (custom_json.get("query") or "").strip()
+    if not query_sql:
+        raise ValueError("Custom endpoint has no query configured")
+    if not query_sql.upper().startswith("SELECT"):
+        raise ValueError("Only SELECT queries are allowed")
+
+    ref_ids = row.get("reference_model_ids") or []
+    if not isinstance(ref_ids, list):
+        ref_ids = []
+
+    policy_clauses: List[Tuple[str, List[Any]]] = []
+    if ref_ids and user and request and not _user_bypasses_row_and_field_policies(user):
+        models = await PostgresDB.fetch(
+            """
+            SELECT model_id, table_name, table_alias
+            FROM public.data_models
+            WHERE model_id = ANY($1::int[])
+            """,
+            ref_ids,
+        )
+        model_by_id = {m["model_id"]: dict(m) for m in (models or [])}
+        for mid in ref_ids:
+            if mid not in model_by_id:
+                continue
+            m = model_by_id[mid]
+            qualifier = (m.get("table_alias") or m.get("table_name") or "").strip()
+            if not qualifier or not _is_safe_identifier(qualifier):
+                continue
+            clause, args = await _build_row_policy_clauses_with_qualifier(
+                mid, ACTION_READ, user, request, qualifier
+            )
+            if clause:
+                policy_clauses.append((clause, args))
+
+    if policy_clauses:
+        query_sql, policy_args = _inject_row_policies_into_sql(query_sql, policy_clauses)
+    else:
+        policy_args = []
+
+    query_sql = re.sub(r"\s+LIMIT\s+\d+", "", query_sql, flags=re.IGNORECASE)
+    query_sql = re.sub(r"\s+OFFSET\s+\d+", "", query_sql, flags=re.IGNORECASE)
+    query_sql = query_sql.rstrip()
+    query_sql += f" LIMIT {min(limit, 1000)} OFFSET {offset}"
+
+    args = list(policy_args)
+    rows = await PostgresDB.fetch(query_sql, *args)
+    results = [dict(r) for r in (rows or [])]
+    columns = list(results[0].keys()) if results else []
+
+    return {
+        "endpoint_id": endpoint_id,
+        "columns": columns,
+        "records": results,
+        "limit": limit,
+        "offset": offset,
+        "row_count": len(results),
+    }
+
+
 async def _build_row_policy_clauses_with_qualifier(
     model_id: int,
     action_bit: int,
