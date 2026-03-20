@@ -2,6 +2,7 @@ from fastapi import FastAPI, Request
 from routes import authentication
 from fastapi.middleware.cors import CORSMiddleware
 import uvicorn
+import asyncio
 from contextlib import asynccontextmanager
 from starlette.middleware.sessions import SessionMiddleware
 from classes.postgres_db import PostgresDB
@@ -73,10 +74,38 @@ async def lifespan(app: FastAPI):
         logger.info(f"App Menus routes registered: {[r.get('path', '') for r in app_menus_routes]}")
     else:
         logger.warning("No app-menus routes found in registered routes!")
-    
+
+    # Job scheduler and workers (optional)
+    scheduler_task_handle = None
+    worker_tasks = []
+    if os.getenv("ENABLE_SCHEDULER", "true").lower() in ("true", "1", "yes"):
+        import asyncio
+        from jobs.scheduler import scheduler_task
+        from jobs.worker import worker_loop
+        worker_count = int(os.getenv("WORKER_COUNT", "2"))
+        scheduler_task_handle = asyncio.create_task(scheduler_task())
+        for i in range(worker_count):
+            wid = f"api-local-{i + 1}"
+            worker_tasks.append(asyncio.create_task(worker_loop(wid)))
+        logger.info("Job scheduler and %d workers started", worker_count)
+    app.state._scheduler_task = scheduler_task_handle
+    app.state._worker_tasks = worker_tasks
+
     yield
     # Shutdown
     logger.info("Application shutdown initiated")
+    if getattr(app.state, "_scheduler_task", None):
+        app.state._scheduler_task.cancel()
+        try:
+            await app.state._scheduler_task
+        except asyncio.CancelledError:
+            pass
+    for t in getattr(app.state, "_worker_tasks", []):
+        t.cancel()
+        try:
+            await t
+        except asyncio.CancelledError:
+            pass
     await PostgresDB.close()
     logger.info("Database connection closed")
 
@@ -233,10 +262,37 @@ except Exception as e:
     logger.error(f"Failed to register upload router: {e}")
     raise
 
+# Import and include jobs router (submit, status, list; worker register/claim for remote workers)
+try:
+    from routes import jobs
+    app.include_router(jobs.router, tags=["Jobs"])
+    logger.info("Jobs router registered at /jobs, /workers, /jobs/claim")
+except Exception as e:
+    logger.error(f"Failed to register jobs router: {e}")
+    raise
+
+# WebSocket (see how-to-connect-websocket)
+try:
+    from routes import websocket
+    app.include_router(websocket.router, tags=["WebSocket"])
+    logger.info("WebSocket endpoint registered at /ws")
+except Exception as e:
+    logger.error(f"Failed to register websocket router: {e}")
+    raise
+
 
 @app.get("/")
 def home():
     return {"message": f"{BRAND_NAME} is running!"}
+
+
+@app.get("/config/display")
+def get_display_config():
+    """Return display timezone and time format from env (for admin UI timestamps)."""
+    return {
+        "timezone": os.getenv("APP_TIMEZONE", "Asia/Kolkata"),
+        "time_format": os.getenv("APP_TIME_FORMAT", "DD/MM/YYYY h:mm A"),
+    }
 
 # Catch-all route for unmatched API paths - return proper JSON 404
 # This prevents FastAPI from returning HTML 404 for frontend routes

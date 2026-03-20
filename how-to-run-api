@@ -36,3 +36,26 @@ How to run decrypt (data model field values)
 
   With venv:
     /path/to/noolva/api/app/noolva-venv/bin/python3 api/decrypt_field_value.py aes "<value>"
+
+---
+WebSocket
+  When you start the API with runserver, the WebSocket endpoint is available on the same host and port at /ws (e.g. ws://localhost:9001/ws). No separate process or port; use APPLICATION_PORT. See how-to-connect-websocket.
+
+---
+Display config (admin timestamps)
+  APP_TIMEZONE=Asia/Kolkata
+  APP_TIME_FORMAT=DD/MM/YYYY h:mm A   (dayjs: dd/mm/yyyy plus time)
+  Used by GET /config/display for admin UI (Schedulers, etc.).
+
+---
+Custom query from jobs (alarm workflow)
+  When job runs on API (local worker): executes query directly, no PAT needed.
+  When job runs on remote worker: set CUSTOM_QUERY_PAT=nvpat_... for HTTP auth.
+
+---
+Job Scheduler (optional)
+  When ENABLE_SCHEDULER=true (default), the API starts background scheduler and workers.
+  Env: ENABLE_SCHEDULER, SCHEDULER_INTERVAL, SCHEDULER_FETCH_LIMIT, WORKER_COUNT, WORKER_CONCURRENCY,
+       QUEUE_MAX_SIZE, DEFAULT_JOB_TIMEOUT_SECONDS, DEFAULT_JOB_MAX_RETRIES,
+       WORKER_MEMORY_LIMIT_MB, SERVER_MEMORY_LIMIT_MB.
+  Submit jobs via POST /jobs (template name + payload). Status: GET /jobs/{id}.
