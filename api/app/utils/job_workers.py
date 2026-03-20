@@ -1,3 +1,6 @@
+"""
+DEPRECATED: Use app.jobs.handlers registry and POST /jobs API. See docs/job-scheduler-implementation-plan.md.
+"""
 def handle_job(job):
     job_type = job["type"]
     payload = job["payload"]

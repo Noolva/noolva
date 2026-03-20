@@ -4,6 +4,8 @@
 - `db-structure/noolvandb_schema.sql` contains full schema - always update here when making schema changes
 - `db-structure/noolvandb_feeds.sql` contains all essential feeds or inbuilt saas/tenant data - update here whenever schema changes
 - Whenever making DB changes (schema, migrations, new tables/columns, etc.), also provide update queries in a **separate file** (e.g. `db-structure/update_old_db_*.sql` or `migration_*.sql`) so existing/old databases can be updated without full schema reload
+- For **each new change set** to old databases, create a **new** `update_old_db_*.sql` file (do not overwrite or repurpose older ones). Name files descriptively, e.g. `update_old_db_job_scheduler.sql`, `update_old_db_auto_crud_templates_v4.sql`, `update_old_db_workflow_alarm_endpoint_path.sql`
+- **Always** put update/migration queries in `db-structure/` as standalone `.sql` files; never embed them only in docs or chat
 
 
 ## Assets Management
@@ -30,3 +32,14 @@
 
 ## Development Notifications
 - Whenever API restart or React npm install/restart is needed, inform the user after making changes
+
+## Runtime & DB Operations (Agent vs User)
+- The agent must **not** run the API server, React dev server, or apply database migrations directly.
+- The agent should **only**:
+  - Modify source files (API, React, SQL, docs, etc.).
+  - Create/update schema files in `db-structure/noolvandb_schema.sql` and related SQL.
+  - Create/update **separate** migration/update files (e.g. `db-structure/update_old_db_*.sql`, `migration_*.sql`) with queries needed to update existing/old databases.
+- The **user** will manually:
+  - Start/stop API and React servers.
+  - Run `npm`/`pip` commands.
+  - Apply SQL migrations and DB updates.

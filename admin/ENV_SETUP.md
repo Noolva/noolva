@@ -53,6 +53,20 @@ VITE_APP_SCOPE=tenant
 - Default: `saas` if not set
 - Used for themes and scope-aware features
 
+## VITE_TIMEZONE and VITE_TIME_FORMAT (optional)
+
+Display timezone and time format for timestamps in the admin UI (e.g. Schedulers page).
+Defaults are read from the API `/config/display` endpoint (from `api/.env`).
+To override in the admin, add to `admin/.env`:
+
+```
+VITE_TIMEZONE=Asia/Kolkata
+VITE_TIME_FORMAT=h:mm A
+```
+
+- `VITE_TIMEZONE`: IANA timezone (e.g. `Asia/Kolkata` for IST)
+- `VITE_TIME_FORMAT`: dayjs format for date+time (e.g. `DD/MM/YYYY h:mm A` for dd/mm/yyyy plus 12h am/pm)
+
 ## Notes
 
 - Environment variables must start with `VITE_` to be exposed to the frontend

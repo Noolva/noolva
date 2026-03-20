@@ -35,6 +35,9 @@ export const getIconClass = (iconName) => {
         
         // Developer Console icons
         'code': 'fas fa-code',
+        'file-text': 'fas fa-file-alt',
+        'unordered-list': 'fas fa-list',
+        'clock-circle': 'far fa-clock',
         
         // Common icons
         'tool': 'fas fa-wrench',
@@ -134,6 +137,8 @@ function getFontAwesomeClass(iconName) {
         'database': 'fas fa-database',
         'chart-bar': 'fas fa-chart-bar',
         'file': 'fas fa-file',
+        'file-text': 'fas fa-file-alt',
+        'unordered-list': 'fas fa-list',
         'folder': 'fas fa-folder',
         'building': 'fas fa-building',
         'briefcase': 'fas fa-briefcase',
@@ -149,6 +154,7 @@ function getFontAwesomeClass(iconName) {
         'exclamation-circle': 'fas fa-exclamation-circle',
         'times-circle': 'fas fa-times-circle',
         'info-circle': 'fas fa-info-circle',
+        'clock-circle': 'far fa-clock',
     };
     
     return faIconMap[iconName] || null;

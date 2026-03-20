@@ -1,5 +1,7 @@
 # Job Scheduler System — Implementation Plan
 
+**Implementation completed.** DB migration, QueueManager, scheduler, workers, jobs API, remote worker script, and workflow execution are in place. Old `queue_handler` / `job_workers` are deprecated (see comments in code).
+
 ## Overview
 
 Replace the old **job_queue** + **actions** tables and in-memory `queue_handler` with a PostgreSQL-backed job system: **scheduler** → **QueueManager** (ready_queue, delayed_queue, cron_registry) → **workers** (local, remote, websocket, mobile). All job state lives in PostgreSQL.
@@ -83,6 +85,40 @@ Note: In your spec the second `DEFAULT_JOB_TIMEOUT_SECONDS=300` was for retries;
   - If `ENABLE_SCHEDULER` false, skip.
   - Every `SCHEDULER_INTERVAL` seconds: poll PostgreSQL for jobs where `status = 'pending'` and `schedule_time <= now()` (or null), limit `SCHEDULER_FETCH_LIMIT`; set `status = 'queued'` and push to `ready_queue`; optionally evaluate `cron_registry` and insert new jobs.
   - Move due items from `delayed_queue` into `ready_queue`.
+
+**Where to add cron jobs:** There is no UI for cron yet. Register in code via `QueueManager.cron_register(key, config)` after getting the singleton with `get_queue_manager()`. Example: in `main.py` lifespan (after DB connect) or in a dedicated module (e.g. `api/app/jobs/cron_registry.py`) that you import from lifespan:
+
+```python
+from jobs.queue_manager import get_queue_manager
+qm = get_queue_manager()
+qm.cron_register("daily_cleanup", {"cron": "0 2 * * *", "template_name": "generate_report", "payload": {"type": "daily"}})
+```
+
+The scheduler does not yet evaluate `cron_registry` each cycle (e.g. with a cron parser to create pending jobs in the DB); that logic can be added in `scheduler.py` when needed.
+
+### 3.4 Auto-CRUD job templates (internal and remote)
+
+Two generic job templates are used to run background auto-CRUD operations on data models:
+
+- `auto_crud_internal`:
+  - `handler_type = 'core_function'`
+  - `handler_function_name = 'run_auto_crud_internal'`
+  - `runnable_in = ['local']`
+  - Payload (stored in `jobs.payload`) includes:
+    - `model_name` (or `model_code`)
+    - `operation` (`create` | `update` | `delete`)
+    - `record_id` (for update/delete)
+    - `data` (for create/update)
+    - `creator_user_id`, `run_as_user_id` (identity under which the job executes)
+- `auto_crud_remote`:
+  - `handler_type = 'core_function'`
+  - `handler_function_name = 'run_auto_crud_remote'`
+  - `runnable_in = ['local','remote']`
+  - Same payload fields as internal, plus:
+    - `remote_base_url` (remote Noolva API base URL)
+    - (Future) `remote_integration_id` for credentials, if needed
+
+These templates are seeded for **new DBs** in `noolvandb_schema.sql` (or can be added as part of feeds) and for existing DBs via `db-structure/update_old_db_auto_crud_templates.sql`.
 - **worker_task_1() … worker_task_N()** (N = WORKER_COUNT):
   - Each runs a loop: get job from `ready_queue` (with timeout), claim in DB (status → `running`, set worker_id if using workers table), execute handler, then set `success`/`failed` and update `job_step_runs` for workflow steps.
 - **Lifespan:** In `main.py` lifespan, start scheduler_task and worker tasks as background asyncio tasks; cancel them on shutdown.
