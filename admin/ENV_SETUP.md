@@ -2,7 +2,8 @@
 
 ## VITE_API_URL Configuration
 
-The `VITE_API_URL` environment variable controls how the frontend connects to the API.
+The `VITE_API_URL` environment variable sets the **API origin** (scheme + host + port, **no path**).  
+The admin app prepends **`/api`** to all JSON HTTP calls (see `src/utils/api.js`). Example: with `VITE_API_URL=http://localhost:9001`, login goes to `http://localhost:9001/api/auth/login`.
 
 ### Where to Set It
 
@@ -30,7 +31,7 @@ VITE_API_URL=
 - Uses the Vite proxy configured in `vite.config.js`
 - Proxies requests from `http://localhost:3000` to `http://localhost:9001`
 - Avoids CORS issues
-- Proxy routes: `/auth`, `/app`, `/integrations`, `/menus`
+- Proxy: `/api` and `/assets` → `http://localhost:9001` (see `vite.config.js`). Static app icons still use `/app/` as configured.
 
 ### Option 3: Production/Remote API
 ```
@@ -56,7 +57,7 @@ VITE_APP_SCOPE=tenant
 ## VITE_TIMEZONE and VITE_TIME_FORMAT (optional)
 
 Display timezone and time format for timestamps in the admin UI (e.g. Schedulers page).
-Defaults are read from the API `/config/display` endpoint (from `api/.env`).
+Defaults are read from the API `GET /api/config/display` endpoint (from `api/.env`).
 To override in the admin, add to `admin/.env`:
 
 ```

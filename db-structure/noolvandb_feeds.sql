@@ -329,6 +329,8 @@ DECLARE
     settings_app_id INT;
     dev_console_app_id INT;
     assets_menu_id INT;
+    settings_org_menu_id INT;
+    org_app_loop_id INT;
 BEGIN
     SELECT user_id INTO system_user_id FROM public.users WHERE user_type = 'system' LIMIT 1;
 
@@ -439,10 +441,32 @@ BEGIN
         INSERT INTO public.menus (menu_title,parent_id,type,route_path,icon,app_id,scope,is_builtin,order_no,created_by)
         VALUES ('Permissions',NULL,'item','org_permissions','key',organization_app_id,'saas',TRUE,70,system_user_id);
     END IF;
-    IF NOT EXISTS (SELECT 1 FROM public.menus WHERE app_id=organization_app_id AND parent_id IS NULL AND menu_title='Settings') THEN
+    -- Organization > Settings: parent folder + General (settings page). Change password is top-level (same app), not nested under Settings.
+    SELECT menu_id INTO settings_org_menu_id FROM public.menus
+        WHERE app_id = organization_app_id AND parent_id IS NULL AND menu_title = 'Settings' LIMIT 1;
+    IF settings_org_menu_id IS NULL THEN
         INSERT INTO public.menus (menu_title,parent_id,type,route_path,icon,app_id,scope,is_builtin,order_no,created_by)
-        VALUES ('Settings',NULL,'item','settings','setting',organization_app_id,'saas',TRUE,80,system_user_id);
+        VALUES ('Settings',NULL,'item',NULL,'setting',organization_app_id,'saas',TRUE,80,system_user_id)
+        RETURNING menu_id INTO settings_org_menu_id;
     END IF;
+    IF settings_org_menu_id IS NOT NULL THEN
+        UPDATE public.menus SET route_path = NULL, last_updated = CURRENT_TIMESTAMP
+        WHERE menu_id = settings_org_menu_id AND route_path = 'settings';
+        IF NOT EXISTS (SELECT 1 FROM public.menus WHERE app_id=organization_app_id AND parent_id=settings_org_menu_id AND route_path='settings') THEN
+            INSERT INTO public.menus (menu_title,parent_id,type,route_path,icon,app_id,scope,is_builtin,order_no,created_by)
+            VALUES ('General',settings_org_menu_id,'item','settings','setting',organization_app_id,'saas',TRUE,10,system_user_id);
+        END IF;
+    END IF;
+    -- Change password: top-level on every organization app (each tenant/company scope has its own app_id)
+    FOR org_app_loop_id IN SELECT a.app_id FROM public.apps a WHERE a.app_name = 'organization'
+    LOOP
+        UPDATE public.menus SET parent_id = NULL, order_no = 82, last_updated = CURRENT_TIMESTAMP
+        WHERE app_id = org_app_loop_id AND route_path = 'change_password' AND menu_title = 'Change password';
+        IF NOT EXISTS (SELECT 1 FROM public.menus WHERE app_id = org_app_loop_id AND parent_id IS NULL AND route_path = 'change_password') THEN
+            INSERT INTO public.menus (menu_title,parent_id,type,route_path,icon,app_id,scope,is_builtin,order_no,created_by)
+            VALUES ('Change password',NULL,'item','change_password','key',org_app_loop_id,'saas',TRUE,82,system_user_id);
+        END IF;
+    END LOOP;
     IF NOT EXISTS (SELECT 1 FROM public.menus WHERE app_id=organization_app_id AND parent_id IS NULL AND menu_title='Themes') THEN
         INSERT INTO public.menus (menu_title,parent_id,type,route_path,icon,app_id,scope,is_builtin,order_no,created_by)
         VALUES ('Themes',NULL,'item','themes','bgcolors',organization_app_id,'saas',TRUE,85,system_user_id);

@@ -369,6 +369,6 @@ WHERE app_id = 1;
 
 ## API Endpoints
 
-- `GET /auth/apps` - Get all apps user has access to
-- `GET /auth/apps/{app_id}/menus` - Get menus for a specific app
-- `GET /auth/menus` - Get all menus (legacy, includes apps)
+- `GET /api/auth/apps` - Get all apps user has access to
+- `GET /api/auth/apps/{app_id}/menus` - Get menus for a specific app
+- `GET /api/auth/menus` - Get all menus (legacy, includes apps)

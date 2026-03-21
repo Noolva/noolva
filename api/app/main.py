@@ -1,4 +1,4 @@
-from fastapi import FastAPI, Request
+from fastapi import FastAPI, Request, APIRouter
 from routes import authentication
 from fastapi.middleware.cors import CORSMiddleware
 import uvicorn
@@ -170,31 +170,50 @@ app.add_middleware(
 # Add logging middleware (should be added last to log final response)
 app.add_middleware(LoggingMiddleware)
 
-# Static assets (api/assets/*) served at /assets/*
+# Static assets (api/assets/*) served at /assets/* (not under /api; CDN-friendly paths)
 ASSETS_DIR = Path(__file__).resolve().parent.parent / "assets"
 if ASSETS_DIR.exists():
     app.mount("/assets", StaticFiles(directory=str(ASSETS_DIR)), name="assets")
 
-# Routes
-app.include_router(authentication.router, prefix="/auth", tags=["Authentication"])
+# All client-facing HTTP API routes use the /api prefix (single canonical origin for JSON endpoints).
+api = APIRouter(prefix="/api")
+
+
+@api.get("/")
+def api_root():
+    """Discoverability: confirms the API prefix is active."""
+    return {"message": f"{BRAND_NAME}", "api_prefix": "/api"}
+
+
+@api.get("/config/display")
+def get_display_config():
+    """Return display timezone and time format from env (for admin UI timestamps)."""
+    return {
+        "timezone": os.getenv("APP_TIMEZONE", "Asia/Kolkata"),
+        "time_format": os.getenv("APP_TIME_FORMAT", "DD/MM/YYYY h:mm A"),
+    }
+
+
+# Routes (mounted under /api)
+api.include_router(authentication.router, prefix="/auth", tags=["Authentication"])
 
 # Import and include settings router
 from routes import settings
-app.include_router(settings.router, tags=["Settings"])
+api.include_router(settings.router, tags=["Settings"])
 
 # Import and include themes router
 from routes import themes
-app.include_router(themes.router, tags=["Themes"])
+api.include_router(themes.router, tags=["Themes"])
 
 # Import and include database router
 from routes import database
-app.include_router(database.router, tags=["Developer Console - Database"])
+api.include_router(database.router, tags=["Developer Console - Database"])
 
 # Import and include menus router (CRUD operations)
 try:
     from routes import menus
-    app.include_router(menus.router, prefix="/app-menus", tags=["App Menus"])
-    logger.info("Menus router registered successfully at /app-menus")
+    api.include_router(menus.router, prefix="/app-menus", tags=["App Menus"])
+    logger.info("Menus router registered successfully at /api/app-menus")
 except Exception as e:
     logger.error(f"Failed to register menus router: {e}")
     raise
@@ -202,8 +221,8 @@ except Exception as e:
 # Import and include data models router
 try:
     from routes import data_models
-    app.include_router(data_models.router, prefix="/data-models", tags=["Data Models"])
-    logger.info("Data models router registered successfully at /data-models")
+    api.include_router(data_models.router, prefix="/data-models", tags=["Data Models"])
+    logger.info("Data models router registered successfully at /api/data-models")
 except Exception as e:
     logger.error(f"Failed to register data models router: {e}")
     raise
@@ -211,8 +230,8 @@ except Exception as e:
 # Import and include field options router
 try:
     from routes import field_options
-    app.include_router(field_options.router, tags=["Field Options"])
-    logger.info("Field options router registered successfully at /field-options")
+    api.include_router(field_options.router, tags=["Field Options"])
+    logger.info("Field options router registered successfully at /api/field-options")
 except Exception as e:
     logger.error(f"Failed to register field options router: {e}")
     raise
@@ -220,8 +239,8 @@ except Exception as e:
 # Import and include icons router
 try:
     from routes import icons
-    app.include_router(icons.router, prefix="/icons", tags=["Icons"])
-    logger.info("Icons router registered successfully at /icons")
+    api.include_router(icons.router, prefix="/icons", tags=["Icons"])
+    logger.info("Icons router registered successfully at /api/icons")
 except Exception as e:
     logger.error(f"Failed to register icons router: {e}")
     raise
@@ -229,8 +248,8 @@ except Exception as e:
 # Import and include collections router
 try:
     from routes import collections
-    app.include_router(collections.router, prefix="/collections", tags=["Collections"])
-    logger.info("Collections router registered successfully at /collections")
+    api.include_router(collections.router, prefix="/collections", tags=["Collections"])
+    logger.info("Collections router registered successfully at /api/collections")
 except Exception as e:
     logger.error(f"Failed to register collections router: {e}")
     raise
@@ -238,8 +257,8 @@ except Exception as e:
 # Import and include api_endpoints router
 try:
     from routes import api_endpoints
-    app.include_router(api_endpoints.router, prefix="/api-endpoints", tags=["API Endpoints"])
-    logger.info("API endpoints router registered successfully at /api-endpoints")
+    api.include_router(api_endpoints.router, prefix="/api-endpoints", tags=["API Endpoints"])
+    logger.info("API endpoints router registered successfully at /api/api-endpoints")
 except Exception as e:
     logger.error(f"Failed to register api_endpoints router: {e}")
     raise
@@ -247,17 +266,26 @@ except Exception as e:
 # Import and include personal_access_tokens router
 try:
     from routes import personal_access_tokens
-    app.include_router(personal_access_tokens.router, prefix="/personal-access-tokens", tags=["Personal Access Tokens"])
-    logger.info("Personal Access Tokens router registered successfully at /personal-access-tokens")
+    api.include_router(personal_access_tokens.router, prefix="/personal-access-tokens", tags=["Personal Access Tokens"])
+    logger.info("Personal Access Tokens router registered successfully at /api/personal-access-tokens")
 except Exception as e:
     logger.error(f"Failed to register personal_access_tokens router: {e}")
+    raise
+
+# Integrations (providers registry + company encrypted credentials)
+try:
+    from routes import integrations
+    api.include_router(integrations.router, prefix="/integrations", tags=["Integrations"])
+    logger.info("Integrations router registered successfully at /api/integrations")
+except Exception as e:
+    logger.error(f"Failed to register integrations router: {e}")
     raise
 
 # Import and include upload router (S3 file upload; supports PAT for model-attachments)
 try:
     from routes import upload
-    app.include_router(upload.router, tags=["Upload"])
-    logger.info("Upload router registered successfully at /upload")
+    api.include_router(upload.router, tags=["Upload"])
+    logger.info("Upload router registered successfully at /api/upload")
 except Exception as e:
     logger.error(f"Failed to register upload router: {e}")
     raise
@@ -265,34 +293,32 @@ except Exception as e:
 # Import and include jobs router (submit, status, list; worker register/claim for remote workers)
 try:
     from routes import jobs
-    app.include_router(jobs.router, tags=["Jobs"])
-    logger.info("Jobs router registered at /jobs, /workers, /jobs/claim")
+    api.include_router(jobs.router, tags=["Jobs"])
+    logger.info("Jobs router registered at /api/jobs, /api/workers, /api/jobs/claim")
 except Exception as e:
     logger.error(f"Failed to register jobs router: {e}")
     raise
 
-# WebSocket (see how-to-connect-websocket)
+# WebSocket (see how-to-connect-websocket); also mounted at app root below as /ws (not only /api/ws)
 try:
     from routes import websocket
-    app.include_router(websocket.router, tags=["WebSocket"])
-    logger.info("WebSocket endpoint registered at /ws")
+    api.include_router(websocket.router, tags=["WebSocket"])
+    logger.info("WebSocket endpoint registered at /api/ws")
 except Exception as e:
     logger.error(f"Failed to register websocket router: {e}")
     raise
+
+app.include_router(api)
+
+# Same WebSocket routes at /ws and /ws/{device_id}. Without this, upgrades to /ws/... are handled
+# by the HTTP catch-all (wrong handler → failed upgrade / 403 in clients).
+app.include_router(websocket.router, tags=["WebSocket"])
+logger.info("WebSocket also registered at /ws and /ws/{device_id}")
 
 
 @app.get("/")
 def home():
     return {"message": f"{BRAND_NAME} is running!"}
-
-
-@app.get("/config/display")
-def get_display_config():
-    """Return display timezone and time format from env (for admin UI timestamps)."""
-    return {
-        "timezone": os.getenv("APP_TIMEZONE", "Asia/Kolkata"),
-        "time_format": os.getenv("APP_TIME_FORMAT", "DD/MM/YYYY h:mm A"),
-    }
 
 # Catch-all route for unmatched API paths - return proper JSON 404
 # This prevents FastAPI from returning HTML 404 for frontend routes
@@ -306,7 +332,19 @@ async def catch_all(request: Request, path: str):
     This should only be reached if no specific route matched.
     """
     # For paths that look like API routes but weren't matched by any router
-    if path.startswith(("assets/", "auth/", "app/", "api/", "settings", "dev-console/")):
+    if path.startswith(
+        (
+            "assets/",
+            "api/",
+            "auth/",
+            "app/",
+            "settings",
+            "dev-console/",
+            "data-models/",
+            "themes/",
+            "field-options/",
+        )
+    ):
         return JSONResponse(
             status_code=404,
             content={

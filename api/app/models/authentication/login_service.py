@@ -181,6 +181,41 @@ class LoginService:
         return {"message": "Password reset successfully", "user_id": user_id}
 
     @classmethod
+    async def change_own_password(cls, user_id: int, current_password: str, new_password: str) -> dict:
+        """
+        Verify current password and set a new password for the authenticated user.
+        """
+        if not new_password or len(new_password) < 5:
+            raise ERPError("New password must be at least 5 characters", ErrorType.VALIDATION_ERROR)
+        user = await PostgresDB.fetchrow(
+            """
+            SELECT user_id, user_type, password
+            FROM public.users
+            WHERE user_id = $1 AND deleted_at IS NULL
+            """,
+            user_id,
+        )
+        if not user:
+            raise ERPError("User not found", ErrorType.NOT_FOUND)
+        if user["user_type"] == "system":
+            raise ERPError("Cannot change password for system user", ErrorType.AUTHORIZATION_ERROR)
+        stored = user["password"]
+        if not stored:
+            raise ERPError(
+                "No password is set for this account. If you sign in with Google or another provider, use that to sign in or ask an administrator to set a password.",
+                ErrorType.VALIDATION_ERROR,
+            )
+        if not cls.verify_password(current_password, stored):
+            raise ERPError("Current password is incorrect", ErrorType.AUTHENTICATION_ERROR)
+        hashed = cls.get_password_hash(new_password)
+        await PostgresDB.execute(
+            "UPDATE public.users SET password = $1, last_updated = NOW() WHERE user_id = $2",
+            hashed,
+            user_id,
+        )
+        return {"message": "Password changed successfully"}
+
+    @classmethod
     async def login_user(
         cls, 
         identifier: str, 

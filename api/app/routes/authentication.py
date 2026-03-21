@@ -50,6 +50,12 @@ class ReauthRequest(BaseModel):
 class MyIdleTimeoutRequest(BaseModel):
     idle_timeout_minutes: Optional[int] = None  # null = use global default, -1 = no lock, >0 = minutes
 
+
+class ChangeOwnPasswordRequest(BaseModel):
+    current_password: str
+    new_password: str
+
+
 class SwitchAccountRequest(BaseModel):
     company_id: Optional[int] = None
     profile_name: Optional[str] = None
@@ -518,6 +524,28 @@ async def update_my_idle_timeout(
         raise HTTPException(status_code=400, detail="idle_timeout_minutes must be between -1 and 1440, or null for default")
     await LoginService.update_my_idle_timeout(user_id, value)
     return {"message": "Idle timeout updated", "idle_timeout_minutes": value}
+
+
+@router.post("/me/change-password")
+async def change_my_password(
+    request: Request,
+    data: ChangeOwnPasswordRequest,
+    db=Depends(get_db),
+    user: Dict = Depends(verify_jwt_token(["saas_admin", "saas_employee", "tenant_admin", "tenant_user"])),
+):
+    """
+    Change password for the currently authenticated user (requires current password).
+    """
+    if not user:
+        raise HTTPException(status_code=401, detail="Authentication required")
+    try:
+        return await LoginService.change_own_password(
+            user_id=user["user_id"],
+            current_password=data.current_password,
+            new_password=data.new_password,
+        )
+    except ERPError as e:
+        return JSONResponse(status_code=400, content=e.to_dict())
 
 
 @router.post("/reauth")
