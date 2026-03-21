@@ -29,8 +29,11 @@ NF0013/feature/url-based-account-tracking-pat-allow-all-to-saas-admin-tenant-adm
 NF0014/feature/data-model-enhancements-import-export-auto-uuid-field-type
 NF0015/feature/data-model-encryption-fields-file-or-image-field-support-thumbnail-handling
 current,
+NF0016/feature/file-encryption-on-behalf-of-field-value-encryption-row-exposure-feature
+NF0017/feature/job-scheduler-system-implementation
 ======
-NF0016/feature/file-encryption-on-behalf-of-field-value-encryption
+
+api-endpoints add inbuilt endpoints.
 
 Edge Device Agent (EDA)
 

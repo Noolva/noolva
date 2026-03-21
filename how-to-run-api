@@ -7,7 +7,7 @@ python version : Python 3.9.6
 
 ---
 Connecting from external clients (PAT)
-  Endpoints that accept PAT (e.g. PUT /settings, POST /upload, data-models auto CRUD) require a
+  Endpoints that accept PAT (e.g. PUT /api/settings, POST /api/upload, data-models auto CRUD) require a
   Personal Access Token (PAT), not the session JWT.
 
   • Use the PAT string that starts with "nvpat_" (e.g. nvpat_abc123...). Create it in admin:
@@ -39,13 +39,13 @@ How to run decrypt (data model field values)
 
 ---
 WebSocket
-  When you start the API with runserver, the WebSocket endpoint is available on the same host and port at /ws (e.g. ws://localhost:9001/ws). No separate process or port; use APPLICATION_PORT. See how-to-connect-websocket.
+  When you start the API with runserver, the WebSocket endpoint is available on the same host and port at /api/ws (e.g. ws://localhost:9001/api/ws). No separate process or port; use APPLICATION_PORT. See how-to-connect-websocket.
 
 ---
 Display config (admin timestamps)
   APP_TIMEZONE=Asia/Kolkata
   APP_TIME_FORMAT=DD/MM/YYYY h:mm A   (dayjs: dd/mm/yyyy plus time)
-  Used by GET /config/display for admin UI (Schedulers, etc.).
+  Used by GET /api/config/display for admin UI (Schedulers, etc.).
 
 ---
 Custom query from jobs (alarm workflow)

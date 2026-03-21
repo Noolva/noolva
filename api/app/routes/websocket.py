@@ -69,16 +69,40 @@ async def _handle_websocket(
     device_id: Optional[str] = None,
 ):
     """
-    Shared WebSocket handler. Auth via query ?token=... or send first text message: {"type":"auth","token":"..."}.
+    Shared WebSocket handler.
+    Auth (same as HTTP API):
+    - Query: ?token=... or ?access_token=... (JWT session or PAT nvpat_...)
+    - Header: Authorization: Bearer ...
+    - Or after accept, first text frame: {"type":"auth","token":"..."}
+
     If device_id is set (e.g. /ws/device123), the client is registered in public.workers and shown on Scheduler Workers.
     Server sends: {"type":"connected"} then keeps connection open. Send {"type":"ping"} for {"type":"pong"}.
     """
-    await websocket.accept()
-    auth_header = f"Bearer {token}" if token else None
+    q = websocket.query_params
+    qp_token = (token or q.get("token") or q.get("access_token") or "").strip() or None
+    auth_header: Optional[str] = None
+    if qp_token:
+        auth_header = f"Bearer {qp_token}"
+    else:
+        h = websocket.headers.get("authorization") or websocket.headers.get("Authorization")
+        if h and not str(h).strip().lower().startswith("Bearer "):
+            auth_header = f"Bearer {str(h).strip()}"
+        else:
+            auth_header = h
+
     user = await resolve_bearer_to_user(auth_header) if auth_header else None
 
-    # If no token in query, expect first message to be auth
-    if not user:
+    if auth_header and not user:
+        try:
+            await websocket.close(code=1008)
+        except Exception:
+            pass
+        return
+
+    if user:
+        await websocket.accept()
+    else:
+        await websocket.accept()
         try:
             first = await websocket.receive_text()
             data = json.loads(first) if first else {}
@@ -86,10 +110,12 @@ async def _handle_websocket(
                 user = await resolve_bearer_to_user(f"Bearer {data['token']}")
         except (json.JSONDecodeError, WebSocketDisconnect):
             pass
-
-    if not user:
-        await websocket.close(code=4001)
-        return
+        if not user:
+            try:
+                await websocket.close(code=4001)
+            except Exception:
+                pass
+            return
 
     # Register this connection as a worker so it appears on Scheduler Workers page
     if device_id:

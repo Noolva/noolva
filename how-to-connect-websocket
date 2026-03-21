@@ -2,33 +2,52 @@
 
 The Noolva API exposes a WebSocket endpoint for persistent connections. Use it from **browsers**, **Flutter (Android & iOS)**, **Python**, or any WebSocket client. It supports connect, optional auth, and ping/pong; future use includes job push to workers and real-time notifications (e.g. for mobile apps using Firebase).
 
+A concise list of all HTTP and WebSocket paths is in **`api/docs/endpoints.md`**.
+
 ## Server and port (no separate process)
 
-The WebSocket runs on the **same server and port** as the HTTP API. When you start the API with `runserver` (see how-to-run-api), the `/ws` endpoint is available immediately—**no separate process or port**.
+The WebSocket runs on the **same server and port** as the HTTP API. When you start the API with `runserver` (see how-to-run-api), WebSocket endpoints are available immediately—**no separate process or port**.
 
-- **Port:** Use the same port as the API (env `APPLICATION_PORT`, default **9001**). There is **no** separate WebSocket port or env.
-- **URL:** `ws://<host>:<port>/ws` (e.g. `ws://localhost:9001/ws`)
-- **TLS:** Use `wss://` when the API is served over HTTPS (e.g. `wss://api.example.com/ws`).
+### URL paths (canonical + aliases)
+
+All JSON HTTP routes use the **`/api`** prefix. WebSockets follow the same convention:
+
+| Use | URL pattern |
+|-----|-------------|
+| **Canonical (recommended for new clients)** | `ws://<host>:<port>/api/ws` and `ws://<host>:<port>/api/ws/<device_id>` |
+| **Alias (same handler)** | `ws://<host>:<port>/ws` and `ws://<host>:<port>/ws/<device_id>` |
+
+Examples: `ws://localhost:9001/api/ws/mac-agent` and `ws://localhost:9001/ws/mac-agent` are equivalent. Prefer **`/api/ws`** in documentation you ship to external apps; **`/ws`** remains valid for older integrations.
+
+- **Port:** Same as the API (env `APPLICATION_PORT`, default **9001**). There is **no** separate WebSocket port.
+- **TLS:** Use `wss://` when the API is served over HTTPS (e.g. `wss://api.example.com/api/ws`).
 
 ## Authentication
 
-You must authenticate so the server accepts the connection. Two options:
+The server must resolve your credentials to a user (same rules as HTTP: **JWT** from login, or **PAT** `nvpat_…`). You can supply the token in several ways.
 
-### 1. Token in query string (e.g. browser, simple clients)
+### 1. Query string (`token` or `access_token`)
 
-Append the Bearer token as a query parameter:
+Recommended for browsers and simple clients where the URL can carry the token:
 
-  ws://localhost:9001/ws?token=nvpat_YOUR_PAT_HERE
+  ws://localhost:9001/api/ws?token=nvpat_YOUR_PAT_HERE
+  ws://localhost:9001/api/ws?access_token=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
 
-or with JWT:
+Either **`token`** or **`access_token`** works (same value). Use a **PAT** for long-lived or scripted connections (admin: Organization → Personal Access Tokens). See `how_to_use_pat.md`.
 
-  ws://localhost:9001/ws?token=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+### 2. `Authorization` header (JWT / PAT)
 
-Use a **PAT** (starts with `nvpat_`) for long-lived or scripted connections. Create in admin: Organization → Personal Access Tokens. See how_to_use_pat.md.
+If your client can set WebSocket headers (many non-browser libraries can), send:
 
-### 2. Token in first message (when query is not suitable)
+  Authorization: Bearer <JWT or PAT>
 
-Connect without a query, then send a single JSON text frame:
+The server also accepts a **raw JWT** in `Authorization` (without the `Bearer ` prefix) and normalizes it.
+
+**Browsers:** The WebSocket API does not let you set arbitrary headers on `new WebSocket(url)`. Use **`?token=`** in the URL or auth in the **first message** (below).
+
+### 3. First message after connect (no token in URL)
+
+Connect without credentials in the URL, then send one JSON text frame:
 
   {"type": "auth", "token": "nvpat_YOUR_PAT_HERE"}
 
@@ -36,7 +55,16 @@ or with JWT:
 
   {"type": "auth", "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."}
 
-If the token is invalid or missing, the server closes the connection with code 4001.
+The server accepts the connection first, then validates this frame.
+
+### Close codes (auth failures)
+
+| Code | Meaning |
+|------|---------|
+| **1008** | You sent a token (query or header) but it was **invalid or expired** (rejected before the app finishes the handshake). |
+| **4001** | No valid auth after connect (e.g. missing token, or first-message auth failed / missing). |
+
+If you see **403** or “connection rejected” in a client, a common cause is using the **wrong path** (e.g. only `/api/ws` exists in docs but the client called a path that hit the HTTP catch-all). Use **`/api/ws`** or **`/ws`** as in the table above.
 
 ## After connect
 
@@ -48,7 +76,8 @@ If the token is invalid or missing, the server closes the connection with code 4
 
 To receive alarm pushes from the job workflow, connect with a **device_id** in the path so the server can route alarms to your connection:
 
-- **URL:** `ws://<host>:<port>/ws/<device_id>?token=...` (e.g. `ws://localhost:9001/ws/device123?token=nvpat_...`).
+- **URL:** `ws://<host>:<port>/api/ws/<device_id>?token=...` (e.g. `ws://localhost:9001/api/ws/device123?token=nvpat_...`).
+- **Alias:** `ws://<host>:<port>/ws/<device_id>?token=...` is the same handler (e.g. `ws://localhost:9001/ws/mac-agent?token=...`).
 
 The server registers this connection for that device_id. When the **process_pending_alarms** workflow runs and creates **process_alarm** jobs, each job can push an alarm to the device if the alarm record has a matching `device_id` and the device is connected.
 
@@ -81,8 +110,8 @@ Use these steps when implementing alarm handling in your external app (Flutter, 
 
 ### Step 2: Connect with device_id in the path
 
-- **URL:** `ws://<host>:<port>/ws/<device_id>?token=<PAT_or_JWT>`
-- Example: `ws://localhost:9001/ws/my-device-001?token=nvpat_abc123...`
+- **URL:** `ws://<host>:<port>/api/ws/<device_id>?token=<PAT_or_JWT>`
+- Example: `ws://localhost:9001/api/ws/my-device-001?token=nvpat_abc123...`
 - Use a **PAT** for long-lived connections (create in admin: Organization → Personal Access Tokens).
 - The server registers this connection for `<device_id>`.
 
@@ -146,7 +175,7 @@ Multiple devices (future: process_alarm may support this).
 
 **Steps to fill alarm_target:**
 
-1. **Broadcast to all devices (default):** Leave `alarm_target` as `null` or set to `"all_devices"`. Any device connected at `ws://host/ws/<device_id>` will receive the alarm.
+1. **Broadcast to all devices (default):** Leave `alarm_target` as `null` or set to `"all_devices"`. Any device connected at `ws://host/api/ws/<device_id>` (or `ws://host/ws/<device_id>`) will receive the alarm.
 
 2. **Target a specific device:** Set `alarm_target` = `"my-device-001"` (or your app’s `device_id`). Only that device receives the alarm.
 
@@ -168,7 +197,7 @@ Multiple devices (future: process_alarm may support this).
 
   const deviceId = "my-device-001";
   const token = "nvpat_YOUR_PAT";
-  const ws = new WebSocket(`ws://localhost:9001/ws/${deviceId}?token=${encodeURIComponent(token)}`);
+  const ws = new WebSocket(`ws://localhost:9001/api/ws/${deviceId}?token=${encodeURIComponent(token)}`);
 
   ws.onmessage = (e) => {
     const msg = JSON.parse(e.data);
@@ -188,7 +217,7 @@ Multiple devices (future: process_alarm may support this).
 
   device_id = "my-device-001"
   token = "nvpat_YOUR_PAT"
-  uri = f"ws://localhost:9001/ws/{device_id}?token={token}"
+  uri = f"ws://localhost:9001/api/ws/{device_id}?token={token}"
 
   async def handle_alarm(msg):
       if msg.get("type") == "alarm":
@@ -207,7 +236,7 @@ Multiple devices (future: process_alarm may support this).
 
   final deviceId = 'my-device-001';
   final token = 'nvpat_YOUR_PAT';
-  final uri = Uri.parse('wss://api.example.com/ws/$deviceId?token=${Uri.encodeComponent(token)}');
+  final uri = Uri.parse('wss://api.example.com/api/ws/$deviceId?token=${Uri.encodeComponent(token)}');
   final channel = WebSocketChannel.connect(uri);
 
   channel.stream.listen((data) {
@@ -226,7 +255,7 @@ Multiple devices (future: process_alarm may support this).
 ## Browser (JavaScript)
 
   const token = "nvpat_YOUR_PAT_OR_JWT";
-  const url = `ws://localhost:9001/ws?token=${encodeURIComponent(token)}`;
+  const url = `ws://localhost:9001/api/ws?token=${encodeURIComponent(token)}`;
   const ws = new WebSocket(url);
 
   ws.onopen = () => console.log("Connected");
@@ -250,7 +279,7 @@ Multiple devices (future: process_alarm may support this).
 
   async def run():
       token = os.environ.get("AUTH_TOKEN") or os.environ.get("PAT")
-      uri = f"ws://localhost:9001/ws?token={token}"
+      uri = f"ws://localhost:9001/api/ws?token={token}"
       async with websockets.connect(uri) as ws:
           msg = await ws.recv()
           print("Server:", json.loads(msg))
@@ -277,7 +306,7 @@ Use the same WebSocket URL and auth from a **Flutter** app so one codebase works
   import 'package:web_socket_channel/web_socket_channel.dart';
 
   final token = 'nvpat_YOUR_PAT_OR_JWT';  // or get from secure storage / Firebase
-  final uri = Uri.parse('wss://api.example.com/ws?token=${Uri.encodeComponent(token)}');
+  final uri = Uri.parse('wss://api.example.com/api/ws?token=${Uri.encodeComponent(token)}');
   final channel = WebSocketChannel.connect(uri);
 
   channel.stream.listen((data) {
@@ -296,7 +325,7 @@ Use the same WebSocket URL and auth from a **Flutter** app so one codebase works
 
 ### 3. Auth in first message (e.g. when token is not in URL)
 
-  final uri = Uri.parse('wss://api.example.com/ws');
+  final uri = Uri.parse('wss://api.example.com/api/ws');
   final channel = WebSocketChannel.connect(uri);
 
   channel.sink.add(jsonEncode({'type': 'auth', 'token': token}));
@@ -304,7 +333,7 @@ Use the same WebSocket URL and auth from a **Flutter** app so one codebase works
 
 ### 4. Android / iOS specifics
 
-- **URL:** Use `wss://` in production (HTTPS). For local dev, Android emulator can use `ws://10.0.2.2:9001/ws`; iOS simulator `ws://localhost:9001/ws`; real devices use your machine’s IP or a deployed API URL.
+- **URL:** Use `wss://` in production (HTTPS). For local dev, Android emulator can use `ws://10.0.2.2:9001/api/ws`; iOS simulator `ws://localhost:9001/api/ws`; real devices use your machine’s IP or a deployed API URL.
 - **Token:** Prefer storing PAT or JWT in **flutter_secure_storage** (or similar) and passing it into the WebSocket URL or first message. If you use **Firebase Auth**, you can use the Firebase ID token as the `token` (same Bearer format the API expects if you’ve wired Firebase auth to your backend).
 - **Firebase:** For **job workers** or **notifications**, the job scheduler supports worker type `mobile` (e.g. Firebase Cloud Messaging). WebSocket is for a persistent app connection; FCM can be used for wake-up or alerts. When WebSocket job push is implemented, the Flutter app can register as a worker (e.g. `worker_type: "websocket"` or `"mobile"`) and receive jobs over the same socket or via HTTP claim.
 
@@ -324,7 +353,7 @@ Use the same WebSocket URL and auth from a **Flutter** app so one codebase works
     void connect() {
       final scheme = baseUrl.startsWith('https') ? 'wss' : 'ws';
       final host = baseUrl.replaceFirst(RegExp(r'^https?://'), '').split('/').first;
-      final uri = Uri.parse('$scheme://$host/ws?token=${Uri.encodeComponent(token)}');
+      final uri = Uri.parse('$scheme://$host/api/ws?token=${Uri.encodeComponent(token)}');
       _channel = WebSocketChannel.connect(uri);
       _channel!.stream.listen(_onMessage, onError: _onError, onDone: _onDone);
     }
@@ -346,15 +375,15 @@ Use the same WebSocket URL and auth from a **Flutter** app so one codebase works
 ## curl (test from CLI)
 
   # Install websocat if needed: brew install websocat
-  websocat "ws://localhost:9001/ws?token=nvpat_YOUR_PAT"
+  websocat "ws://localhost:9001/api/ws?token=nvpat_YOUR_PAT"
 
-Or use a GUI client (e.g. Postman, Insomnia) that supports WebSocket; set URL to `ws://localhost:9001/ws?token=<your_token>`.
+Or use a GUI client (e.g. Postman, Insomnia) that supports WebSocket; set URL to `ws://localhost:9001/api/ws?token=<your_token>`.
 
 ## Job workers over WebSocket (planned)
 
-The job scheduler design (docs/job-scheduler-implementation-plan.md) includes **websocket** and **mobile** worker types (e.g. laptops, Android/iOS Flutter apps). Today, remote workers use **HTTP** (GET /jobs/claim, POST /jobs/{id}/result). When WebSocket job push is implemented:
+The job scheduler design (docs/job-scheduler-implementation-plan.md) includes **websocket** and **mobile** worker types (e.g. laptops, Android/iOS Flutter apps). Today, remote workers use **HTTP** (`GET /api/jobs/claim`, `POST /api/jobs/{id}/result`). When WebSocket job push is implemented:
 
-- Register as a worker with type `websocket` or `mobile` (e.g. POST /workers/register or over WS).
+- Register as a worker with type `websocket` or `mobile` (e.g. `POST /api/workers/register` or over WS).
 - Server may push job assignments over the same WebSocket; client runs the job and sends the result (e.g. `{"type": "job_result", "job_id": "...", "status": "success", "result": {...}}`).
 - **Flutter (Android/iOS):** Use the Flutter section above to open the WebSocket; when job push is available, handle incoming job messages and submit results over the same connection or via HTTP.
 - **Firebase:** Use FCM for push/wake-up if needed; the app can still use this WebSocket for the persistent channel and (when implemented) job delivery.
@@ -364,16 +393,19 @@ Until then, use the HTTP remote worker (see how-to-run-remote-worker) for runnin
 ## Troubleshooting
 
 - **Connection refused** – API not running or wrong host/port. Start with `cli.py runserver` (see how-to-run-api).
-- **Close code 4001** – Auth failed. Check token (PAT or JWT), no extra spaces; use query `?token=...` or first message `{"type":"auth","token":"..."}`.
-- **CORS** – Browser same-origin or API CORS allows your frontend origin. For `ws://` same host/port is usually fine.
-- **wss://** – If the API is behind HTTPS, use `wss://` and the same path (`/ws`).
-- **Flutter Android emulator** – Use `ws://10.0.2.2:9001/ws` to reach host machine’s localhost.
-- **Flutter iOS simulator** – Use `ws://localhost:9001/ws`; on a real device use the host IP or deployed API URL with `wss://`.
-- **Firebase / mobile token** – If using Firebase Auth, pass the ID token in `token`; ensure your API accepts it (e.g. JWT validation or Firebase Admin verification).
+- **Close code 1008** – Token was present (query or header) but **rejected** (wrong PAT, expired JWT, typo). Fix the token or obtain a new one from login / PAT admin.
+- **Close code 4001** – No valid auth: missing token, or first-message `auth` failed. Use `?token=`, `?access_token=`, `Authorization`, or `{"type":"auth","token":"..."}`.
+- **403 / “connection rejected”** – Often a **bad URL path** (WebSocket upgrade hit the wrong route). Use **`/api/ws`** or **`/ws`** plus optional **`/<device_id>`** as documented above—not a random path that only exists for HTTP.
+- **CORS** – WebSockets are not subject to CORS the same way as XHR; still use the correct host/port. For `ws://` to localhost from a page on another origin, some setups need a matching API URL.
+- **wss://** – If the API is behind HTTPS, use `wss://` and the same path (`/api/ws` or `/ws`).
+- **Flutter Android emulator** – Use `ws://10.0.2.2:9001/api/ws` (or `/ws`) to reach the host machine’s localhost.
+- **Flutter iOS simulator** – Use `ws://localhost:9001/api/ws`; on a real device use the host IP or deployed API URL with `wss://`.
+- **Firebase / mobile token** – If using Firebase Auth, pass the ID token in `token` only if your API validates that token (Noolva expects its own JWT or a PAT unless you’ve integrated Firebase).
 
 ## See also
 
+- `api/docs/endpoints.md` – full list of HTTP + WebSocket paths (`/api/…`)
 - how-to-run-api – start the API and base URL
 - how_to_use_pat.md – create and use PAT
-- how-to-run-remote-worker – HTTP-based job worker
+- how-to-run-remote-worker – HTTP-based job worker (`/api/jobs`, `/api/workers`, …)
 - docs/job-scheduler-implementation-plan.md – worker types and future WebSocket job push

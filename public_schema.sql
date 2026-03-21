@@ -2,7 +2,7 @@
 -- PostgreSQL database dump
 --
 
-\restrict bomdYDkcpi1Aa91RfJM5lf9LeBKg9uzAk2rQzw7yojROdMcOjgD3Qjn0HfYlr4W
+\restrict 6bnuXo5vWROfszptIENJa9edJoN5ybfwkTyb5e9qCQC3Utge2ZcCM3czYlZc8fq
 
 -- Dumped from database version 16.11 (Ubuntu 16.11-0ubuntu0.24.04.1)
 -- Dumped by pg_dump version 18.1
@@ -64,51 +64,6 @@ ALTER TYPE public.model_scope_enum OWNER TO noolvan;
 SET default_tablespace = '';
 
 SET default_table_access_method = heap;
-
---
--- Name: actions; Type: TABLE; Schema: public; Owner: noolvan
---
-
-CREATE TABLE public.actions (
-    action_id integer NOT NULL,
-    action_code character varying(50) NOT NULL,
-    action_name character varying(100) NOT NULL,
-    description text,
-    handler_function character varying(100) NOT NULL,
-    inputs_schema_json jsonb DEFAULT '{}'::jsonb,
-    outputs_schema_json jsonb DEFAULT '{}'::jsonb,
-    is_idempotent boolean DEFAULT false,
-    queue_concurrency_mode character varying(20) DEFAULT 'parallel'::character varying,
-    queue_concurrency_limit integer DEFAULT 0,
-    default_timeout_seconds integer DEFAULT 3600,
-    retry_policy_json jsonb DEFAULT '{"backoff": "exponential", "max_retries": 3}'::jsonb,
-    is_active boolean DEFAULT true
-);
-
-
-ALTER TABLE public.actions OWNER TO noolvan;
-
---
--- Name: actions_action_id_seq; Type: SEQUENCE; Schema: public; Owner: noolvan
---
-
-CREATE SEQUENCE public.actions_action_id_seq
-    AS integer
-    START WITH 1
-    INCREMENT BY 1
-    NO MINVALUE
-    NO MAXVALUE
-    CACHE 1;
-
-
-ALTER SEQUENCE public.actions_action_id_seq OWNER TO noolvan;
-
---
--- Name: actions_action_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: noolvan
---
-
-ALTER SEQUENCE public.actions_action_id_seq OWNED BY public.actions.action_id;
-
 
 --
 -- Name: ai_entity_aliases; Type: TABLE; Schema: public; Owner: noolvan
@@ -315,7 +270,14 @@ CREATE TABLE public.alarms (
     status character varying(255) DEFAULT 'pending'::character varying NOT NULL,
     acknowledged_at timestamp with time zone,
     entity_id numeric,
-    row_exposure_mode_id integer
+    row_exposure_mode_id integer,
+    reminder_offsets jsonb,
+    next_alarm_time timestamp with time zone,
+    snooze_enabled boolean DEFAULT false,
+    snooze_interval_minutes numeric,
+    max_snooze_count numeric DEFAULT '1'::numeric,
+    acknowledged_from character varying(100),
+    alarm_target jsonb
 );
 
 
@@ -1217,51 +1179,76 @@ ALTER SEQUENCE public.integrations_integration_id_seq OWNED BY public.integratio
 
 
 --
--- Name: job_queue; Type: TABLE; Schema: public; Owner: noolvan
+-- Name: job_step_runs; Type: TABLE; Schema: public; Owner: noolvan
 --
 
-CREATE TABLE public.job_queue (
-    job_id integer NOT NULL,
-    job_uuid uuid DEFAULT gen_random_uuid() NOT NULL,
-    company_id integer,
-    action_id integer,
-    related_workflow_id integer,
-    related_workflow_run_id integer,
-    status character varying(20) DEFAULT 'pending'::character varying,
-    priority integer DEFAULT 0,
-    retry_count integer DEFAULT 0,
-    payload jsonb,
-    result jsonb,
+CREATE TABLE public.job_step_runs (
+    id uuid DEFAULT gen_random_uuid() NOT NULL,
+    job_id uuid NOT NULL,
+    step_id text NOT NULL,
+    worker_id text,
+    status text,
+    input_data jsonb,
+    output_data jsonb,
     started_at timestamp with time zone,
-    completed_at timestamp with time zone,
-    created_by integer,
-    created_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP
+    finished_at timestamp with time zone
 );
 
 
-ALTER TABLE public.job_queue OWNER TO noolvan;
+ALTER TABLE public.job_step_runs OWNER TO noolvan;
 
 --
--- Name: job_queue_job_id_seq; Type: SEQUENCE; Schema: public; Owner: noolvan
+-- Name: job_templates; Type: TABLE; Schema: public; Owner: noolvan
 --
 
-CREATE SEQUENCE public.job_queue_job_id_seq
-    AS integer
-    START WITH 1
-    INCREMENT BY 1
-    NO MINVALUE
-    NO MAXVALUE
-    CACHE 1;
+CREATE TABLE public.job_templates (
+    id uuid DEFAULT gen_random_uuid() NOT NULL,
+    name text NOT NULL,
+    description text,
+    version integer DEFAULT 1,
+    input_schema jsonb,
+    workflow_definition jsonb,
+    output_schema jsonb,
+    handler_type text,
+    handler_function_name text,
+    script_path text,
+    runnable_in text[],
+    capabilities text[],
+    is_idempotent boolean DEFAULT false,
+    queue_concurrency_mode text DEFAULT 'parallel'::text,
+    queue_concurrency_limit integer DEFAULT 0,
+    default_timeout_seconds integer DEFAULT 3600,
+    retry_policy_json jsonb DEFAULT '{"backoff": "exponential", "max_retries": 3}'::jsonb,
+    created_at timestamp with time zone DEFAULT now(),
+    is_active boolean DEFAULT true,
+    template_category text DEFAULT 'task'::text,
+    CONSTRAINT job_templates_template_category_check CHECK ((template_category = ANY (ARRAY['task'::text, 'workflow'::text, 'system'::text])))
+);
 
 
-ALTER SEQUENCE public.job_queue_job_id_seq OWNER TO noolvan;
+ALTER TABLE public.job_templates OWNER TO noolvan;
 
 --
--- Name: job_queue_job_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: noolvan
+-- Name: jobs; Type: TABLE; Schema: public; Owner: noolvan
 --
 
-ALTER SEQUENCE public.job_queue_job_id_seq OWNED BY public.job_queue.job_id;
+CREATE TABLE public.jobs (
+    id uuid DEFAULT gen_random_uuid() NOT NULL,
+    template_id uuid,
+    payload jsonb,
+    schedule_time timestamp with time zone,
+    status text DEFAULT 'pending'::text,
+    retry_count integer DEFAULT 0,
+    result jsonb,
+    worker_id text,
+    started_at timestamp with time zone,
+    completed_at timestamp with time zone,
+    created_at timestamp with time zone DEFAULT now(),
+    updated_at timestamp with time zone
+);
 
+
+ALTER TABLE public.jobs OWNER TO noolvan;
 
 --
 -- Name: locations; Type: TABLE; Schema: public; Owner: noolvan
@@ -1595,7 +1582,8 @@ CREATE TABLE public.my_tasks (
     alarm_id integer,
     person_id integer,
     business_id integer,
-    row_exposure_mode_id integer
+    row_exposure_mode_id integer,
+    external_identifier character varying(100)
 );
 
 
@@ -2156,6 +2144,27 @@ ALTER SEQUENCE public.row_exposure_modes_exposure_mode_id_seq OWNED BY public.ro
 
 
 --
+-- Name: schedulers; Type: TABLE; Schema: public; Owner: noolvan
+--
+
+CREATE TABLE public.schedulers (
+    id uuid DEFAULT gen_random_uuid() NOT NULL,
+    name text NOT NULL,
+    description text,
+    cron_expression text NOT NULL,
+    template_id uuid NOT NULL,
+    payload jsonb DEFAULT '{}'::jsonb,
+    is_enabled boolean DEFAULT true,
+    last_run_at timestamp with time zone,
+    next_run_at timestamp with time zone,
+    created_at timestamp with time zone DEFAULT now(),
+    updated_at timestamp with time zone
+);
+
+
+ALTER TABLE public.schedulers OWNER TO noolvan;
+
+--
 -- Name: settings; Type: TABLE; Schema: public; Owner: noolvan
 --
 
@@ -2298,7 +2307,8 @@ CREATE TABLE public.task_comments (
     task integer,
     message text,
     comment_title character varying(100),
-    row_exposure_mode_id integer
+    row_exposure_mode_id integer,
+    activity_type character varying(255) DEFAULT 'comment'::character varying NOT NULL
 );
 
 
@@ -2324,6 +2334,48 @@ ALTER SEQUENCE public.task_comments_comment_id_seq OWNER TO noolvan;
 --
 
 ALTER SEQUENCE public.task_comments_comment_id_seq OWNED BY public.task_comments.comment_id;
+
+
+--
+-- Name: task_person_dependencies; Type: TABLE; Schema: public; Owner: noolvan
+--
+
+CREATE TABLE public.task_person_dependencies (
+    dependency_id integer NOT NULL,
+    created_by integer,
+    idate timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
+    last_updated timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
+    row_exposure_mode_id integer,
+    task_id integer,
+    person_id integer,
+    dependency_type character varying(255),
+    status character varying(255),
+    note text
+);
+
+
+ALTER TABLE public.task_person_dependencies OWNER TO noolvan;
+
+--
+-- Name: task_person_dependencies_dependency_id_seq; Type: SEQUENCE; Schema: public; Owner: noolvan
+--
+
+CREATE SEQUENCE public.task_person_dependencies_dependency_id_seq
+    AS integer
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+ALTER SEQUENCE public.task_person_dependencies_dependency_id_seq OWNER TO noolvan;
+
+--
+-- Name: task_person_dependencies_dependency_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: noolvan
+--
+
+ALTER SEQUENCE public.task_person_dependencies_dependency_id_seq OWNED BY public.task_person_dependencies.dependency_id;
 
 
 --
@@ -3007,6 +3059,75 @@ ALTER SEQUENCE public.users_user_id_seq OWNED BY public.users.user_id;
 
 
 --
+-- Name: work_logs; Type: TABLE; Schema: public; Owner: noolvan
+--
+
+CREATE TABLE public.work_logs (
+    work_log_id integer NOT NULL,
+    created_by integer,
+    idate timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
+    last_updated timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
+    row_exposure_mode_id integer,
+    report_uuid uuid DEFAULT gen_random_uuid(),
+    report_date date NOT NULL,
+    task_id integer,
+    requested_by integer,
+    approved_by integer,
+    report_status character varying(255) DEFAULT 'completed'::character varying,
+    work_summary text NOT NULL,
+    work_duration interval,
+    business_id integer,
+    tags text[],
+    ticket_number character varying(100)
+);
+
+
+ALTER TABLE public.work_logs OWNER TO noolvan;
+
+--
+-- Name: work_logs_work_log_id_seq; Type: SEQUENCE; Schema: public; Owner: noolvan
+--
+
+CREATE SEQUENCE public.work_logs_work_log_id_seq
+    AS integer
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+ALTER SEQUENCE public.work_logs_work_log_id_seq OWNER TO noolvan;
+
+--
+-- Name: work_logs_work_log_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: noolvan
+--
+
+ALTER SEQUENCE public.work_logs_work_log_id_seq OWNED BY public.work_logs.work_log_id;
+
+
+--
+-- Name: workers; Type: TABLE; Schema: public; Owner: noolvan
+--
+
+CREATE TABLE public.workers (
+    worker_id text NOT NULL,
+    worker_type text NOT NULL,
+    hostname text,
+    ip_address text,
+    status text DEFAULT 'idle'::text,
+    capabilities jsonb DEFAULT '{}'::jsonb,
+    max_concurrency integer DEFAULT 1,
+    running_jobs integer DEFAULT 0,
+    last_heartbeat timestamp with time zone,
+    registered_at timestamp with time zone DEFAULT now(),
+    metadata jsonb DEFAULT '{}'::jsonb
+);
+
+
+ALTER TABLE public.workers OWNER TO noolvan;
+
+--
 -- Name: workflow_runs; Type: TABLE; Schema: public; Owner: noolvan
 --
 
@@ -3093,13 +3214,6 @@ ALTER SEQUENCE public.workflows_workflow_id_seq OWNED BY public.workflows.workfl
 --
 
 ALTER TABLE ONLY public.audit_logs ATTACH PARTITION public.audit_logs_default DEFAULT;
-
-
---
--- Name: actions action_id; Type: DEFAULT; Schema: public; Owner: noolvan
---
-
-ALTER TABLE ONLY public.actions ALTER COLUMN action_id SET DEFAULT nextval('public.actions_action_id_seq'::regclass);
 
 
 --
@@ -3254,13 +3368,6 @@ ALTER TABLE ONLY public.integration_providers ALTER COLUMN provider_id SET DEFAU
 --
 
 ALTER TABLE ONLY public.integrations ALTER COLUMN integration_id SET DEFAULT nextval('public.integrations_integration_id_seq'::regclass);
-
-
---
--- Name: job_queue job_id; Type: DEFAULT; Schema: public; Owner: noolvan
---
-
-ALTER TABLE ONLY public.job_queue ALTER COLUMN job_id SET DEFAULT nextval('public.job_queue_job_id_seq'::regclass);
 
 
 --
@@ -3432,6 +3539,13 @@ ALTER TABLE ONLY public.task_comments ALTER COLUMN comment_id SET DEFAULT nextva
 
 
 --
+-- Name: task_person_dependencies dependency_id; Type: DEFAULT; Schema: public; Owner: noolvan
+--
+
+ALTER TABLE ONLY public.task_person_dependencies ALTER COLUMN dependency_id SET DEFAULT nextval('public.task_person_dependencies_dependency_id_seq'::regclass);
+
+
+--
 -- Name: task_priorities priority_id; Type: DEFAULT; Schema: public; Owner: noolvan
 --
 
@@ -3544,6 +3658,13 @@ ALTER TABLE ONLY public.users ALTER COLUMN user_id SET DEFAULT nextval('public.u
 
 
 --
+-- Name: work_logs work_log_id; Type: DEFAULT; Schema: public; Owner: noolvan
+--
+
+ALTER TABLE ONLY public.work_logs ALTER COLUMN work_log_id SET DEFAULT nextval('public.work_logs_work_log_id_seq'::regclass);
+
+
+--
 -- Name: workflow_runs run_id; Type: DEFAULT; Schema: public; Owner: noolvan
 --
 
@@ -3555,22 +3676,6 @@ ALTER TABLE ONLY public.workflow_runs ALTER COLUMN run_id SET DEFAULT nextval('p
 --
 
 ALTER TABLE ONLY public.workflows ALTER COLUMN workflow_id SET DEFAULT nextval('public.workflows_workflow_id_seq'::regclass);
-
-
---
--- Name: actions actions_action_code_key; Type: CONSTRAINT; Schema: public; Owner: noolvan
---
-
-ALTER TABLE ONLY public.actions
-    ADD CONSTRAINT actions_action_code_key UNIQUE (action_code);
-
-
---
--- Name: actions actions_pkey; Type: CONSTRAINT; Schema: public; Owner: noolvan
---
-
-ALTER TABLE ONLY public.actions
-    ADD CONSTRAINT actions_pkey PRIMARY KEY (action_id);
 
 
 --
@@ -3982,19 +4087,35 @@ ALTER TABLE ONLY public.integrations
 
 
 --
--- Name: job_queue job_queue_job_uuid_key; Type: CONSTRAINT; Schema: public; Owner: noolvan
+-- Name: job_step_runs job_step_runs_pkey; Type: CONSTRAINT; Schema: public; Owner: noolvan
 --
 
-ALTER TABLE ONLY public.job_queue
-    ADD CONSTRAINT job_queue_job_uuid_key UNIQUE (job_uuid);
+ALTER TABLE ONLY public.job_step_runs
+    ADD CONSTRAINT job_step_runs_pkey PRIMARY KEY (id);
 
 
 --
--- Name: job_queue job_queue_pkey; Type: CONSTRAINT; Schema: public; Owner: noolvan
+-- Name: job_templates job_templates_name_key; Type: CONSTRAINT; Schema: public; Owner: noolvan
 --
 
-ALTER TABLE ONLY public.job_queue
-    ADD CONSTRAINT job_queue_pkey PRIMARY KEY (job_id);
+ALTER TABLE ONLY public.job_templates
+    ADD CONSTRAINT job_templates_name_key UNIQUE (name);
+
+
+--
+-- Name: job_templates job_templates_pkey; Type: CONSTRAINT; Schema: public; Owner: noolvan
+--
+
+ALTER TABLE ONLY public.job_templates
+    ADD CONSTRAINT job_templates_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: jobs jobs_pkey; Type: CONSTRAINT; Schema: public; Owner: noolvan
+--
+
+ALTER TABLE ONLY public.jobs
+    ADD CONSTRAINT jobs_pkey PRIMARY KEY (id);
 
 
 --
@@ -4254,6 +4375,14 @@ ALTER TABLE ONLY public.row_exposure_modes
 
 
 --
+-- Name: schedulers schedulers_pkey; Type: CONSTRAINT; Schema: public; Owner: noolvan
+--
+
+ALTER TABLE ONLY public.schedulers
+    ADD CONSTRAINT schedulers_pkey PRIMARY KEY (id);
+
+
+--
 -- Name: settings settings_pkey; Type: CONSTRAINT; Schema: public; Owner: noolvan
 --
 
@@ -4283,6 +4412,14 @@ ALTER TABLE ONLY public.task_categories
 
 ALTER TABLE ONLY public.task_comments
     ADD CONSTRAINT task_comments_pkey PRIMARY KEY (comment_id);
+
+
+--
+-- Name: task_person_dependencies task_person_dependencies_pkey; Type: CONSTRAINT; Schema: public; Owner: noolvan
+--
+
+ALTER TABLE ONLY public.task_person_dependencies
+    ADD CONSTRAINT task_person_dependencies_pkey PRIMARY KEY (dependency_id);
 
 
 --
@@ -4515,6 +4652,22 @@ ALTER TABLE ONLY public.users
 
 ALTER TABLE ONLY public.users
     ADD CONSTRAINT users_username_key UNIQUE (username);
+
+
+--
+-- Name: work_logs work_logs_pkey; Type: CONSTRAINT; Schema: public; Owner: noolvan
+--
+
+ALTER TABLE ONLY public.work_logs
+    ADD CONSTRAINT work_logs_pkey PRIMARY KEY (work_log_id);
+
+
+--
+-- Name: workers workers_pkey; Type: CONSTRAINT; Schema: public; Owner: noolvan
+--
+
+ALTER TABLE ONLY public.workers
+    ADD CONSTRAINT workers_pkey PRIMARY KEY (worker_id);
 
 
 --
@@ -4859,6 +5012,34 @@ CREATE INDEX idx_integrations_provider_name ON public.integrations USING btree (
 
 
 --
+-- Name: idx_job_step_runs_job_id; Type: INDEX; Schema: public; Owner: noolvan
+--
+
+CREATE INDEX idx_job_step_runs_job_id ON public.job_step_runs USING btree (job_id);
+
+
+--
+-- Name: idx_jobs_schedule_time; Type: INDEX; Schema: public; Owner: noolvan
+--
+
+CREATE INDEX idx_jobs_schedule_time ON public.jobs USING btree (schedule_time);
+
+
+--
+-- Name: idx_jobs_status; Type: INDEX; Schema: public; Owner: noolvan
+--
+
+CREATE INDEX idx_jobs_status ON public.jobs USING btree (status);
+
+
+--
+-- Name: idx_jobs_template_id; Type: INDEX; Schema: public; Owner: noolvan
+--
+
+CREATE INDEX idx_jobs_template_id ON public.jobs USING btree (template_id);
+
+
+--
 -- Name: idx_menus_app; Type: INDEX; Schema: public; Owner: noolvan
 --
 
@@ -4922,6 +5103,13 @@ CREATE INDEX idx_roles_company ON public.roles USING btree (company_id);
 
 
 --
+-- Name: idx_schedulers_enabled_next; Type: INDEX; Schema: public; Owner: noolvan
+--
+
+CREATE INDEX idx_schedulers_enabled_next ON public.schedulers USING btree (is_enabled, next_run_at) WHERE (is_enabled = true);
+
+
+--
 -- Name: idx_settings_key; Type: INDEX; Schema: public; Owner: noolvan
 --
 
@@ -4954,20 +5142,6 @@ CREATE INDEX idx_settings_tenant ON public.settings USING btree (tenant_id);
 --
 
 CREATE INDEX idx_settings_user_uuid ON public.settings USING btree (user_uuid);
-
-
---
--- Name: idx_task_queue_company; Type: INDEX; Schema: public; Owner: noolvan
---
-
-CREATE INDEX idx_task_queue_company ON public.job_queue USING btree (company_id);
-
-
---
--- Name: idx_task_queue_status; Type: INDEX; Schema: public; Owner: noolvan
---
-
-CREATE INDEX idx_task_queue_status ON public.job_queue USING btree (status);
 
 
 --
@@ -5094,6 +5268,13 @@ CREATE INDEX idx_users_active_status ON public.users USING btree (active_status)
 --
 
 CREATE INDEX idx_users_username ON public.users USING btree (username);
+
+
+--
+-- Name: idx_workers_type_status; Type: INDEX; Schema: public; Owner: noolvan
+--
+
+CREATE INDEX idx_workers_type_status ON public.workers USING btree (worker_type, status);
 
 
 --
@@ -5517,43 +5698,35 @@ ALTER TABLE ONLY public.integrations
 
 
 --
--- Name: job_queue job_queue_action_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: noolvan
+-- Name: job_step_runs job_step_runs_job_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: noolvan
 --
 
-ALTER TABLE ONLY public.job_queue
-    ADD CONSTRAINT job_queue_action_id_fkey FOREIGN KEY (action_id) REFERENCES public.actions(action_id);
-
-
---
--- Name: job_queue job_queue_company_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: noolvan
---
-
-ALTER TABLE ONLY public.job_queue
-    ADD CONSTRAINT job_queue_company_id_fkey FOREIGN KEY (company_id) REFERENCES public.companies(company_id) ON DELETE CASCADE;
+ALTER TABLE ONLY public.job_step_runs
+    ADD CONSTRAINT job_step_runs_job_id_fkey FOREIGN KEY (job_id) REFERENCES public.jobs(id) ON DELETE CASCADE;
 
 
 --
--- Name: job_queue job_queue_created_by_fkey; Type: FK CONSTRAINT; Schema: public; Owner: noolvan
+-- Name: job_step_runs job_step_runs_worker_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: noolvan
 --
 
-ALTER TABLE ONLY public.job_queue
-    ADD CONSTRAINT job_queue_created_by_fkey FOREIGN KEY (created_by) REFERENCES public.users(user_id);
-
-
---
--- Name: job_queue job_queue_related_workflow_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: noolvan
---
-
-ALTER TABLE ONLY public.job_queue
-    ADD CONSTRAINT job_queue_related_workflow_id_fkey FOREIGN KEY (related_workflow_id) REFERENCES public.workflows(workflow_id) ON DELETE SET NULL;
+ALTER TABLE ONLY public.job_step_runs
+    ADD CONSTRAINT job_step_runs_worker_id_fkey FOREIGN KEY (worker_id) REFERENCES public.workers(worker_id) ON DELETE SET NULL;
 
 
 --
--- Name: job_queue job_queue_related_workflow_run_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: noolvan
+-- Name: jobs jobs_template_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: noolvan
 --
 
-ALTER TABLE ONLY public.job_queue
-    ADD CONSTRAINT job_queue_related_workflow_run_id_fkey FOREIGN KEY (related_workflow_run_id) REFERENCES public.workflow_runs(run_id) ON DELETE CASCADE;
+ALTER TABLE ONLY public.jobs
+    ADD CONSTRAINT jobs_template_id_fkey FOREIGN KEY (template_id) REFERENCES public.job_templates(id) ON DELETE SET NULL;
+
+
+--
+-- Name: jobs jobs_worker_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: noolvan
+--
+
+ALTER TABLE ONLY public.jobs
+    ADD CONSTRAINT jobs_worker_id_fkey FOREIGN KEY (worker_id) REFERENCES public.workers(worker_id) ON DELETE SET NULL;
 
 
 --
@@ -5893,6 +6066,14 @@ ALTER TABLE ONLY public.roles
 
 
 --
+-- Name: schedulers schedulers_template_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: noolvan
+--
+
+ALTER TABLE ONLY public.schedulers
+    ADD CONSTRAINT schedulers_template_id_fkey FOREIGN KEY (template_id) REFERENCES public.job_templates(id) ON DELETE CASCADE;
+
+
+--
 -- Name: settings settings_field_type_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: noolvan
 --
 
@@ -5962,6 +6143,22 @@ ALTER TABLE ONLY public.task_comments
 
 ALTER TABLE ONLY public.task_comments
     ADD CONSTRAINT task_comments_row_exposure_mode_id_fkey FOREIGN KEY (row_exposure_mode_id) REFERENCES public.row_exposure_modes(exposure_mode_id);
+
+
+--
+-- Name: task_person_dependencies task_person_dependencies_created_by_fkey; Type: FK CONSTRAINT; Schema: public; Owner: noolvan
+--
+
+ALTER TABLE ONLY public.task_person_dependencies
+    ADD CONSTRAINT task_person_dependencies_created_by_fkey FOREIGN KEY (created_by) REFERENCES public.users(user_id);
+
+
+--
+-- Name: task_person_dependencies task_person_dependencies_row_exposure_mode_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: noolvan
+--
+
+ALTER TABLE ONLY public.task_person_dependencies
+    ADD CONSTRAINT task_person_dependencies_row_exposure_mode_id_fkey FOREIGN KEY (row_exposure_mode_id) REFERENCES public.row_exposure_modes(exposure_mode_id);
 
 
 --
@@ -6269,6 +6466,22 @@ ALTER TABLE ONLY public.users
 
 
 --
+-- Name: work_logs work_logs_created_by_fkey; Type: FK CONSTRAINT; Schema: public; Owner: noolvan
+--
+
+ALTER TABLE ONLY public.work_logs
+    ADD CONSTRAINT work_logs_created_by_fkey FOREIGN KEY (created_by) REFERENCES public.users(user_id);
+
+
+--
+-- Name: work_logs work_logs_row_exposure_mode_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: noolvan
+--
+
+ALTER TABLE ONLY public.work_logs
+    ADD CONSTRAINT work_logs_row_exposure_mode_id_fkey FOREIGN KEY (row_exposure_mode_id) REFERENCES public.row_exposure_modes(exposure_mode_id);
+
+
+--
 -- Name: workflow_runs workflow_runs_workflow_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: noolvan
 --
 
@@ -6288,5 +6501,5 @@ ALTER TABLE ONLY public.workflows
 -- PostgreSQL database dump complete
 --
 
-\unrestrict bomdYDkcpi1Aa91RfJM5lf9LeBKg9uzAk2rQzw7yojROdMcOjgD3Qjn0HfYlr4W
+\unrestrict 6bnuXo5vWROfszptIENJa9edJoN5ybfwkTyb5e9qCQC3Utge2ZcCM3czYlZc8fq
 
