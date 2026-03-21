@@ -11,6 +11,7 @@ import Dashboard from './pages/Dashboard';
 import ListPage from './pages/ListPage';
 import AddForm from './pages/AddForm';
 import Settings from './pages/Settings';
+import ChangePassword from './pages/ChangePassword';
 import Themes from './pages/Themes';
 import Database from './pages/Database';
 import DbQuery from './pages/DbQuery';
@@ -22,6 +23,7 @@ import DataModels from './pages/DataModels';
 import IconExplorer from './pages/IconExplorer';
 import Collections from './pages/Collections';
 import ApiEndpoints from './pages/ApiEndpoints';
+import IntegrationManager from './pages/IntegrationManager';
 import OrganizationUsers from './pages/OrganizationUsers';
 import PersonalAccessTokens from './pages/PersonalAccessTokens';
 import { useAuth } from './contexts/AuthContext';
@@ -83,6 +85,7 @@ const AppContent = () => {
       case 'list': return <ListPage />;
       case 'add': return <AddForm />;
       case 'settings': return <Settings />;
+      case 'change_password': return <ChangePassword />;
       case 'themes': return <Themes />;
       case 'dev_console_database': return <Database />;
       case 'dev_console_db_query': return <DbQuery />;
@@ -95,6 +98,7 @@ const AppContent = () => {
       case 'studio_icons': return <IconExplorer />;
       case 'studio_collections': return <Collections />;
       case 'studio_api_endpoints': return <ApiEndpoints />;
+      case 'studio_integrations': return <IntegrationManager />;
       case 'studio_asset_gallery': return <IconExplorer />;
       case 'org_users': return <OrganizationUsers />;
       case 'personal_access_tokens': return <PersonalAccessTokens />;
@@ -112,8 +116,10 @@ const AppContent = () => {
           if (routePath === 'studio_icons') return <IconExplorer />;
           if (routePath === 'studio_collections') return <Collections />;
           if (routePath === 'studio_api_endpoints') return <ApiEndpoints />;
+          if (routePath === 'studio_integrations') return <IntegrationManager />;
           if (routePath === 'studio_asset_gallery') return <IconExplorer />;
           if (routePath === 'settings') return <Settings />;
+          if (routePath === 'change_password') return <ChangePassword />;
           if (routePath === 'themes') return <Themes />;
           if (routePath === 'org_users') return <OrganizationUsers />;
           if (routePath === 'personal_access_tokens') return <PersonalAccessTokens />;
@@ -124,6 +130,8 @@ const AppContent = () => {
           if (title === 'database') return <Database />;
           if (title === 'db_query' || title === 'db query') return <DbQuery />;
           if (title === 'icons') return <IconExplorer />;
+          // Settings parent row (submenu) has no route_path; old tabs may still use this menu_id
+          if (title === 'settings') return <Settings />;
         }
         return <div>Unknown Page: {key}</div>;
       }

@@ -68,11 +68,11 @@ Run as a service (systemd, supervisor, or a simple loop with restart on exit).
 
 ## What the worker does
 
-1. **Register** – POST /workers/register with worker_id, worker_type, hostname.
-2. **Poll** – GET /jobs/claim?worker_id=... until a job is returned.
-3. **Load template** – GET /job-templates/{template_id} to get handler_type and handler_function_name.
+1. **Register** – POST /api/workers/register with worker_id, worker_type, hostname.
+2. **Poll** – GET /api/jobs/claim?worker_id=... until a job is returned.
+3. **Load template** – GET /api/job-templates/{template_id} to get handler_type and handler_function_name.
 4. **Run** – Executes the core_function handler in-process (same code as API handlers).
-5. **Submit result** – POST /jobs/{job_id}/result with status (success/failed) and result payload.
+5. **Submit result** – POST /api/jobs/{job_id}/result with status (success/failed) and result payload.
 6. Repeats from step 2.
 
 Only **core_function** handlers are supported in the remote worker. custom_script and workflow steps that need the full API are not run by this script.

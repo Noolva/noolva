@@ -17,7 +17,7 @@ You can also create a PAT via API (with a valid JWT):
 
 ## 2. Use the PAT from an external client
 
-Use the **same API base URL** as your admin (e.g. `https://api.yourdomain.com` or `http://localhost:9001`).
+Use the **same API origin** as your admin (e.g. `https://api.yourdomain.com` or `http://localhost:9001`). All JSON endpoints are under the **`/api`** prefix (e.g. `http://localhost:9001/api/...`).
 
 Send the PAT as a **Bearer** token on every request:
 
@@ -27,13 +27,13 @@ Send the PAT as a **Bearer** token on every request:
 
 ```bash
 curl -H "Authorization: Bearer nvpat_YOUR_TOKEN_HERE" \
-  "http://localhost:9001/data-models/auto/users/records"
+  "http://localhost:9001/api/data-models/auto/users/records"
 ```
 
 **JavaScript (fetch):**
 
 ```javascript
-const response = await fetch('http://localhost:9001/data-models/auto/users/records', {
+const response = await fetch('http://localhost:9001/api/data-models/auto/users/records', {
   headers: {
     'Authorization': `Bearer ${yourPAT}`,
     'Content-Type': 'application/json',
@@ -46,7 +46,7 @@ const response = await fetch('http://localhost:9001/data-models/auto/users/recor
 ```python
 import requests
 headers = {"Authorization": f"Bearer {your_pat}"}
-r = requests.get("http://localhost:9001/data-models/auto/users/records", headers=headers)
+r = requests.get("http://localhost:9001/api/data-models/auto/users/records", headers=headers)
 ```
 
 ---
@@ -142,7 +142,7 @@ The API logs a **detailed line** for each failed auth so you can debug:
 | Token type | Looks like | Where you get it | Use for |
 |------------|------------|-------------------|--------|
 | **PAT** | `nvpat_` + 64 hex chars | Admin: Organization → Personal Access Tokens → Create (copy once) | External scripts, PUT /settings, POST /upload, auto CRUD from other apps |
-| **JWT** | `eyJ...` (long base64 string) | Returned at login (e.g. `/auth/login`) | Browser/admin app session only; many API routes accept **only JWT**, not PAT |
+| **JWT** | `eyJ...` (long base64 string) | Returned at login (e.g. `POST /api/auth/login`) | Browser/admin app session only; many API routes accept **only JWT**, not PAT |
 
 For **PUT /settings**, **POST /upload**, and **data-models auto CRUD**, you must send the **PAT** in the header:
 
@@ -178,13 +178,13 @@ Share the **exact request** (headers only; never log the full token) and the **l
 **These endpoints accept only JWT (login session token), not PAT:**
 
 - `/app-menus/list` — returns `{"detail":"Invalid token"}` if you send a PAT.
-- Other org/auth routes (e.g. `/auth/get-user-menus`, `/auth/accounts`, etc.) — same: JWT only.
+- Other org/auth routes (e.g. `/api/auth/menus`, `/api/auth/accounts`, etc.) — same: JWT only.
 
 So use your PAT with **data-models** endpoints to verify it works. For example:
 
 ```bash
 curl -s -H "Authorization: Bearer nvpat_YOUR_FULL_TOKEN" \
-  "http://localhost:9001/data-models/auto/users/records"
+  "http://localhost:9001/api/data-models/auto/users/records"
 ```
 
 (Replace `users` with an actual auto model name if different.)
@@ -225,7 +225,7 @@ Returns all row exposure modes. No `Authorization` header required.
 **cURL:**
 
 ```bash
-curl -s "http://localhost:9001/settings/row-exposure-modes"
+curl -s "http://localhost:9001/api/settings/row-exposure-modes"
 ```
 
 ### Get current user mode (JWT or PAT)
@@ -260,11 +260,11 @@ If the mode is not set, `current_user_mode` may be `null`.
 ```bash
 # Get only current_user_mode
 curl -s -H "Authorization: Bearer nvpat_YOUR_TOKEN" \
-  "http://localhost:9001/settings?scope=user&keys=current_user_mode"
+  "http://localhost:9001/api/settings?scope=user&keys=current_user_mode"
 
 # Get all user-scoped settings
 curl -s -H "Authorization: Bearer nvpat_YOUR_TOKEN" \
-  "http://localhost:9001/settings?scope=user"
+  "http://localhost:9001/api/settings?scope=user"
 ```
 
 **Python (requests):**
@@ -272,7 +272,7 @@ curl -s -H "Authorization: Bearer nvpat_YOUR_TOKEN" \
 ```python
 import requests
 pat = "nvpat_YOUR_FULL_TOKEN"
-base = "http://localhost:9001"
+base = "http://localhost:9001/api"
 headers = {"Authorization": f"Bearer {pat}"}
 
 # Get current_user_mode
@@ -285,7 +285,7 @@ mode_id = data.get("settings", {}).get("current_user_mode")  # 2 or None
 
 ```javascript
 const pat = "nvpat_YOUR_FULL_TOKEN";
-const base = "http://localhost:9001";
+const base = "http://localhost:9001/api";
 
 const r = await fetch(`${base}/settings?scope=user&keys=current_user_mode`, {
   headers: { Authorization: `Bearer ${pat}` },
@@ -322,7 +322,7 @@ Set the **current user’s** mode (stored per user). Use `scope: "user"` and onl
 curl -X PUT -H "Authorization: Bearer nvpat_YOUR_TOKEN" \
   -H "Content-Type: application/json" \
   -d '{"scope":"user","settings":{"current_user_mode":2}}' \
-  "http://localhost:9001/settings"
+  "http://localhost:9001/api/settings"
 ```
 
 **Clear the mode (show all rows):**
@@ -331,7 +331,7 @@ curl -X PUT -H "Authorization: Bearer nvpat_YOUR_TOKEN" \
 curl -X PUT -H "Authorization: Bearer nvpat_YOUR_TOKEN" \
   -H "Content-Type: application/json" \
   -d '{"scope":"user","settings":{"current_user_mode":null}}' \
-  "http://localhost:9001/settings"
+  "http://localhost:9001/api/settings"
 ```
 
 **Python (requests):**
@@ -340,7 +340,7 @@ curl -X PUT -H "Authorization: Bearer nvpat_YOUR_TOKEN" \
 import requests
 
 pat = "nvpat_YOUR_FULL_TOKEN"
-base = "http://localhost:9001"
+base = "http://localhost:9001/api"
 
 # 1) Get available modes (optional; no auth)
 r = requests.get(f"{base}/settings/row-exposure-modes")
@@ -430,7 +430,7 @@ List all persons (paginated):
 
 ```bash
 curl -s -H "Authorization: Bearer nvpat_YOUR_TOKEN" \
-  "http://localhost:9001/data-models/auto/persons/records?limit=20&offset=0&fields=name,dob,notes"
+  "http://localhost:9001/api/data-models/auto/persons/records?limit=20&offset=0&fields=name,dob,notes"
 ```
 
 List only records for a given parent (e.g. task_comments for task 40):
@@ -438,10 +438,10 @@ List only records for a given parent (e.g. task_comments for task 40):
 ```bash
 # If the model has a field named "task" or "task_id", pass it as query param:
 curl -s -H "Authorization: Bearer nvpat_YOUR_TOKEN" \
-  "http://localhost:9001/data-models/auto/task_comments/records?task=40&limit=100"
+  "http://localhost:9001/api/data-models/auto/task_comments/records?task=40&limit=100"
 # or
 curl -s -H "Authorization: Bearer nvpat_YOUR_TOKEN" \
-  "http://localhost:9001/data-models/auto/task_comments/records?task_id=40&fields=id,body,created_at"
+  "http://localhost:9001/api/data-models/auto/task_comments/records?task_id=40&fields=id,body,created_at"
 ```
 
 Filter values are coerced to the field type (integer, UUID, date, etc.). Filter params work together with `limit`, `offset`, and `fields`.
@@ -466,7 +466,7 @@ Filter values are coerced to the field type (integer, UUID, date, etc.). Filter 
 curl -s -X POST -H "Authorization: Bearer nvpat_YOUR_TOKEN" \
   -H "Content-Type: application/json" \
   -d '{"filter":{"task":40},"limit":100,"fields":"id,body,created_at"}' \
-  "http://localhost:9001/data-models/auto/task_comments/records"
+  "http://localhost:9001/api/data-models/auto/task_comments/records"
 ```
 
 Response shape is the same as GET list: `{ "model_name": "...", "records": [ ... ], "limit": 100, "offset": 0 }`.
@@ -550,7 +550,7 @@ curl -X POST -H "Authorization: Bearer nvpat_YOUR_TOKEN" \
   -F "file=@/path/to/document.pdf" \
   -F "key=uploads/my-doc.pdf" \
   -F "is_public=false" \
-  "http://localhost:9001/upload"
+  "http://localhost:9001/api/upload"
 ```
 
 **Python (requests):**
@@ -559,7 +559,7 @@ curl -X POST -H "Authorization: Bearer nvpat_YOUR_TOKEN" \
 import requests
 with open("photo.jpg", "rb") as f:
     r = requests.post(
-        "http://localhost:9001/upload",
+        "http://localhost:9001/api/upload",
         headers={"Authorization": f"Bearer {your_pat}"},
         files={"file": ("photo.jpg", f, "image/jpeg")},
         data={"key": "uploads/photo.jpg", "is_public": "true"},
@@ -574,7 +574,7 @@ const form = new FormData();
 form.append('file', fileInput.files[0]);
 form.append('key', 'uploads/myfile.pdf');
 form.append('is_public', 'false');
-const response = await fetch('http://localhost:9001/upload', {
+const response = await fetch('http://localhost:9001/api/upload', {
   method: 'POST',
   headers: { 'Authorization': `Bearer ${yourPAT}` },
   body: form,
@@ -618,7 +618,7 @@ curl -X POST -H "Authorization: Bearer nvpat_YOUR_TOKEN" \
   -F "model_name=persons" \
   -F "field_name=profile_photo" \
   -F "record_id=3a734566-e01c-4bb2-9a48-45739a473a02" \
-  "http://localhost:9001/upload"
+  "http://localhost:9001/api/upload"
 ```
 
 **Example (Python with PAT):**
@@ -627,7 +627,7 @@ curl -X POST -H "Authorization: Bearer nvpat_YOUR_TOKEN" \
 import requests
 
 pat = "nvpat_YOUR_FULL_TOKEN"
-base = "http://localhost:9001"
+base = "http://localhost:9001/api"
 
 # 1) Upload for model-attachments
 with open("photo.jpg", "rb") as f:
@@ -678,7 +678,7 @@ The API treats fields whose type is **file** or **image** as attachment fields: 
 - **Field config:** When defining the model field, set `field_config_json` (e.g. `{"filters": [".jpg", ".png", ".jpeg"], "multiple": false}` or `true`, `max_size_mb`: 2). The upload API validates filters and max_size_mb when `model_name` and `field_name` are sent. For **image** fields, add **`"generate_thumbnail": true`** to auto-generate a thumbnail (path: `<filename>_thumb.<ext>`); optional **`"crop_ratio": "1:1"`** (or e.g. `"16:9"`) is applied when generating the thumbnail.
 - **Auto CRUD:** On **update**, old S3 objects for replaced file/image values are deleted (single path or JSON array). On **delete** record, all file/image field values (paths) for that record are deleted from S3. The API accepts stored paths with or without prefix when resolving the full S3 key for delete.
 
-Use the **same base URL** as your admin API (e.g. `http://localhost:9001`). If you get "Route not found: /upload", ensure the request goes to the API server and that the upload router is registered (API restart may be required after deployment).
+Use the **same API origin** as your admin (e.g. `http://localhost:9001`) and call **`/api/upload`**. If you get "Route not found", ensure the path includes the `/api` prefix and the upload router is registered (API restart may be required after deployment).
 
 ### 5c. Private file access (GET /private-file) and encrypted file/image fields
 
@@ -711,7 +711,7 @@ When the file/image field has **encryption** (`encryption_method` = `xor_cipher`
 
 ```bash
 curl -s -H "Authorization: Bearer nvpat_YOUR_TOKEN" \
-  "http://localhost:9001/private-file?path=private%2Fmodel-attachments%2Ftask_attachments%2F36d7dcb368a147f686074e9b25a7491e.png&redirect=false"
+  "http://localhost:9001/api/private-file?path=private%2Fmodel-attachments%2Ftask_attachments%2F36d7dcb368a147f686074e9b25a7491e.png&redirect=false"
 ```
 
 Response: `{ "url": "https://cdn.example.com/...?Expires=...&Signature=..." }`
@@ -720,7 +720,7 @@ Response: `{ "url": "https://cdn.example.com/...?Expires=...&Signature=..." }`
 
 ```bash
 curl -H "Authorization: Bearer nvpat_YOUR_TOKEN" \
-  "http://localhost:9001/private-file?path=private%2Fmodel-attachments%2Ftask_attachments%2F36d7dcb368a147f686074e9b25a7491e.png&decrypt=true&model_name=task_attachments&field_name=attachment" \
+  "http://localhost:9001/api/private-file?path=private%2Fmodel-attachments%2Ftask_attachments%2F36d7dcb368a147f686074e9b25a7491e.png&decrypt=true&model_name=task_attachments&field_name=attachment" \
   -o downloaded.png
 ```
 
@@ -730,7 +730,7 @@ curl -H "Authorization: Bearer nvpat_YOUR_TOKEN" \
 import requests
 
 pat = "nvpat_YOUR_FULL_TOKEN"
-base = "http://localhost:9001"
+base = "http://localhost:9001/api"
 path = "private/model-attachments/task_attachments/36d7dcb368a147f686074e9b25a7491e.png"
 
 # Option A: Get signed URL (for non-encrypted private files)
