@@ -5,10 +5,11 @@
 
 import axios from 'axios';
 
-// API Base URL - Set VITE_API_URL in .env file or use default localhost:9001
-// For proxy (recommended in dev): Set VITE_API_URL='' in .env
-// For direct connection: Set VITE_API_URL='http://localhost:9001' in .env or leave unset
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:9001';
+// VITE_API_URL = API origin only (scheme + host + port), no path, e.g. http://localhost:9001
+// For proxy (recommended in dev): leave VITE_API_URL unset — JSON calls use relative /api/...
+// All REST/WebSocket JSON endpoints are under /api (see api/docs/endpoints.md).
+const API_ORIGIN = (import.meta.env.VITE_API_URL || '').replace(/\/$/, '');
+const API_BASE_URL = API_ORIGIN ? `${API_ORIGIN}/api` : '/api';
 
 /**
  * Simple encryption/decryption for tokens in localStorage
@@ -171,11 +172,10 @@ const isAuthAllowedWhenLocked = (config) => {
 
 /**
  * Create axios instance with default config
- * Note: When API_BASE_URL is empty, axios uses relative URLs which work with Vite proxy
- * When API_BASE_URL is set, axios connects directly to that URL
+ * baseURL is always the JSON API root (`/api` or `http://host:port/api`).
  */
 const axiosInstance = axios.create({
-    baseURL: API_BASE_URL || undefined, // undefined means relative URLs (uses proxy)
+    baseURL: API_BASE_URL || undefined,
     headers: {
         'Content-Type': 'application/json',
     },
@@ -327,10 +327,7 @@ export const api = {
     },
 
     googleLogin: () => {
-        // Redirect to Google OAuth
-        // For proxy mode (empty API_BASE_URL), use full URL for redirects
-        const baseUrl = API_BASE_URL || 'http://localhost:9001';
-        window.location.href = `${baseUrl}/auth/google`;
+        window.location.href = `${API_BASE_URL}/auth/google`;
     },
 
     getUserContext: async () => {
@@ -417,6 +414,14 @@ export const api = {
         return response.data;
     },
 
+    changeMyPassword: async (currentPassword, newPassword) => {
+        const response = await axiosInstance.post('/auth/me/change-password', {
+            current_password: currentPassword,
+            new_password: newPassword,
+        });
+        return response.data;
+    },
+
     // Re-auth after idle lock (password + optional TOTP code)
     reauth: async (password, totpCode = null) => {
         const response = await axiosInstance.post('/auth/reauth', {
@@ -437,6 +442,32 @@ export const api = {
     },
     revokePersonalAccessToken: async (patId) => {
         const response = await axiosInstance.delete(`/personal-access-tokens/${patId}`);
+        return response.data;
+    },
+
+    // Integrations (company-scoped; pass companyId when session has no company or super-admin override)
+    listIntegrationProviders: async () => {
+        const response = await axiosInstance.get('/integrations/providers');
+        return response.data;
+    },
+    listIntegrations: async (companyId = null) => {
+        const params = {};
+        if (companyId != null && companyId !== '') params.company_id = companyId;
+        const response = await axiosInstance.get('/integrations', { params });
+        return response.data;
+    },
+    createIntegration: async (payload) => {
+        const response = await axiosInstance.post('/integrations', payload);
+        return response.data;
+    },
+    updateIntegration: async (integrationId, payload) => {
+        const response = await axiosInstance.put(`/integrations/${integrationId}`, payload);
+        return response.data;
+    },
+    deleteIntegration: async (integrationId, companyId = null) => {
+        const params = {};
+        if (companyId != null && companyId !== '') params.company_id = companyId;
+        const response = await axiosInstance.delete(`/integrations/${integrationId}`, { params });
         return response.data;
     },
 

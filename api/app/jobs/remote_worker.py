@@ -2,7 +2,8 @@
 Remote worker script: register with API, poll for claimed jobs, run handlers, submit results.
 Run from repo root: python -m app.jobs.remote_worker
 Or from api/: python -m app.jobs.remote_worker
-Requires: API_BASE_URL (e.g. http://localhost:9001), AUTH_TOKEN (Bearer PAT or JWT), WORKER_ID (e.g. vm-worker-1).
+Requires: API_BASE_URL (API origin, e.g. http://localhost:9001 — paths /workers, /jobs are under /api),
+AUTH_TOKEN (Bearer PAT or JWT), WORKER_ID (e.g. vm-worker-1).
 """
 import asyncio
 import logging
@@ -20,7 +21,14 @@ import httpx
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger("remote_worker")
 
-API_BASE = os.getenv("API_BASE_URL", "http://localhost:9001").rstrip("/")
+def _resolve_api_base() -> str:
+    raw = os.getenv("API_BASE_URL", "http://localhost:9001").rstrip("/")
+    if raw.endswith("/api"):
+        return raw
+    return f"{raw}/api"
+
+
+API_BASE = _resolve_api_base()
 AUTH_TOKEN = os.getenv("AUTH_TOKEN") or os.getenv("PAT")
 WORKER_ID = os.getenv("WORKER_ID", "remote-worker-1")
 WORKER_TYPE = os.getenv("WORKER_TYPE", "remote")
