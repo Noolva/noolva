@@ -170,10 +170,11 @@ app.add_middleware(
 # Add logging middleware (should be added last to log final response)
 app.add_middleware(LoggingMiddleware)
 
-# Static assets (api/assets/*) served at /assets/* (not under /api; CDN-friendly paths)
+# Static assets (api/assets/*): /assets/* (direct to API) and /api/assets/* (via nginx /api proxy)
 ASSETS_DIR = Path(__file__).resolve().parent.parent / "assets"
 if ASSETS_DIR.exists():
     app.mount("/assets", StaticFiles(directory=str(ASSETS_DIR)), name="assets")
+    app.mount("/api/assets", StaticFiles(directory=str(ASSETS_DIR)), name="api_assets")
 
 # All client-facing HTTP API routes use the /api prefix (single canonical origin for JSON endpoints).
 api = APIRouter(prefix="/api")

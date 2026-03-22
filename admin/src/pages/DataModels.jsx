@@ -37,6 +37,7 @@ import {
     UnorderedListOutlined,
 } from '@ant-design/icons';
 import { api } from '../utils/api';
+import { resolveApiAssetUrl } from '../config/runtimeApi';
 import { VCDragSortList } from '../components/ViewComponents/displays/VCDragSortList';
 import { FieldConfigJsonEditor } from '../components/ViewComponents/inputs/FieldConfigJsonEditor';
 import { FieldsImportModal } from '../components/ViewComponents/inputs/FieldsImportModal';
@@ -78,12 +79,7 @@ const DataModels = () => {
     // Helper function to get asset URL
     const getAssetUrl = (assetPath) => {
         if (!assetPath) return null;
-        const apiBaseUrl = import.meta.env.VITE_API_URL || 'http://localhost:9001';
-        if (assetPath.startsWith('http://') || assetPath.startsWith('https://')) {
-            return assetPath;
-        }
-        // For assets in api/assets folder, they're served from /assets/ path
-        return `${apiBaseUrl}/assets/${assetPath}`;
+        return resolveApiAssetUrl(assetPath);
     };
 
     useEffect(() => {
