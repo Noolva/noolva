@@ -1,5 +1,11 @@
 const apps = [
-    { key: 'dashbaords', title: 'Dashboards', icon: '/app_icons/dashboards.png' },
+    {
+        key: 'dashbaords',
+        title: 'Dashboards',
+        icon: import.meta.env.DEV
+            ? '/app_icons/dashboards.png'
+            : `${import.meta.env.BASE_URL}app_icons/dashboards.png`,
+    },
 ];
 const AppGridMenu = ({ onMenuSelect }) => (
     <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 80px)', gap: 12, padding: 12 }}>

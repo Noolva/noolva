@@ -4,12 +4,11 @@
  */
 
 import axios from 'axios';
+import { resolveApiBaseUrl, resolveGoogleAuthUrl, resolveAppScope } from '../config/runtimeApi.js';
 
-// VITE_API_URL = API origin only (scheme + host + port), no path, e.g. http://localhost:9001
-// For proxy (recommended in dev): leave VITE_API_URL unset — JSON calls use relative /api/...
+// VITE_API_URL = build-time API origin (optional). For same-host deploys, leave unset → relative /api.
+// Per-environment override without rebuild: public/runtime-config.json → loaded in main.jsx (apiOrigin).
 // All REST/WebSocket JSON endpoints are under /api (see api/docs/endpoints.md).
-const API_ORIGIN = (import.meta.env.VITE_API_URL || '').replace(/\/$/, '');
-const API_BASE_URL = API_ORIGIN ? `${API_ORIGIN}/api` : '/api';
 
 /**
  * Simple encryption/decryption for tokens in localStorage
@@ -175,7 +174,7 @@ const isAuthAllowedWhenLocked = (config) => {
  * baseURL is always the JSON API root (`/api` or `http://host:port/api`).
  */
 const axiosInstance = axios.create({
-    baseURL: API_BASE_URL || undefined,
+    baseURL: resolveApiBaseUrl(),
     headers: {
         'Content-Type': 'application/json',
     },
@@ -185,6 +184,12 @@ const axiosInstance = axios.create({
 // Request interceptor: block all requests when session is locked (except auth flows like reauth/login)
 axiosInstance.interceptors.request.use(
     (config) => {
+        config.baseURL = resolveApiBaseUrl();
+        // Axios resolves with URL(): paths starting with "/" ignore base path and hit site root — drops /api.
+        const u = config.url;
+        if (typeof u === 'string' && u.length > 0 && !/^https?:\/\//i.test(u) && u.startsWith('/')) {
+            config.url = u.replace(/^\/+/, '');
+        }
         if (getSessionLocked() && !isAuthAllowedWhenLocked(config)) {
             try {
                 window.dispatchEvent(new CustomEvent('auth:idleLock', { detail: { enable_2fa: getSessionLockedRequire2FA() } }));
@@ -285,7 +290,7 @@ axiosInstance.interceptors.response.use(
             });
         } else if (error.request) {
             // Request was made but no response received (ACTUAL network error)
-            error.message = `Network error: Unable to connect to ${API_BASE_URL || 'the API server'}. Please check if the API server is running.`;
+            error.message = `Network error: Unable to connect to ${resolveApiBaseUrl() || 'the API server'}. Please check if the API server is running.`;
             error.errorData = {
                 description: error.message,
                 solution: "Verify your network connection and try again."
@@ -327,7 +332,7 @@ export const api = {
     },
 
     googleLogin: () => {
-        window.location.href = `${API_BASE_URL}/auth/google`;
+        window.location.href = resolveGoogleAuthUrl();
     },
 
     getUserContext: async () => {
@@ -521,14 +526,14 @@ export const api = {
     },
 
     // Themes
-    getThemes: async ({ scope = "saas", user_id = null, tenant_id = null } = {}) => {
+    getThemes: async ({ scope = resolveAppScope(), user_id = null, tenant_id = null } = {}) => {
         const params = { scope };
         if (user_id != null) params.user_id = user_id;
         if (tenant_id != null) params.tenant_id = tenant_id;
         const response = await axiosInstance.get("/themes", { params });
         return response.data;
     },
-    getActiveTheme: async ({ scope = "saas", user_id = null, tenant_id = null } = {}) => {
+    getActiveTheme: async ({ scope = resolveAppScope(), user_id = null, tenant_id = null } = {}) => {
         const params = { scope };
         if (user_id != null) params.user_id = user_id;
         if (tenant_id != null) params.tenant_id = tenant_id;
@@ -547,7 +552,7 @@ export const api = {
         const response = await axiosInstance.put(`/themes/${themeId}`, data);
         return response.data;
     },
-    upsertMyTheme: async ({ theme_json, scope = "saas" }) => {
+    upsertMyTheme: async ({ theme_json, scope = resolveAppScope() }) => {
         const response = await axiosInstance.put("/themes/mine", { theme_json }, { params: { scope } });
         return response.data;
     },

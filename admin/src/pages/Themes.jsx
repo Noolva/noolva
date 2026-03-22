@@ -5,8 +5,7 @@ import { getComponentKey, coerceNumber, coerceBoolean, normalizeOptions } from "
 import { api } from "../utils/api";
 import { useAuth } from "../contexts/AuthContext";
 import { useTheme } from "../contexts/ThemeContext";
-
-const APP_SCOPE = import.meta.env.VITE_APP_SCOPE || "saas";
+import { resolveAppScope } from "../config/runtimeApi";
 
 function convertColorToHex(colorValue) {
   if (!colorValue) return colorValue;
@@ -113,7 +112,7 @@ export default function Themes() {
   const [formDirty, setFormDirty] = useState(false);
   const initialValuesRef = useRef(null);
 
-  const scope = APP_SCOPE;
+  const scope = useMemo(() => resolveAppScope(), []);
 
   // Global theme options: built-in + custom global themes
   const globalThemeOptions = useMemo(() => {
