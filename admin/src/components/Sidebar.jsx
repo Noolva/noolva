@@ -4,6 +4,7 @@ import { SearchOutlined, LeftOutlined, RightOutlined } from '@ant-design/icons';
 import { api } from '../utils/api';
 import { renderIcon } from '../utils/iconMapper.jsx';
 import { useTheme } from '../contexts/ThemeContext';
+import { resolveApiAssetUrl } from '../config/runtimeApi';
 
 const Sidebar = memo(({ selectedApp, selectedAppData, onSelect, onOpenInNewTab, autoHideSidebar = false, onAutoHideSidebarChange, collapsed = false }) => {
     const { isDark, themeKey, themes } = useTheme();
@@ -132,11 +133,10 @@ const Sidebar = memo(({ selectedApp, selectedAppData, onSelect, onOpenInNewTab, 
     const menuItems = useMemo(() => buildMenuItems(filteredRoots), [filteredRoots, onSelect, selectedApp]);
 
     const showLoading = loading && menus.length === 0;
-    const apiBaseUrl = import.meta.env.VITE_API_URL || 'http://localhost:9001';
     const appIconRaw = selectedAppData?.app_image_url;
     const appIcon =
         appIconRaw
-            ? (appIconRaw.startsWith('http') ? appIconRaw : `${apiBaseUrl}${appIconRaw}`)
+            ? (appIconRaw.startsWith('http') ? appIconRaw : resolveApiAssetUrl(appIconRaw))
             : null;
     const appTitle = selectedAppData?.app_title || selectedAppData?.app_name || 'App';
 

@@ -30,6 +30,7 @@ import { useToken } from 'antd/es/theme/internal';
 import CookieBanner from './CookieBanner';
 import AccountSwitcher from './AccountSwitcher';
 import { SettingOutlined } from '@ant-design/icons';
+import { resolveApiAssetUrl } from '../config/runtimeApi';
 const { Header: AntHeader } = Layout;
 
 const Header = ({ onAppSelect, onMenuSelect }) => {
@@ -104,6 +105,14 @@ const Header = ({ onAppSelect, onMenuSelect }) => {
             );
         }
 
+        // Dev: Vite serves `public/` at `/` (not under `base`). Prod: icons live under `base`.
+        const appIconsBase = import.meta.env.DEV
+            ? '/app_icons/'
+            : `${import.meta.env.BASE_URL}app_icons/`;
+        const defaultIconUrl = `${appIconsBase}default.png`;
+        const blankImg =
+            'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7';
+
         return (
             <div
                 style={{
@@ -117,15 +126,14 @@ const Header = ({ onAppSelect, onMenuSelect }) => {
                 }}
             >
                 {apps.map(app => {
-                    // Use app_image_url from DB. If it's a relative "/assets/..." path, prefix API base URL.
-                    const apiBaseUrl = import.meta.env.VITE_API_URL || 'http://localhost:9001';
+                    // app_image_url: /assets/… must go through /api/assets/… when nginx only proxies /api
                     const raw = app.app_image_url;
                     const iconUrl =
                         raw
                             ? (raw.startsWith('http://') || raw.startsWith('https://')
                                 ? raw
-                                : `${apiBaseUrl}${raw}`)
-                            : `/app_icons/${app.app_name || app.app_id}.png`;
+                                : resolveApiAssetUrl(raw))
+                            : `${appIconsBase}${app.app_name || app.app_id}.png`;
                     const appKey = app.app_id || app.app_uuid || app.app_name;
                     const appTitle = app.app_title || app.app_name || 'Untitled';
 
@@ -154,8 +162,13 @@ const Header = ({ onAppSelect, onMenuSelect }) => {
                                 height={40}
                                 style={{ borderRadius: 6 }}
                                 onError={(e) => {
-                                    // Fallback to default icon if image fails to load
-                                    e.target.src = '/app_icons/default.png';
+                                    if (e.target.dataset.iconFallback === '1') {
+                                        e.target.onerror = null;
+                                        e.target.src = blankImg;
+                                        return;
+                                    }
+                                    e.target.dataset.iconFallback = '1';
+                                    e.target.src = defaultIconUrl;
                                 }}
                             />
                             <span style={{ marginTop: 6, fontSize: 12, color: textColor }}>
