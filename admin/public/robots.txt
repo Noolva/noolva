@@ -1,0 +1,4 @@
+User-agent: *
+Disallow: /api/
+Disallow: /console/
+Disallow: /assets/

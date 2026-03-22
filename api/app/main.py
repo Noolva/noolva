@@ -7,7 +7,7 @@ from contextlib import asynccontextmanager
 from starlette.middleware.sessions import SessionMiddleware
 from classes.postgres_db import PostgresDB
 from errors.base_error import ERPError
-from fastapi.responses import JSONResponse
+from fastapi.responses import JSONResponse, PlainTextResponse
 import os
 import logging
 from logging.handlers import RotatingFileHandler
@@ -175,6 +175,20 @@ ASSETS_DIR = Path(__file__).resolve().parent.parent / "assets"
 if ASSETS_DIR.exists():
     app.mount("/assets", StaticFiles(directory=str(ASSETS_DIR)), name="assets")
     app.mount("/api/assets", StaticFiles(directory=str(ASSETS_DIR)), name="api_assets")
+
+# Same rules as admin/public/robots.txt when API and console share one origin (merge at CDN/nginx if needed).
+_ROBOTS_TXT = (
+    "User-agent: *\n"
+    "Disallow: /api/\n"
+    "Disallow: /console/\n"
+    "Disallow: /assets/\n"
+)
+
+
+@app.get("/robots.txt", include_in_schema=False)
+def robots_txt():
+    return PlainTextResponse(_ROBOTS_TXT, media_type="text/plain; charset=utf-8")
+
 
 # All client-facing HTTP API routes use the /api prefix (single canonical origin for JSON endpoints).
 api = APIRouter(prefix="/api")
