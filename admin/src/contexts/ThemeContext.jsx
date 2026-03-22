@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useEffect, useMemo, useState } from 'react';
 import { ConfigProvider, theme as antdTheme } from 'antd';
 import { api } from '../utils/api';
+import { resolveAppScope } from '../config/runtimeApi';
 import { useAuth } from './AuthContext';
 
 const ThemeContext = createContext();
@@ -99,7 +100,7 @@ export const ThemeProvider = ({ children }) => {
                     if (stored === 'dark' || stored === 'light') setIsDark(stored === 'dark');
                 } catch (e) { }
 
-                const res = await api.getActiveTheme({ scope: 'saas', user_id: user?.user_id ?? undefined });
+                const res = await api.getActiveTheme({ scope: resolveAppScope(), user_id: user?.user_id ?? undefined });
                 const t = res?.theme;
                 if (!mounted || !t) {
                     if (mounted) setSettingsLoaded(true);

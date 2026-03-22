@@ -11,7 +11,8 @@ Full URLs look like: `http://localhost:9001/api/auth/login`.
 |------|---------|
 | `GET /` | Health / process up |
 | `GET /docs`, `GET /redoc`, `GET /openapi.json` | FastAPI interactive docs and OpenAPI schema |
-| `GET /assets/*` | Static files from `api/assets` (images referenced by URL in DB, etc.) |
+| `GET /assets/*` | Static files from `api/assets` (direct to API process) |
+| `GET /api/assets/*` | Same files, under `/api` so reverse proxies that only forward `/api/` can serve them (admin UI uses this in production) |
 
 **Admin (Vite):** set `VITE_API_URL` to the **origin only** (e.g. `http://localhost:9001`). The React app calls `origin + /api + …` (see `admin/src/utils/api.js`).
 
