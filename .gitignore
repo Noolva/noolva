@@ -118,6 +118,8 @@ dist
 
 # Firebase cache directory
 .firebase/
+# Service account JSON (use FIREBASE_CREDENTIALS_PATH or keep outside repo)
+firebase-info/*.json
 
 # TernJS port file
 .tern-port

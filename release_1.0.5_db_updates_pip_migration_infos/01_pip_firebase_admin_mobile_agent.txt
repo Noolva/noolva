@@ -1,0 +1,7 @@
+# Release 1.0.5 — Python dependencies (pip)
+# From repo root, typical API venv:
+
+# pip install -r api/app/requirements.txt
+
+# New package for this release (also listed in requirements.txt):
+firebase-admin==6.5.0
