@@ -67,3 +67,6 @@ Pillow>=10.0.0
 
 # Cron expression parsing for schedulers
 croniter>=2.0.0
+
+# Firebase Cloud Messaging (mobile agent wake / sync; karandev / production: pip install -r api/app/requirements.txt)
+firebase-admin==6.5.0
