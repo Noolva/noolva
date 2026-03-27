@@ -50,3 +50,6 @@ async-timeout==5.0.1
 sniffio==1.3.1
 exceptiongroup==1.3.0
 typing-inspection==0.4.1
+
+# Firebase Cloud Messaging (mobile agent)
+firebase-admin==6.5.0
