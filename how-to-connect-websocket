@@ -1,8 +1,111 @@
 # How to connect via WebSocket
 
-The Noolva API exposes a WebSocket endpoint for persistent connections. Use it from **browsers**, **Flutter (Android & iOS)**, **Python**, or any WebSocket client. It supports connect, optional auth, and ping/pong; future use includes job push to workers and real-time notifications (e.g. for mobile apps using Firebase).
+The Noolva API exposes a WebSocket on the **same host and port** as HTTP. For **alarm push**, each Noolva **agent** must connect with a **`device_id` in the path**: **`/api/ws/<device_id>`** (or `/ws/<device_id>`). The server sends JSON text frames: `connected`, `pong`, and **`alarm`** (see below).
 
-A concise list of all HTTP and WebSocket paths is in **`api/docs/endpoints.md`**.
+| | Platform | Agent stack | Suggested `device_id` |
+|--|----------|-------------|------------------------|
+| 🍎 | **macOS** | SwiftUI | `mac-agent` (or hostname-based) |
+| 🪟 | **Windows** | C# + WinUI 3 | `windows-agent` |
+| 🐧 | **Linux** | Qt (C++) | `linux-agent` |
+| 📱 | **iOS** | SwiftUI | `ios-agent` |
+| 🤖 | **Android** | Kotlin + Compose | `android-agent` |
+
+Use a **stable, unique** id per install (UUID in Keychain / EncryptedSharedPreferences / `QSettings`, etc.). Match **`alarms.alarm_target`** when the alarm is **targeted**; use **SQL/JSON null** on `alarm_target` for **broadcast** to every connected agent (see Step 6).
+
+**Alarm push:** WebSocket (in-app) **and** optional **FCM** (wake device → client pulls `pending-tasks`). Requires DB migration `db-structure/update_old_db_mobile_agent_fcm.sql`, `pip install` deps (`firebase-admin`), and a **Firebase service account JSON** (see below).
+
+A concise list of HTTP + WebSocket paths is in **`api/docs/endpoints.md`**.
+
+## Mobile agent team (FCM / register-device / pending-tasks)
+
+Share this section with **client app teams** (Android / iOS). All REST paths use the **`/api`** prefix on the same **origin** as the WebSocket (e.g. `https://karandev.noolva.com` → `https://karandev.noolva.com/api/...`).
+
+### Quick reference (FAQ)
+
+| # | Topic | Answer |
+|---|--------|--------|
+| **1** | FCM end-to-end for alarms? | **Yes, when the server is configured.** `process_alarm` sends WebSocket push, then enqueues **pending tasks** and sends a **data-only** FCM (high priority on Android). Job **result** (admin / `GET /api/jobs/{id}`) includes: `pushed_to_device`, `pushed_count` (WebSocket), plus `fcm_sent`, `fcm_failed`, `fcm_errors`, `pending_enqueued`, `fcm_skipped` (e.g. no token, no credentials file, broadcast without `company_id`). |
+| **2** | `register-device` | **`POST {origin}/api/register-device`** — JSON body `{"device_id":"<same string as WebSocket path>","fcm_token":"<FCM registration token>"}` — header **`Authorization: Bearer <JWT or PAT>`**. **Upsert** per logged-in user + `device_id`; a new `fcm_token` **replaces** the previous one for that device. **`DELETE /api/register-device`** with JSON body `{"device_id":"..."}` — optional on logout (until deleted or replaced, an old token may still receive messages). |
+| **3** | FCM message shape | **Data-only** (no `notification` block from Noolva). All data values are **strings**. See **FCM data keys** below. Android: **high** priority. **No** `collapse_key` by default (multiple alarms are not collapsed into one). |
+| **4** | `pending-tasks` | **`GET {origin}/api/pending-tasks/{device_id}`** — same Bearer token. **Consumes** tasks: server **deletes** returned rows. Response: JSON **array** (see **Example response** below). Rows are written in the **same** `process_alarm` run **before** FCM send, so pull after wake is safe. |
+| **5** | Same Firebase project | The app’s **`google-services.json`** (or iOS equivalent) must be the **same Firebase project** the server uses with its **service account** JSON. Mismatch → token invalid / delivery failures. |
+| **6** | WebSocket vs FCM | **WebSocket:** in-app, real-time (see **Deployment note** later: same API process as the job worker). **FCM:** wake / “something to sync” — app should call **`pending-tasks`** and keep WebSocket connected when foregrounded. |
+| **7** | Broadcast + `company_id` | For alarms with **`all_devices`**, server-side FCM to registered phones is filtered by **`company_id`** on the registration row and **`company_id` in the job payload**. If the workflow does not pass `company_id` into `process_alarm`, **broadcast FCM is skipped** (WebSocket broadcast to connected clients is unchanged). |
+
+### Recommended client flow (mobile)
+
+1. User logs in → obtain **JWT** (or use a **PAT** for the agent).
+2. Generate a **stable `device_id`** per install (UUID); use the **same** value in **`wss://…/api/ws/{device_id}`** and in **`register-device`**.
+3. After Firebase delivers an **FCM token** (and on **`onTokenRefresh` / `onNewToken`**), **`POST /api/register-device`** with the current token.
+4. Open **WebSocket** with the same auth rules as today (`?token=` or `Authorization` if supported).
+5. On **`FirebaseMessagingService`** / iOS equivalent: if **`data["action"] == "sync"`** (or non-empty data you treat as sync), call **`GET /api/pending-tasks/{device_id}`** with Bearer token, then handle each task (e.g. `type == "alarm"` + `payload`).
+6. On logout, optionally **`DELETE /api/register-device`** with that `device_id`.
+
+### REST endpoints (canonical)
+
+| Method | Path | Body | Notes |
+|--------|------|------|--------|
+| `POST` | `/api/register-device` | `{"device_id":"…","fcm_token":"…"}` | `Content-Type: application/json`. **Requires** prior login (JWT/PAT). |
+| `DELETE` | `/api/register-device` | `{"device_id":"…"}` | Clears registration for this user + device. |
+| `GET` | `/api/pending-tasks/{device_id}` | — | `{device_id}` must match registered device and URL-encode if needed. **Consumes** tasks. |
+
+Example (HTTPS):
+
+```http
+POST /api/register-device HTTP/1.1
+Host: karandev.noolva.com
+Authorization: Bearer eyJ…
+Content-Type: application/json
+
+{"device_id":"550e8400-e29b-41d4-a716-446655440000","fcm_token":"…"}
+```
+
+```http
+GET /api/pending-tasks/550e8400-e29b-41d4-a716-446655440000 HTTP/1.1
+Host: karandev.noolva.com
+Authorization: Bearer eyJ…
+```
+
+### FCM data keys (all string values)
+
+| Key | Example / meaning |
+|-----|-------------------|
+| `action` | `sync` — client should run sync (e.g. call `pending-tasks`). |
+| `type` | `alarm` |
+| `alarm_id` | String ID of the alarm record. |
+| `payload_json` | Single JSON **string** to parse client-side; mirrors server job payload fields (excluding `device_id`, `company_id`). |
+
+Parse `payload_json` with your JSON library after receiving the FCM message.
+
+### Example `GET /api/pending-tasks/{device_id}` response
+
+```json
+[
+  {
+    "type": "alarm",
+    "task_id": "42",
+    "id": "42",
+    "message": "Alarm 42",
+    "text": "Alarm 42",
+    "payload": { "alarm_id": "42", "title": "…" }
+  }
+]
+```
+
+Empty array `[]` if nothing pending. Field **`payload`** is present when the server stored JSON for that task.
+
+### HTTP errors (client handling)
+
+| Status | Typical cause |
+|--------|----------------|
+| **401** | Missing/invalid/expired Bearer token. |
+| **403** | `pending-tasks`: `device_id` path does not match a **`register-device`** row for this user (register first or wrong device). |
+
+### Server-side setup (operators, not app code)
+
+Run DB migration; `pip install -r api/app/requirements.txt` (includes `firebase-admin`); place Firebase **service account** JSON on the server; set **`FIREBASE_CREDENTIALS_PATH`** if not using the default path; restart API. See `release_1.0.5_db_updates_pip_migration_infos/` for a release checklist.
+
+---
 
 ## Server and port (no separate process)
 
@@ -74,16 +177,24 @@ If you see **403** or “connection rejected” in a client, a common cause is u
 
 ## Receiving alarms (device connection)
 
-To receive alarm pushes from the job workflow, connect with a **device_id** in the path so the server can route alarms to your connection:
+Alarm delivery uses the **`process_pending_alarms`** workflow → **`create_jobs_from_records`** → **`process_alarm`** job handler. **WebSocket:** push to clients that registered with **`/api/ws/<device_id>`** (or `/ws/<device_id>`). **Mobile (optional):** same handler also enqueues **pending tasks** and sends **FCM** when the server is configured (see **Mobile agent team** at the top).
 
-- **URL:** `ws://<host>:<port>/api/ws/<device_id>?token=...` (e.g. `ws://localhost:9001/api/ws/device123?token=nvpat_...`).
+- **URL:** `ws://<host>:<port>/api/ws/<device_id>?token=...` (e.g. `ws://localhost:9001/api/ws/android-agent?token=nvpat_...`).
 - **Alias:** `ws://<host>:<port>/ws/<device_id>?token=...` is the same handler (e.g. `ws://localhost:9001/ws/mac-agent?token=...`).
 
-The server registers this connection for that device_id. When the **process_pending_alarms** workflow runs and creates **process_alarm** jobs, each job can push an alarm to the device if the alarm record has a matching `device_id` and the device is connected.
+**Broadcast vs targeted (important):**
+
+- **`alarm_target` is SQL `NULL`, JSON null, or empty string** after the pending-alarms query: the server maps this to **`all_devices`** and calls **`push_to_all_devices`** — every **currently connected** `/ws/<device_id>` session receives the same alarm message (mac-agent, android-agent, etc.). Your Android app still must use **some** stable `device_id` in the path so it is registered; that id does **not** have to match a value in the alarm row for broadcasts.
+- **`alarm_target` is a single device id** (JSONB string value, e.g. `"android-agent"`): only that connection receives the push.
+- **`alarm_target` is an empty JSON object `{}` or empty array `[]`:** this is **not** treated as broadcast today. Use **SQL/JSON null** for “all devices”. If your UI writes `{}`, fix the client or data so null is stored.
+
+The server registers the socket under the path segment **`device_id`**. Admin **Scheduler Workers** shows that id for websocket workers; sending **`{"type":"ping"}`** periodically updates **`last_heartbeat`**.
 
 **Message shape when an alarm is pushed:**
 
   {"type": "alarm", "alarm_id": "<id>", "payload": { ... }}
+
+`payload` contains the job payload fields except `device_id` (e.g. `alarm_id` and any other keys your workflow maps).
 
 Handle it in your client:
 
@@ -95,25 +206,28 @@ Handle it in your client:
     } else if (msg.type === "pong") { /* keepalive */ }
   };
 
-If the device is offline when the alarm is processed, the job still completes but no push is sent; `pushed_to_device` is false in the job result. See docs/workflow_alarm_and_reusable_templates_plan.md for the full flow.
+If no client is connected on the **same API process** that runs the job when it executes, no push is delivered; the job can still succeed with `pushed_count` **0** (see **Deployment note** below). Inspect the job **result** in admin/API for `pushed_count`, `pushed_to_device`, and `device_id`. See docs/workflow_alarm_and_reusable_templates_plan.md for the full flow.
+
+**Deployment note (why a device “looks connected” but gets no alarm):** WebSocket connections are held **in memory** on the process that accepted them. **`process_alarm` runs in the API’s in-process job workers** (`api-local-*`). If you run **multiple OS-level API processes** (e.g. `uvicorn --workers N`, or several replicas **without** ensuring WS and the job run on the **same** instance), the worker handling the job may have **no** connections — broadcast will send to **zero** clients on that process. Prefer **one worker process** for dev, or sticky sessions / a single scheduler instance until push is moved to a shared bus (Redis, etc.).
 
 ---
 
-## Steps: How to handle alarm sent by WebSocket (external apps)
+## Steps: How to handle alarm sent by WebSocket (all agents)
 
-Use these steps when implementing alarm handling in your external app (Flutter, React Native, Python, etc.).
+Use these steps for **macOS / Windows / Linux / iOS / Android** agents; stack-specific code lives in **Agent implementations by platform** below.
 
 ### Step 1: Choose a device_id
 
-- Pick a unique **device_id** for this app instance (e.g. user ID, device UUID, or `user_123_device_456`).
-- The alarm record in the database must have `alarm_target` (or `device_id`) set to this same value so the server routes the alarm to your connection.
+- Pick a **stable, unique** `device_id` per app install (or per user+device): persisted UUID, or a configured name such as `mac-agent`, `windows-agent`, `linux-agent`, `ios-agent`, `android-agent` (align with the table in the introduction).
+- **Targeted alarms:** `alarms.alarm_target` (JSONB) must be the **same string** as your path `device_id` (stored as a JSON string in the column).
+- **Broadcast alarms** (`alarm_target` null): any `device_id` in the path is fine; your app still receives the alarm as long as it is connected on the **same API instance** that processes the job (see deployment note above).
 
 ### Step 2: Connect with device_id in the path
 
 - **URL:** `ws://<host>:<port>/api/ws/<device_id>?token=<PAT_or_JWT>`
 - Example: `ws://localhost:9001/api/ws/my-device-001?token=nvpat_abc123...`
-- Use a **PAT** for long-lived connections (create in admin: Organization → Personal Access Tokens).
-- The server registers this connection for `<device_id>`.
+- Use a **PAT** for long-lived mobile sessions (admin: Organization → Personal Access Tokens). JWT is fine but expires sooner.
+- The server registers this connection for `<device_id>` and includes it in **push_to_device** / **push_to_all_devices** routing.
 
 ### Step 3: Parse incoming messages
 
@@ -146,247 +260,195 @@ When `msg.type === "alarm"`:
 
 ### Step 6: Set alarm_target (who receives the alarm)
 
-The `alarm_target` column (mapped to `device_id` in the workflow) controls who receives the alarm push.
+In Noolva’s schema, `public.alarms.alarm_target` is **JSONB**. The **`process_pending_alarms`** workflow maps `$record.alarm_target` into the job payload as **`device_id`**. Handlers normalize **null / blank string** to **`all_devices`** (broadcast); the literal string **`all_devices`** in the payload also broadcasts.
 
-**Format (TEXT column):**
+| Stored value (JSONB) | Effect |
+|----------------------|--------|
+| Column **NULL** or JSON **null** | Broadcast to **all** registered WebSocket connections |
+| JSON string **`"all_devices"`** | Broadcast to **all** |
+| JSON string **`"my-device-001"`** | Push only to `/api/ws/my-device-001` |
+| **`{}`**, **`[]`**, or other non-null non-string shapes | **Not** treated as broadcast; avoid for “all devices” |
 
-| Value        | Meaning                                      |
-|--------------|----------------------------------------------|
-| `null` / empty | Broadcast to **all connected devices**       |
-| `all_devices`  | Broadcast to **all connected devices**       |
-| `device123`    | Push only to the device with that `device_id` |
+**SQL examples (JSONB column):**
 
-**Format (JSONB column):** If your table uses a JSON column for targets:
+```sql
+-- Broadcast (recommended)
+INSERT INTO public.alarms (..., alarm_target) VALUES (..., NULL);
 
-```json
-"device123"
+-- Target one device (JSON string inside jsonb)
+INSERT INTO public.alarms (..., alarm_target) VALUES (..., to_jsonb('my-device-001'::text));
 ```
-Single device.
 
-```json
-"all_devices"
+**Optional explicit broadcast string** (server treats `all_devices` like broadcast):
+
+```sql
+INSERT INTO public.alarms (..., alarm_target) VALUES (..., to_jsonb('all_devices'::text));
 ```
-Broadcast to all.
 
-```json
-{"device_ids": ["device1", "device2"]}
-```
-Multiple devices (future: process_alarm may support this).
+**List of multiple device IDs** in one JSON object is **not** implemented in **`process_alarm`** today; use **NULL** for broadcast or separate alarm rows per device.
 
-**Steps to fill alarm_target:**
+### Quick reference (scripts / QA only)
 
-1. **Broadcast to all devices (default):** Leave `alarm_target` as `null` or set to `"all_devices"`. Any device connected at `ws://host/api/ws/<device_id>` (or `ws://host/ws/<device_id>`) will receive the alarm.
-
-2. **Target a specific device:** Set `alarm_target` = `"my-device-001"` (or your app’s `device_id`). Only that device receives the alarm.
-
-3. **Insert/update example (SQL):**
-   ```sql
-   -- Broadcast to all (default)
-   INSERT INTO public.alarms (..., alarm_target) VALUES (..., NULL);
-
-   -- Or explicitly
-   INSERT INTO public.alarms (..., alarm_target) VALUES (..., 'all_devices');
-
-   -- Target one device
-   INSERT INTO public.alarms (..., alarm_target) VALUES (..., 'my-device-001');
-   ```
-
-4. **If using JSONB:** Store a string value: `'"all_devices"'::jsonb` or `'"device123"'::jsonb`. The workflow reads the string from the JSON.
-
-### Example: JavaScript (browser / Node)
-
-  const deviceId = "my-device-001";
-  const token = "nvpat_YOUR_PAT";
-  const ws = new WebSocket(`ws://localhost:9001/api/ws/${deviceId}?token=${encodeURIComponent(token)}`);
-
-  ws.onmessage = (e) => {
-    const msg = JSON.parse(e.data);
-    if (msg.type === "alarm") {
-      // Your alarm handling
-      showNotification(msg.alarm_id, msg.payload);
-      playAlarmSound();
-    } else if (msg.type === "pong") { /* keepalive ok */ }
-  };
-
-  setInterval(() => ws.send(JSON.stringify({ type: "ping" })), 30000);
-
-### Example: Python (websockets)
-
-  import asyncio, json
-  import websockets
-
-  device_id = "my-device-001"
-  token = "nvpat_YOUR_PAT"
-  uri = f"ws://localhost:9001/api/ws/{device_id}?token={token}"
-
-  async def handle_alarm(msg):
-      if msg.get("type") == "alarm":
-          print("Alarm:", msg["alarm_id"], msg["payload"])
-          # show_notification(msg["alarm_id"], msg["payload"])
-
-  async def run():
-      async with websockets.connect(uri) as ws:
-          async for raw in ws:
-              msg = json.loads(raw)
-              await handle_alarm(msg)
-
-  asyncio.run(run())
-
-### Example: Flutter (Dart)
-
-  final deviceId = 'my-device-001';
-  final token = 'nvpat_YOUR_PAT';
-  final uri = Uri.parse('wss://api.example.com/api/ws/$deviceId?token=${Uri.encodeComponent(token)}');
-  final channel = WebSocketChannel.connect(uri);
-
-  channel.stream.listen((data) {
-    final msg = jsonDecode(data);
-    if (msg['type'] == 'alarm') {
-      _showAlarmNotification(msg['alarm_id'], msg['payload']);
-      _playAlarmSound();
-    }
-  });
+For ad-hoc tests you can use **JavaScript** (`WebSocket` with `…/api/ws/<device_id>?token=…`) or **Python** (`websockets`): parse JSON, branch on `type == "alarm"`, send `{"type":"ping"}` every ~30s. Production code should follow **Agent implementations by platform** below.
 
 ### See also (alarm workflow)
 
 - docs/workflow_alarm_and_reusable_templates_plan.md – workflow design and payload_mapping
 - db-structure/update_old_db_workflow_alarm_templates.sql – alarm_target → device_id mapping
 
-## Browser (JavaScript)
+## Agent implementations by platform
 
-  const token = "nvpat_YOUR_PAT_OR_JWT";
-  const url = `ws://localhost:9001/api/ws?token=${encodeURIComponent(token)}`;
-  const ws = new WebSocket(url);
+**Shared pattern for alarms**
 
-  ws.onopen = () => console.log("Connected");
-  ws.onmessage = (e) => console.log("Message:", JSON.parse(e.data));
-  ws.onerror = (e) => console.error("Error", e);
-  ws.onclose = (e) => console.log("Closed", e.code, e.reason);
+1. Connect to **`wss://<host>/api/ws/<device_id>?token=<PAT>`** (percent-encode token and `device_id` if they contain reserved characters).
+2. Read **text** frames only; each message is a JSON object with **`type`**.
+3. On **`type == "alarm"`**, read **`alarm_id`** (string) and **`payload`** (object). Update UI on the **main thread** (Android main, UI thread, WinUI dispatcher, Qt GUI thread, Swift `MainActor` / main queue).
+4. Send **`{"type":"ping"}`** every ~30s on a timer; handle **`pong`** if you log connectivity.
+5. On disconnect or failure, **reconnect** with backoff; alarms are **not** replayed for time spent offline.
 
-  // Optional: ping every 30s
-  setInterval(() => ws.send(JSON.stringify({ type: "ping" })), 30000);
+Optional: raise a **system notification** when an alarm arrives and the app is backgrounded (channels differ per OS; see each section).
 
-  // Send auth in first message instead of query (if you didn't use ?token=):
-  // ws.onopen = () => ws.send(JSON.stringify({ type: "auth", token: "nvpat_..." }));
+---
 
-## Python (websockets or similar)
+### Android — Kotlin + Compose
 
-  import asyncio
-  import json
-  import os
-  # pip install websockets
-  import websockets
+| Topic | Guidance |
+|-------|-----------|
+| **HTTP stack** | **OkHttp** `WebSocketListener` — same process as the rest of the app; use a long-lived **`OkHttpClient`** (singleton or DI). |
+| **Where to own the socket** | A **`ViewModel`** scoped to the app (`Application` + `viewModelScope`) or a small **singleton `NoolvaAgentConnection`**. Avoid tying the socket only to a single screen if alarms should survive navigation. |
+| **Compose** | Expose alarms with **`StateFlow<AlarmEvent?>`** or **`SharedFlow`**; collect in root composable with **`collectAsState()`** / **`collectLatest`**, or show **`Snackbar`**, **dialog**, or route to a dedicated alarms screen. |
+| **Threading** | In **`onMessage`**, **`Handler(Looper.getMainLooper()).post { … }`**, **`runOnUiThread`**, or **`withContext(Dispatchers.Main)`** before mutating UI state. |
+| **Persistent alarm UX** | **`NotificationManager`** (+ channel) with **`alarm_id`** in extras; optionally a **foreground service** if you must hold the socket in background (battery / policy tradeoffs). |
+| **Lifecycle** | **`ProcessLifecycleOwner`** or **`LifecycleService`**: reconnect when app returns to foreground; pause or teardown if you do not need background alarms. |
+| **Token** | **EncryptedSharedPreferences** or **DataStore** for PAT; build URL or `Authorization: Bearer` on **`Request.Builder`**. |
+| **Cleartext** | **`ws://`** on device/emulator may need **`networkSecurityConfig`** (dev only). Ship **`wss://`** in production. |
 
-  async def run():
-      token = os.environ.get("AUTH_TOKEN") or os.environ.get("PAT")
-      uri = f"ws://localhost:9001/api/ws?token={token}"
-      async with websockets.connect(uri) as ws:
-          msg = await ws.recv()
-          print("Server:", json.loads(msg))
-          await ws.send(json.dumps({"type": "ping"}))
-          pong = await ws.recv()
-          print("Pong:", json.loads(pong))
+**OkHttp + alarm branch (outline):**
 
-  asyncio.run(run())
-
-## Flutter (Android & iOS)
-
-Use the same WebSocket URL and auth from a **Flutter** app so one codebase works on **Android**, **iOS**, and other platforms. Use `web_socket_channel` (or `dart:io` / `dart:html` WebSocket) and pass the token in the query or in the first message.
-
-### 1. Add dependency
-
-  # pubspec.yaml
-  dependencies:
-    web_socket_channel: ^3.0.0
-
-### 2. Connect with token in URL (recommended)
-
-  import 'dart:async';
-  import 'dart:convert';
-  import 'package:web_socket_channel/web_socket_channel.dart';
-
-  final token = 'nvpat_YOUR_PAT_OR_JWT';  // or get from secure storage / Firebase
-  final uri = Uri.parse('wss://api.example.com/api/ws?token=${Uri.encodeComponent(token)}');
-  final channel = WebSocketChannel.connect(uri);
-
-  channel.stream.listen((data) {
-    final msg = jsonDecode(data);
-    if (msg['type'] == 'connected') print('Connected');
-    if (msg['type'] == 'pong') print('Pong');
-    // Handle job push, etc., when implemented
-  });
-
-  // Ping keepalive (e.g. every 30s)
-  Timer.periodic(Duration(seconds: 30), (_) {
-    channel.sink.add(jsonEncode({'type': 'ping'}));
-  });
-
-  // Later: channel.sink.close();
-
-### 3. Auth in first message (e.g. when token is not in URL)
-
-  final uri = Uri.parse('wss://api.example.com/api/ws');
-  final channel = WebSocketChannel.connect(uri);
-
-  channel.sink.add(jsonEncode({'type': 'auth', 'token': token}));
-  channel.stream.listen((data) { ... });
-
-### 4. Android / iOS specifics
-
-- **URL:** Use `wss://` in production (HTTPS). For local dev, Android emulator can use `ws://10.0.2.2:9001/api/ws`; iOS simulator `ws://localhost:9001/api/ws`; real devices use your machine’s IP or a deployed API URL.
-- **Token:** Prefer storing PAT or JWT in **flutter_secure_storage** (or similar) and passing it into the WebSocket URL or first message. If you use **Firebase Auth**, you can use the Firebase ID token as the `token` (same Bearer format the API expects if you’ve wired Firebase auth to your backend).
-- **Firebase:** For **job workers** or **notifications**, the job scheduler supports worker type `mobile` (e.g. Firebase Cloud Messaging). WebSocket is for a persistent app connection; FCM can be used for wake-up or alerts. When WebSocket job push is implemented, the Flutter app can register as a worker (e.g. `worker_type: "websocket"` or `"mobile"`) and receive jobs over the same socket or via HTTP claim.
-
-### 5. Minimal full example (Flutter)
-
-  import 'dart:async';
-  import 'dart:convert';
-  import 'package:web_socket_channel/web_socket_channel.dart';
-
-  class NoolvaWebSocket {
-    WebSocketChannel? _channel;
-    final String baseUrl;
-    final String token;
-
-    NoolvaWebSocket({required this.baseUrl, required this.token});
-
-    void connect() {
-      final scheme = baseUrl.startsWith('https') ? 'wss' : 'ws';
-      final host = baseUrl.replaceFirst(RegExp(r'^https?://'), '').split('/').first;
-      final uri = Uri.parse('$scheme://$host/api/ws?token=${Uri.encodeComponent(token)}');
-      _channel = WebSocketChannel.connect(uri);
-      _channel!.stream.listen(_onMessage, onError: _onError, onDone: _onDone);
+```kotlin
+// java.net.URLEncoder for query token
+val wsUrl = "$baseWss/api/ws/$deviceId?token=${URLEncoder.encode(pat, Charsets.UTF_8.name())}"
+val client = OkHttpClient.Builder()
+  .pingInterval(0, TimeUnit.SECONDS)
+  .build()
+client.newWebSocket(Request.Builder().url(wsUrl).build(), object : WebSocketListener() {
+  override fun onMessage(webSocket: WebSocket, text: String) {
+    val o = JSONObject(text)
+    when (o.optString("type")) {
+      "alarm" -> {
+        val id = o.optString("alarm_id")
+        val payload = o.optJSONObject("payload")
+        scope.launch(Dispatchers.Main) {
+          alarmEvents.tryEmit(AlarmEvent(id, payload))
+        }
+      }
     }
-
-    void _onMessage(dynamic data) {
-      final msg = jsonDecode(data);
-      if (msg['type'] == 'connected') {}
-      if (msg['type'] == 'pong') {}
-    }
-    void _onError(e) {}
-    void _onDone() {}
-
-    void ping() => _channel?.sink.add(jsonEncode({'type': 'ping'}));
-    void disconnect() => _channel?.sink.close();
   }
+  override fun onFailure(ws: WebSocket, t: Throwable, response: Response?) { /* schedule reconnect */ }
+})
+// kotlinx.coroutines fixed-periodic: webSocket.send("""{"type":"ping"}""")
+```
 
-  // Usage: NoolvaWebSocket(baseUrl: 'https://api.example.com', token: myPatOrJwt).connect();
+---
+
+### iOS — SwiftUI
+
+| Topic | Guidance |
+|-------|-----------|
+| **API** | **`URLSessionWebSocketTask`** (iOS 13+) — create with **`URLSession.shared.webSocketTask(with: URL)`** where the URL includes **`/api/ws/<device_id>?token=...`**. |
+| **Receive loop** | Call **`receive(completionHandler:)`**; on success with **`.string(text)`**, parse **`Data(text.utf8)`** with **`JSONDecoder`** or **`JSONSerialization`**; then call **`receive` again** to keep the loop going. |
+| **Send ping** | **`task.send(.string("{\"type\":\"ping\"}"))`** with a **`Timer`** or **`Task` + sleep** on an interval. |
+| **SwiftUI** | Hold the task in an **`ObservableObject`** / **`@StateObject`**; publish `@Published var lastAlarm: AlarmPush?` on **`DispatchQueue.main.async`**. Views react with **`onChange`**, sheets, or banners. |
+| **Background** | Prefer **`wss://`**. For notifications when the app is not active, request **`UNUserNotificationCenter`** permission and post a local notification when **`type == "alarm"`**. |
+| **Reconnect** | On receive/delegate failure, **`cancel()`** the task and open a new one; exponential backoff. |
+
+**Receive loop (outline):**
+
+```swift
+func receiveLoop(_ task: URLSessionWebSocketTask) {
+  task.receive { result in
+    defer { receiveLoop(task) }
+    guard case .success(let message) = result,
+          case .string(let text) = message,
+          let data = text.data(using: .utf8),
+          let obj = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+          obj["type"] as? String == "alarm" else { return }
+    let alarmId = obj["alarm_id"] as? String ?? ""
+    DispatchQueue.main.async { /* @Published / UNUserNotification */ }
+  }
+}
+task.resume()
+receiveLoop(task)
+```
+
+---
+
+### macOS — SwiftUI
+
+Same **`URLSessionWebSocketTask`** and receive/send pattern as **iOS**. Differences are mostly product UX:
+
+- Menubar / windowed app: show alarms in a **window**, **popover**, or **`NSUserNotification` / UNUserNotificationCenter**.
+- **App Nap** can throttle timers; keepalive ping still helps but reconnect when the app becomes active if needed.
+- Use **`wss://`** for production; **`localhost`** is fine for dev on `ws://`.
+
+---
+
+### Windows — C# + WinUI 3
+
+| Topic | Guidance |
+|-------|-----------|
+| **Client** | **`System.Net.WebSockets.ClientWebSocket`** (or **`Windows.Networking.Sockets.MessageWebSocket`**; below assumes **`ClientWebSocket`** for portability). |
+| **Connect** | `var ws = new ClientWebSocket();` optionally **`ws.Options.SetRequestHeader("Authorization", $"Bearer {pat}")`** if you omit query token; then **`await ws.ConnectAsync(uri, CancellationToken)`** with `Uri` including **`/api/ws/{deviceId}?token=...`**. |
+| **Receive** | Loop **`await ws.ReceiveAsync(buffer, ct)`**, decode UTF-8 to string, **`JsonDocument.Parse`**, check **`RootElement.GetProperty("type")`**. |
+| **UI thread** | **`DispatcherQueue.GetForCurrentThread().TryEnqueue(() => { ... })`** (or the Window’s dispatcher) before touching XAML state or showing **`ContentDialog`**. |
+| **Alarm UI** | In-app: **`InfoBar`**, dialog, or toast via **`AppNotificationManager`** (Windows App SDK) for user-visible alerts. |
+| **Ping** | **`PeriodicTimer`** or **`Task.Delay` loop** sending UTF-8 bytes of `{"type":"ping"}`. |
+| **Reconnect** | Catch **`WebSocketException`**, dispose socket, backoff, **`ConnectAsync`** again. |
+
+---
+
+### Linux — Qt (C++)
+
+| Topic | Guidance |
+|-------|-----------|
+| **Module** | **`QT += websockets`**; include **`#include <QtWebSockets/QWebSocket>`**. |
+| **Connect** | **`QWebSocket socket;`** `socket.open(QUrl("wss://host/api/ws/linux-agent?token=..."));` |
+| **Messages** | Connect **`&QWebSocket::textMessageReceived`**; parse **`QJsonDocument::fromJson(message.toUtf8())`**, read **`obj["type"].toString()`**. |
+| **Alarm handling** | **`emit alarmReceived(alarmId, payload)`** to QML or a controller; in **Widgets**, update labels on the GUI thread (signals are queued across threads by default when using **`Qt::QueuedConnection`**). |
+| **Ping** | **`QTimer`** every 30s: **`socket.sendTextMessage(R"({"type":"ping"})")`**. |
+| **UX** | **`QSystemTrayIcon::showMessage`**, main-window **`QMessageBox`**, or QML **`Popup`** when **`type == "alarm"`**. |
+| **TLS** | Trust store uses system CAs; for custom servers add certificate handling if needed. |
+
+---
+
+### Optional: browser and Python (dev / QA only)
+
+**Browser:** `new WebSocket` cannot set `Authorization`; put **`?token=`** in the URL. For alarms, the URL must include **`/api/ws/<device_id>`**.
+
+**Python:** `websockets` or **`asyncio` + aiohttp** — connect to the same URL; loop on `recv`, `json.loads`, handle `type == "alarm"`.
 
 ## curl (test from CLI)
 
   # Install websocat if needed: brew install websocat
   websocat "ws://localhost:9001/api/ws?token=nvpat_YOUR_PAT"
 
-Or use a GUI client (e.g. Postman, Insomnia) that supports WebSocket; set URL to `ws://localhost:9001/api/ws?token=<your_token>`.
+  # Test alarm registration paths (same pattern as platform agents):
+  websocat "ws://localhost:9001/api/ws/mac-agent?token=nvpat_YOUR_PAT"
+  websocat "ws://localhost:9001/api/ws/windows-agent?token=nvpat_YOUR_PAT"
+  websocat "ws://localhost:9001/api/ws/linux-agent?token=nvpat_YOUR_PAT"
+  websocat "ws://localhost:9001/api/ws/ios-agent?token=nvpat_YOUR_PAT"
+  websocat "ws://localhost:9001/api/ws/android-agent?token=nvpat_YOUR_PAT"
+
+Or use a GUI client (e.g. Postman, Insomnia) that supports WebSocket; use **`/api/ws/<device_id>?token=...`** when testing pushes.
 
 ## Job workers over WebSocket (planned)
 
-The job scheduler design (docs/job-scheduler-implementation-plan.md) includes **websocket** and **mobile** worker types (e.g. laptops, Android/iOS Flutter apps). Today, remote workers use **HTTP** (`GET /api/jobs/claim`, `POST /api/jobs/{id}/result`). When WebSocket job push is implemented:
+The job scheduler design (docs/job-scheduler-implementation-plan.md) includes **websocket** and **mobile** worker types. Today, remote workers use **HTTP** (`GET /api/jobs/claim`, `POST /api/jobs/{id}/result`). When WebSocket job push is implemented:
 
 - Register as a worker with type `websocket` or `mobile` (e.g. `POST /api/workers/register` or over WS).
-- Server may push job assignments over the same WebSocket; client runs the job and sends the result (e.g. `{"type": "job_result", "job_id": "...", "status": "success", "result": {...}}`).
-- **Flutter (Android/iOS):** Use the Flutter section above to open the WebSocket; when job push is available, handle incoming job messages and submit results over the same connection or via HTTP.
-- **Firebase:** Use FCM for push/wake-up if needed; the app can still use this WebSocket for the persistent channel and (when implemented) job delivery.
+- Server may push job assignments over the same WebSocket; the agent runs the job and sends the result (e.g. `{"type": "job_result", "job_id": "...", "status": "success", "result": {...}}`).
+- **SwiftUI / WinUI / Qt / Kotlin agents** would handle those messages on the same connection you use for alarms today.
+- **Firebase (FCM):** Configure service account + migration (see **Mobile agent team**). WebSocket remains the in-app channel; FCM is for background wake + `pending-tasks` pull.
 
 Until then, use the HTTP remote worker (see how-to-run-remote-worker) for running jobs from another machine.
 
@@ -396,11 +458,16 @@ Until then, use the HTTP remote worker (see how-to-run-remote-worker) for runnin
 - **Close code 1008** – Token was present (query or header) but **rejected** (wrong PAT, expired JWT, typo). Fix the token or obtain a new one from login / PAT admin.
 - **Close code 4001** – No valid auth: missing token, or first-message `auth` failed. Use `?token=`, `?access_token=`, `Authorization`, or `{"type":"auth","token":"..."}`.
 - **403 / “connection rejected”** – Often a **bad URL path** (WebSocket upgrade hit the wrong route). Use **`/api/ws`** or **`/ws`** plus optional **`/<device_id>`** as documented above—not a random path that only exists for HTTP.
+- **Alarms never arrive (broadcast or targeted)** – Confirm the URL includes **`/api/ws/<your_device_id>`** (not only `/api/ws`). Confirm **`alarm_target`** is **NULL** / JSON null for broadcast (not **`{}`**). Check the **`process_alarm` job result** for **`pushed_count`**; **0** usually means **no WebSocket on the process that ran the job** (see deployment note: multiple API workers / replicas).
+- **Scheduler Workers shows idle but no alarms** – Listing workers is **DB-backed**; **alarm push** uses **in-memory** connections on one process. Those can diverge when multiple API instances exist.
 - **CORS** – WebSockets are not subject to CORS the same way as XHR; still use the correct host/port. For `ws://` to localhost from a page on another origin, some setups need a matching API URL.
 - **wss://** – If the API is behind HTTPS, use `wss://` and the same path (`/api/ws` or `/ws`).
-- **Flutter Android emulator** – Use `ws://10.0.2.2:9001/api/ws` (or `/ws`) to reach the host machine’s localhost.
-- **Flutter iOS simulator** – Use `ws://localhost:9001/api/ws`; on a real device use the host IP or deployed API URL with `wss://`.
+- **Android emulator** – Use `ws://10.0.2.2:<port>/api/ws/<device_id>` to reach the host machine’s localhost.
+- **iOS Simulator** – Use `ws://localhost:<port>/api/ws/<device_id>`; on a real device use the host IP or deployed API with `wss://`.
+- **Android cleartext fails** – Use **`wss://`** or add **`networkSecurityConfig`** for dev with `ws://`.
 - **Firebase / mobile token** – If using Firebase Auth, pass the ID token in `token` only if your API validates that token (Noolva expects its own JWT or a PAT unless you’ve integrated Firebase).
+- **FCM received but `pending-tasks` empty** – Server enqueues pending rows before sending FCM; an empty array usually means **no row was queued** (e.g. no token registered, or broadcast without `company_id`). **403** on `pending-tasks` → this user has not **`POST /api/register-device`**’d that `device_id`, or token/user mismatch — register again.
+- **No FCM in background** – Server sends **data-only** FCM with high priority; ensure the client handles **data** messages in **`FirebaseMessagingService`** (Android) / equivalent (iOS: FCM data delivery rules differ). **Notification-only** payloads are not used by Noolva for this flow.
 
 ## See also
 

@@ -39,8 +39,25 @@ async def process_alarm(payload: Dict[str, Any]) -> Dict[str, Any]:
                 pushed_count = 1 if pushed else 0
         except Exception as e:
             logger.warning("process_alarm: push failed for device_id=%s: %s", device_id, e)
+
+    mobile_result: Dict[str, Any] = {}
+    try:
+        from utils.agent_alarm_push import deliver_alarm_mobile
+
+        mobile_result = await deliver_alarm_mobile(payload, str(device_id), alarm_id)
+    except Exception as e:
+        logger.warning("process_alarm: mobile FCM/pending queue failed: %s", e)
+        mobile_result = {"fcm_skipped": "exception", "fcm_error": str(e)}
+
     # Future: update alarm status in DB (e.g. mark as notified) via auto_crud or direct update
-    return {"ok": True, "alarm_id": alarm_id, "pushed_to_device": pushed, "pushed_count": pushed_count, "device_id": device_id}
+    return {
+        "ok": True,
+        "alarm_id": alarm_id,
+        "pushed_to_device": pushed,
+        "pushed_count": pushed_count,
+        "device_id": device_id,
+        **mobile_result,
+    }
 
 
 register_handler("process_alarm", process_alarm)

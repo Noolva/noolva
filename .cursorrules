@@ -33,12 +33,23 @@
 ## Development Notifications
 - Whenever API restart or React npm install/restart is needed, inform the user after making changes
 
+## Release bundles (per-version deploy: DB + pip + checklist)
+- For each release that touches **database**, **pip**, or **mandatory deploy steps**, **also** add/update a folder at repo root:
+  - **`release_<semver>_db_updates_pip_migration_infos/`** (example: `release_1.0.5_db_updates_pip_migration_infos/`).
+- Inside that folder, use **numbered** filenames so operators can apply in order across **multiple environments** on different schedules:
+  - **`01_<descriptive_title>.sql`** — one SQL file (or the canonical copy) for DB updates for this release; **must stay in sync** with the corresponding `db-structure/update_old_db_*.sql` or document “same as `db-structure/…`” at the top.
+  - **`01_pip_<descriptive_title>.txt`** — pip notes: key packages, `pip install -r …` path, pins added/changed.
+  - **`02_other_mandatory_for_deployment.txt`** — non-SQL, non-pip: env vars, secrets, restarts, nginx, reverse proxy, `FIREBASE_CREDENTIALS_PATH`, optional workflow/config changes, QA smoke checks.
+- The **canonical** migration SQL still lives under **`db-structure/`** per rules above; the release folder is a **deploy bundle** for humans and for multi-environment rollouts.
+- When preparing a new release, **create a new** `release_<semver>_db_updates_pip_migration_infos/` folder (do not overwrite older release folders).
+
 ## Runtime & DB Operations (Agent vs User)
 - The agent must **not** run the API server, React dev server, or apply database migrations directly.
 - The agent should **only**:
   - Modify source files (API, React, SQL, docs, etc.).
   - Create/update schema files in `db-structure/noolvandb_schema.sql` and related SQL.
   - Create/update **separate** migration/update files (e.g. `db-structure/update_old_db_*.sql`, `migration_*.sql`) with queries needed to update existing/old databases.
+  - When the change is part of a release, add/update the **`release_<semver>_db_updates_pip_migration_infos/`** bundle as in **Release bundles** above.
 - The **user** will manually:
   - Start/stop API and React servers.
   - Run `npm`/`pip` commands.

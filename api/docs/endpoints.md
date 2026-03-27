@@ -201,6 +201,16 @@ Below, `{id}` and similar denote path parameters. Methods are as registered in F
 | `POST` | `/api/upload` |
 | `GET` | `/api/private-file` |
 
+### Mobile agent (FCM + pending tasks) — `/api`
+
+| Method | Path |
+|--------|------|
+| `POST` | `/api/register-device` |
+| `DELETE` | `/api/register-device` |
+| `GET` | `/api/pending-tasks/{device_id}` |
+
+Auth: `Authorization: Bearer <JWT or PAT>`. See `how-to-connect-websocket` (mobile agent section).
+
 ### Jobs, workers, templates, schedulers — `/api`
 
 | Method | Path |

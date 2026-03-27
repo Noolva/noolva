@@ -1,0 +1,33 @@
+Release 1.0.5 — mandatory deployment (non-SQL, non-pip)
+=====================================================
+
+Apply in order when promoting this release across environments (dev, staging, prod, etc.).
+
+1) Code deploy
+   - Pull/checkout tag or branch containing 1.0.5 API changes (FCM utils, mobile_agent routes, process_alarm).
+
+2) pip install
+   - See 01_pip_firebase_admin_mobile_agent.txt (install from api/app/requirements.txt).
+
+3) Database
+   - Run 01_mobile_agent_fcm_tables.sql on the target Postgres (once per environment).
+
+4) Firebase / secrets
+   - Place Firebase service account JSON on the server (not committed to git).
+   - Set env: FIREBASE_CREDENTIALS_PATH=/absolute/path/to/adminsdk.json
+   - Or use default path under repo: firebase-info/<your-adminsdk>.json (see api/app/utils/fcm.py).
+   - Same Firebase project as the Android app’s google-services.json.
+
+5) API restart
+   - Restart the API process/worker after env + pip + SQL.
+
+6) Optional workflow
+   - For broadcast FCM to mobile, ensure process_alarm job payload includes company_id when alarm_target is all_devices (see how-to-connect-websocket).
+
+7) Mobile / QA
+   - POST /api/register-device, GET /api/pending-tasks/{device_id}, trigger alarm, verify job result fcm_sent / pending_enqueued.
+
+Notes
+-----
+- Roll out environments on your own schedule; this file is the checklist only.
+- Do not commit service account JSON; use .gitignore and secrets store on each host.

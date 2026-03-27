@@ -305,6 +305,15 @@ except Exception as e:
     logger.error(f"Failed to register upload router: {e}")
     raise
 
+# Mobile agent: FCM registration + pending tasks (see how-to-connect-websocket)
+try:
+    from routes import mobile_agent
+    api.include_router(mobile_agent.router, tags=["Mobile agent"])
+    logger.info("Mobile agent routes registered at /api/register-device, /api/pending-tasks/…")
+except Exception as e:
+    logger.error(f"Failed to register mobile_agent router: {e}")
+    raise
+
 # Import and include jobs router (submit, status, list; worker register/claim for remote workers)
 try:
     from routes import jobs
