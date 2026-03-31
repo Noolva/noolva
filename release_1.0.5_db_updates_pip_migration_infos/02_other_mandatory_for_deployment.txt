@@ -11,6 +11,9 @@ Apply in order when promoting this release across environments (dev, staging, pr
 
 3) Database
    - Run 01_mobile_agent_fcm_tables.sql on the target Postgres (once per environment).
+   - Run 03_flattening_policies_and_job_workflows.sql (flattening policies + dispatch_flattening_refreshes workflow).
+   - Run 04_data_lifecycle_and_job_workflows.sql (data_lifecycle_policy enums/table + lifecycle + purge_soft_deleted templates).
+   - Canonical copies live under db-structure/update_old_db_flattening_policies_and_jobs.sql and update_old_db_data_lifecycle_and_jobs.sql.
 
 4) Firebase / secrets
    - Place Firebase service account JSON on the server (not committed to git).
@@ -20,6 +23,15 @@ Apply in order when promoting this release across environments (dev, staging, pr
 
 5) API restart
    - Restart the API process/worker after env + pip + SQL.
+
+5b) Admin menus (Flattened Datas, Data Life Cycles)
+   - Re-apply the Developer Console section of db-structure/noolvandb_feeds.sql on each DB, or insert the two menus manually for app_name=developer_console.
+
+5c) Job workers
+   - Workers must load new handlers: refresh_flattening_table, sync_lifecycle_table, purge_soft_deleted (restart job worker processes).
+
+5d) Schedulers (optional)
+   - Point a scheduler job at template dispatch_flattening_refreshes and/or dispatch_lifecycle_syncs when interval-based refresh is required.
 
 6) Optional workflow
    - For broadcast FCM to mobile, ensure process_alarm job payload includes company_id when alarm_target is all_devices (see how-to-connect-websocket).

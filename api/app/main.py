@@ -224,6 +224,17 @@ api.include_router(themes.router, tags=["Themes"])
 from routes import database
 api.include_router(database.router, tags=["Developer Console - Database"])
 
+try:
+    from routes import flattening_policies
+    from routes import data_lifecycle_policies
+
+    api.include_router(flattening_policies.router, tags=["Developer Console - Flattening Policies"])
+    api.include_router(data_lifecycle_policies.router, tags=["Developer Console - Data Lifecycle"])
+    logger.info("Flattening and data lifecycle routers registered")
+except Exception as e:
+    logger.error("Failed to register flattening/lifecycle routers: %s", e)
+    raise
+
 # Import and include menus router (CRUD operations)
 try:
     from routes import menus
