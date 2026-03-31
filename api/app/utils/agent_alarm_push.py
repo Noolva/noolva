@@ -18,7 +18,8 @@ async def deliver_alarm_mobile(payload: Dict[str, Any], device_id: str, alarm_id
     After WebSocket push: enqueue pull-model tasks and send FCM data messages.
 
     - Targeted device_id: all registrations with that device_id (typically one user).
-    - Broadcast (all_devices): registrations for payload.company_id only (required for FCM broadcast).
+    - Broadcast (all_devices): if payload.company_id is set, registrations for that company only;
+      if missing, all rows in agent_device_registrations (OK single-tenant; avoid in multi-tenant).
     """
     out: Dict[str, Any] = {
         "fcm_sent": 0,
@@ -40,7 +41,7 @@ async def deliver_alarm_mobile(payload: Dict[str, Any], device_id: str, alarm_id
 
     if not registrations:
         if str(device_id) == "all_devices":
-            out["fcm_skipped"] = "no_company_id_or_no_registrations"
+            out["fcm_skipped"] = "no_registrations"
         else:
             out["fcm_skipped"] = "no_fcm_registration_for_device"
         return out
@@ -68,10 +69,18 @@ async def deliver_alarm_mobile(payload: Dict[str, Any], device_id: str, alarm_id
 
     if not is_fcm_configured():
         out["fcm_skipped"] = "fcm_credentials_missing"
+        logger.warning(
+            "agent_alarm_push: FCM not sent — no Firebase credentials file (set FIREBASE_CREDENTIALS_PATH or add file at default path). pending_enqueued=%s",
+            pending,
+        )
         return out
 
     tokens = [r["fcm_token"] for r in registrations if r.get("fcm_token")]
     if not tokens:
+        logger.warning(
+            "agent_alarm_push: FCM not sent — registration row(s) have empty fcm_token. pending_enqueued=%s",
+            pending,
+        )
         return out
 
     payload_json = json.dumps(payload_for_task, default=str)
@@ -85,22 +94,50 @@ async def deliver_alarm_mobile(payload: Dict[str, Any], device_id: str, alarm_id
     out["fcm_sent"] = result["sent"]
     out["fcm_failed"] = result["failed"]
     out["fcm_errors"] = result["errors"]
+    if result["sent"]:
+        logger.info(
+            "agent_alarm_push: FCM sent OK — sent=%s failed=%s alarm_id=%s",
+            result["sent"],
+            result["failed"],
+            alarm_str,
+        )
+    if result["failed"]:
+        logger.warning(
+            "agent_alarm_push: FCM send failed — sent=%s failed=%s errors=%s alarm_id=%s",
+            result["sent"],
+            result["failed"],
+            result["errors"],
+            alarm_str,
+        )
     return out
 
 
 async def _resolve_registrations(device_id: str, payload: Dict[str, Any]) -> List[Dict[str, Any]]:
     if str(device_id) == "all_devices":
         cid = payload.get("company_id")
-        if cid is None:
-            logger.info("agent_alarm_push: FCM/pending for broadcast skipped — add company_id to job payload for tenant-scoped mobile push")
-            return []
+        if cid is not None:
+            try:
+                cid_int = int(cid)
+            except (TypeError, ValueError):
+                cid_int = None
+            if cid_int is not None:
+                return await PostgresDB.fetch(
+                    """
+                    SELECT user_id, company_id, device_id, fcm_token
+                    FROM public.agent_device_registrations
+                    WHERE company_id = $1
+                    """,
+                    cid_int,
+                )
         rows = await PostgresDB.fetch(
             """
             SELECT user_id, company_id, device_id, fcm_token
             FROM public.agent_device_registrations
-            WHERE company_id = $1
-            """,
-            int(cid),
+            """
+        )
+        logger.info(
+            "agent_alarm_push: broadcast without company_id — matched %d registration row(s) (pending + FCM happen next; see following log lines)",
+            len(rows),
         )
         return rows
 

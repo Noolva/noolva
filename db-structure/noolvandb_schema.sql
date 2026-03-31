@@ -815,35 +815,19 @@ ALTER TABLE public.menus
     ON DELETE SET NULL;
 -- 06_api_and_operations.sql
 -- Classification: Connectivity & Operations
--- Description: Manages Data Ops (Archival, Audit) and API/Endpoint Configuration (including Flattened/Computed Views).
+-- Description: Audit, flattening policies (WARM read models), data lifecycle (tier movement), API/Endpoint Configuration.
 -- Dependencies: users, data_models
 
 -- ==========================================
--- 1. Archival Policies
+-- 0. Enum Types (Data Lifecycle)
 -- ==========================================
--- 3-Level Strategy: Live -> Archive Table (L2) -> S3 Parquet (L3)
-CREATE TABLE public.archival_policies (
-    policy_id SERIAL PRIMARY KEY,
-    model_id INTEGER NOT NULL REFERENCES public.data_models(model_id) ON DELETE CASCADE,
-    
-    tenant_id UUID, -- Optional: Tenant-specific policy
-    
-    -- L2: Move to Archive Table
-    l2_criteria_json JSONB, -- e.g. { "days_older_than": 90, "status": "closed" }
-    archive_table_name VARCHAR(100), -- e.g. "archives.orders_2024"
-    
-    -- L3: Move to S3 (Cold Storage)
-    l3_criteria_json JSONB, -- e.g. { "days_older_than": 365 }
-    s3_config_json JSONB, -- { "bucket": "...", "path_pattern": "..." }
-    
-    is_active BOOLEAN DEFAULT TRUE,
-    
-    created_by INTEGER REFERENCES public.users(user_id),
-    last_updated TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
-);
+CREATE TYPE public.destination_type_enum AS ENUM ('s3', 'postgres_archive', 'iceberg');
+CREATE TYPE public.movement_type_enum AS ENUM ('move', 'copy');
+CREATE TYPE public.sync_strategy_enum AS ENUM ('FULL', 'INCREMENTAL');
+CREATE TYPE public.transfer_mode_enum AS ENUM ('time_based', 'condition_based', 'time_and_condition');
 
 -- ==========================================
--- 2. Audit Logs (Time-Partitioned)
+-- 1. Audit Logs (Time-Partitioned)
 -- ==========================================
 -- High-volume event tracking. Partitioned by Time Range.
 CREATE TABLE public.audit_logs (
@@ -875,27 +859,61 @@ CREATE TABLE public.audit_logs_default PARTITION OF public.audit_logs
     DEFAULT;
 
 -- ==========================================
--- 3. Data Flattening Rules
+-- 2. Flattening table / relation policies (WARM tier)
 -- ==========================================
--- Configurable denormalization for high-performance read models.
-CREATE TABLE public.data_flattening_rules (
-    rule_id SERIAL PRIMARY KEY,
-    rule_uuid UUID DEFAULT gen_random_uuid() NOT NULL UNIQUE,
-    
-    rule_name VARCHAR(100) NOT NULL,
-    rule_code VARCHAR(100) NOT NULL UNIQUE,
-    
-    source_model_id INTEGER REFERENCES public.data_models(model_id) ON DELETE CASCADE,
-    target_model_name VARCHAR(100), -- Name of the physical table/matview if generated
-    
-    -- Configuration
-    computation_config_json JSONB, -- { "joins": [...], "formulas": [...] }
-    refresh_policy_json JSONB, -- { "type": "scheduled", "cron": "0 * * * *", "timeout": 300 }
-    
-    is_active BOOLEAN DEFAULT TRUE,
-    
-    created_by INTEGER REFERENCES public.users(user_id),
-    last_updated TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
+CREATE TABLE public.flattening_table_policy (
+    id SERIAL PRIMARY KEY,
+    table_name TEXT UNIQUE NOT NULL,
+    refresh_strategy TEXT CHECK (refresh_strategy IS NULL OR refresh_strategy IN ('FULL', 'INCREMENTAL', 'VERSIONED')),
+    refresh_interval_minutes INT,
+    batch_size INT,
+    last_refreshed TIMESTAMPTZ,
+    last_processed_value TIMESTAMPTZ,
+    is_snapshot BOOLEAN DEFAULT TRUE NOT NULL,
+    is_active BOOLEAN DEFAULT TRUE NOT NULL,
+    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP NOT NULL,
+    last_updated TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP NOT NULL
+);
+
+CREATE TABLE public.flattening_relation_policy (
+    id SERIAL PRIMARY KEY,
+    table_name TEXT NOT NULL REFERENCES public.flattening_table_policy(table_name) ON DELETE CASCADE,
+    relation_name TEXT NOT NULL,
+    relation_type TEXT NOT NULL CHECK (relation_type IN ('m2o', 'o2m')),
+    strategy TEXT NOT NULL CHECK (strategy IN ('denormalize', 'json', 'separate')),
+    include_fields TEXT[],
+    target_table TEXT,
+    is_required BOOLEAN DEFAULT FALSE,
+    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP NOT NULL,
+    UNIQUE (table_name, relation_name),
+    CHECK (strategy <> 'separate' OR (target_table IS NOT NULL AND length(trim(target_table)) > 0)),
+    CHECK ((relation_type = 'm2o' AND strategy = 'denormalize') OR (relation_type = 'o2m' AND strategy IN ('json', 'separate'))),
+    CHECK (strategy = 'denormalize' OR include_fields IS NULL OR cardinality(include_fields) = 0)
+);
+
+-- ==========================================
+-- 3. Data lifecycle policy (WARM / COOL / COLD routing config)
+-- ==========================================
+CREATE TABLE public.data_lifecycle_policy (
+    id SERIAL PRIMARY KEY,
+    policy_label TEXT,
+    table_name TEXT NOT NULL,
+    pk_column TEXT NOT NULL DEFAULT 'id',
+    transfer_mode public.transfer_mode_enum DEFAULT 'time_based' NOT NULL,
+    time_column TEXT,
+    filter_condition TEXT,
+    destination_type public.destination_type_enum NOT NULL,
+    destination_table TEXT,
+    is_public_on_s3 BOOLEAN,
+    movement_type public.movement_type_enum NOT NULL,
+    sync_strategy public.sync_strategy_enum NOT NULL,
+    sync_batch_size INT DEFAULT 1000,
+    sync_interval_minutes INT,
+    last_synced_at TIMESTAMPTZ,
+    last_processed_value TIMESTAMPTZ,
+    is_active BOOLEAN DEFAULT TRUE NOT NULL,
+    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP NOT NULL,
+    last_updated TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP NOT NULL
 );
 
 -- ==========================================
@@ -938,11 +956,14 @@ CREATE TABLE public.api_endpoints (
 );
 
 -- Indexes
-CREATE INDEX idx_archival_model ON public.archival_policies(model_id);
 CREATE INDEX idx_audit_logs_event_time ON public.audit_logs(event_time); -- Partition pruning
 CREATE INDEX idx_audit_logs_tenant ON public.audit_logs(tenant_id);
 CREATE INDEX idx_audit_logs_target ON public.audit_logs(target_model, target_record_id);
-CREATE INDEX idx_flattening_rules_source ON public.data_flattening_rules(source_model_id);
+CREATE INDEX idx_flattening_table_policy_due ON public.flattening_table_policy(is_snapshot, refresh_strategy) WHERE is_active = TRUE AND is_snapshot = FALSE;
+CREATE INDEX idx_flattening_table_policy_last_refreshed ON public.flattening_table_policy(last_refreshed);
+CREATE INDEX idx_flattening_relation_policy_table ON public.flattening_relation_policy(table_name);
+CREATE INDEX idx_data_lifecycle_policy_due ON public.data_lifecycle_policy(is_active, destination_type) WHERE is_active = TRUE;
+CREATE INDEX idx_data_lifecycle_policy_last_sync ON public.data_lifecycle_policy(last_synced_at);
 CREATE INDEX idx_api_endpoints_path ON public.api_endpoints(path);
 -- 07_system_utilities.sql
 -- Classification: Operational Utilities
