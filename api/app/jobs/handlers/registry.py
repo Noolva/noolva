@@ -29,6 +29,9 @@ async def run_core_function(handler_function_name: str, payload: Dict[str, Any])
 
 def _register_builtins():
     from . import send_email as _se, generate_report as _gr, notification_push as _np, auto_crud as _ac, custom_query as _cq  # noqa: F401
+    from . import refresh_flattening_table as _rft  # noqa: F401
+    from . import sync_lifecycle_table as _slt  # noqa: F401
+    from . import purge_soft_deleted as _psd  # noqa: F401
     # Handlers self-register on import
 
 
@@ -41,3 +44,6 @@ def ensure_handlers_loaded():
     from . import custom_query  # noqa: F401
     from . import create_jobs_from_records  # noqa: F401
     from . import process_alarm  # noqa: F401
+    from . import refresh_flattening_table  # noqa: F401
+    from . import sync_lifecycle_table  # noqa: F401
+    from . import purge_soft_deleted  # noqa: F401

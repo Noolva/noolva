@@ -740,6 +740,7 @@ async def create_data_model(
             columns.append("created_by INTEGER REFERENCES public.users(user_id)")
             columns.append("idate TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP NOT NULL")
             columns.append("last_updated TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP NOT NULL")
+            columns.append("deleted_at TIMESTAMPTZ")
             # Row exposure: link to row_exposure_modes for user-mode filtering in auto CRUD
             columns.append("row_exposure_mode_id INTEGER REFERENCES public.row_exposure_modes(exposure_mode_id)")
             
@@ -889,6 +890,30 @@ async def create_data_model(
                 None,
                 system_fields_start_order + 2
             )
+
+        # Soft delete timestamp (optional; hidden in lists via Auto CRUD when NULL filter applies)
+        if timestamp_field_type_id:
+            await PostgresDB.execute(
+                """
+                INSERT INTO public.data_model_fields (
+                    model_id, field_name, display_name, field_type_id,
+                    field_config_json, is_required, is_unique, is_primary_key,
+                    default_value, encryption_method, ui_component, order_no
+                ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
+                """,
+                model_id,
+                "deleted_at",
+                "Deleted At",
+                timestamp_field_type_id,
+                "{}",
+                False,
+                False,
+                False,
+                None,
+                "none",
+                None,
+                system_fields_start_order + 3
+            )
         
         # Insert row_exposure_mode_id field (hidden in UI like idate/last_updated)
         if integer_field_type_id:
@@ -911,7 +936,7 @@ async def create_data_model(
                 None,
                 "none",
                 None,
-                system_fields_start_order + 3
+                system_fields_start_order + 4
             )
         
         # Insert api_endpoints for auto_crud (GET, POST, PUT, DELETE)
@@ -1238,7 +1263,7 @@ async def check_model_deletion(
                 except Exception as e:
                     logger.warning(f"Error parsing field_config_json for field {rel.get('field_id')}: {str(e)}")
         
-        # Check for other references (app_views, archival_policies, data_flattening_rules, api_endpoints)
+        # Check for other references (app_views, flattening / lifecycle policies by table_name, api_endpoints)
         other_references = []
         
         # Check app_views
@@ -1254,31 +1279,60 @@ async def check_model_deletion(
                 "items": [{"id": v["app_view_id"], "name": v["view_name"]} for v in app_views]
             })
         
-        # Check archival_policies
-        archival_policies = await PostgresDB.fetch(
-            "SELECT policy_id FROM public.archival_policies WHERE model_id = $1",
-            model_id
-        )
-        if archival_policies:
-            other_references.append({
-                "type": "archival_policies",
-                "count": len(archival_policies),
-                "reason": "Archival policies are configured for this model. Remove them before deleting the model.",
-                "items": []
-            })
-        
-        # Check data_flattening_rules
-        flattening_rules = await PostgresDB.fetch(
-            "SELECT rule_id, rule_name FROM public.data_flattening_rules WHERE source_model_id = $1",
-            model_id
-        )
-        if flattening_rules:
-            other_references.append({
-                "type": "data_flattening_rules",
-                "count": len(flattening_rules),
-                "reason": "Flattened view rules use this model as source. Remove or update them before deleting the model.",
-                "items": [{"id": r["rule_id"], "name": r["rule_name"]} for r in flattening_rules]
-            })
+        physical_table = table_name
+        try:
+            flattening_policies = await PostgresDB.fetch(
+                """
+                SELECT id, table_name FROM public.flattening_table_policy
+                WHERE table_name = $1
+                """,
+                physical_table,
+            )
+            if flattening_policies:
+                other_references.append({
+                    "type": "flattening_table_policy",
+                    "count": len(flattening_policies),
+                    "reason": "Flattening table policy targets this physical table. Remove it in Developer Console → Flattened Datas first.",
+                    "items": [{"id": p["id"], "name": p["table_name"]} for p in flattening_policies]
+                })
+            flattening_rels = await PostgresDB.fetch(
+                """
+                SELECT id, relation_name FROM public.flattening_relation_policy
+                WHERE table_name = $1
+                """,
+                physical_table,
+            )
+            if flattening_rels:
+                other_references.append({
+                    "type": "flattening_relation_policy",
+                    "count": len(flattening_rels),
+                    "reason": "Flattening relation policies reference this table_name. Remove them before deleting the model.",
+                    "items": [{"id": r["id"], "name": r["relation_name"]} for r in flattening_rels]
+                })
+        except Exception as e:
+            if "flattening_table_policy" not in str(e) and "does not exist" not in str(e).lower():
+                raise
+            logger.warning("flattening policy tables missing (run db migrations): %s", e)
+
+        try:
+            lifecycle_policies = await PostgresDB.fetch(
+                """
+                SELECT id, policy_label FROM public.data_lifecycle_policy
+                WHERE table_name = $1
+                """,
+                physical_table,
+            )
+            if lifecycle_policies:
+                other_references.append({
+                    "type": "data_lifecycle_policy",
+                    "count": len(lifecycle_policies),
+                    "reason": "Data lifecycle policies reference this table. Remove them in Developer Console → Data Life Cycles first.",
+                    "items": [{"id": p["id"], "name": (p.get("policy_label") or str(p["id"]))} for p in lifecycle_policies]
+                })
+        except Exception as e:
+            if "data_lifecycle_policy" not in str(e) and "does not exist" not in str(e).lower():
+                raise
+            logger.warning("data_lifecycle_policy missing (run db migrations): %s", e)
         
         # Check api_endpoints (related_model_id or model_id in reference_model_ids)
         api_endpoints = await PostgresDB.fetch(
@@ -1470,7 +1524,7 @@ async def delete_data_model(
         # - field_permissions
         # - model_row_access_policies
         # - app_views
-        # - archival_policies (if exists)
+        # - flattening_table_policy / data_lifecycle_policy (if table_name matches; remove in Dev Console first)
         await PostgresDB.execute("DELETE FROM public.data_models WHERE model_id = $1", model_id)
         
         return {
@@ -2022,11 +2076,18 @@ async def _auto_list_records_impl(
         from_clause = f'public."{table_name}"'
         exposure_where = ""
         args = list(where_args)
+    dead_sql = ""
+    if "deleted_at" in all_fields:
+        colref = 't."deleted_at"' if use_exposure_join else '"deleted_at"'
+        if where_sql or exposure_where:
+            dead_sql = f" AND ({colref} IS NULL)"
+        else:
+            dead_sql = f" WHERE ({colref} IS NULL)"
     args.append(limit)
     args.append(offset)
     limit_idx = len(args) - 1
     offset_idx = len(args)
-    sql = f'SELECT {cols_sql} FROM {from_clause}{where_sql}{exposure_where} LIMIT ${limit_idx} OFFSET ${offset_idx}'
+    sql = f'SELECT {cols_sql} FROM {from_clause}{where_sql}{exposure_where}{dead_sql} LIMIT ${limit_idx} OFFSET ${offset_idx}'
     raw_rows = await PostgresDB.fetch(sql, *args)
 
     file_image_encryption_fields = {
@@ -2159,6 +2220,8 @@ async def auto_get_one_record(
         # NULL or 0 = always expose; else show row if row_exposure_mode_id matches user's current_user_mode (e.g. private mode shows private rows)
         where += f" AND (\"row_exposure_mode_id\" IS NULL OR \"row_exposure_mode_id\" = 0 OR \"row_exposure_mode_id\" = ${param_idx})"
         args.append(user_mode_id)
+    if "deleted_at" in all_fields:
+        where += ' AND ("deleted_at" IS NULL)'
     sql = f'SELECT {cols_sql} FROM public."{table_name}" {where} LIMIT 1'
     row = await PostgresDB.fetchrow(sql, *args)
     if not row:

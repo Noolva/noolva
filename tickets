@@ -31,9 +31,15 @@ NF0015/feature/data-model-encryption-fields-file-or-image-field-support-thumbnai
 current,
 NF0016/feature/file-encryption-on-behalf-of-field-value-encryption-row-exposure-feature
 NF0017/feature/job-scheduler-system-implementation
+NF0018/feature/integrations-page-finalize-first-releasex
+NF0019/hotfix/env-injection-console-base-dir-dyncamic-static-filenames
+NF0020/hotfix/norobots-fix-at-api
 ======
-
-api-endpoints add inbuilt endpoints.
+NF0021/feature/websocket-support-mac-windows-android-ios-ubuntu-fcm-support-api
+flattening-data-life-cycle
+add in schedule, between timings, then every 20 mins or 30 minutes.
+--------
+api-endpoints add inbuilt endpoints, and add if pat also support,
 
 Edge Device Agent (EDA)
 
