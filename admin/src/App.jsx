@@ -19,6 +19,8 @@ import SchedulerWorkers from './pages/SchedulerWorkers';
 import JobTemplates from './pages/JobTemplates';
 import Jobs from './pages/Jobs';
 import Schedulers from './pages/Schedulers';
+import FlattenedDatas from './pages/FlattenedDatas';
+import DataLifecyclePolicies from './pages/DataLifecyclePolicies';
 import DataModels from './pages/DataModels';
 import IconExplorer from './pages/IconExplorer';
 import Collections from './pages/Collections';
@@ -93,6 +95,8 @@ const AppContent = () => {
       case 'dev_console_job_templates': return <JobTemplates />;
       case 'dev_console_jobs': return <Jobs />;
       case 'dev_console_schedulers': return <Schedulers />;
+      case 'dev_console_flattened_datas': return <FlattenedDatas />;
+      case 'dev_console_data_lifecycle': return <DataLifecyclePolicies />;
       case 'studio_data_models': return <DataModels />;
       case 'data_models': return <DataModels />;
       case 'studio_icons': return <IconExplorer />;
@@ -112,6 +116,8 @@ const AppContent = () => {
           if (routePath === 'dev_console_job_templates') return <JobTemplates />;
           if (routePath === 'dev_console_jobs') return <Jobs />;
           if (routePath === 'dev_console_schedulers') return <Schedulers />;
+          if (routePath === 'dev_console_flattened_datas') return <FlattenedDatas />;
+          if (routePath === 'dev_console_data_lifecycle') return <DataLifecyclePolicies />;
           if (routePath === 'studio_data_models' || routePath === 'data_models') return <DataModels />;
           if (routePath === 'studio_icons') return <IconExplorer />;
           if (routePath === 'studio_collections') return <Collections />;
