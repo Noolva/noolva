@@ -9,26 +9,23 @@ from typing import Any, Dict, List, Optional
 
 logger = logging.getLogger("noolva_api.flattening_policy")
 
-VALID_REFRESH = frozenset({"FULL", "INCREMENTAL", "VERSIONED"})
+VALID_REFRESH = frozenset({"FULL", "INCREMENTAL"})
 
 
 def validate_table_policy_row(row: Dict[str, Any], partial: bool = False) -> None:
     snap = row.get("is_snapshot")
     if snap is None and not partial:
-        snap = True
+        snap = False
     strat = row.get("refresh_strategy")
     if strat is not None and strat not in VALID_REFRESH:
         raise ValueError(f"refresh_strategy must be one of {sorted(VALID_REFRESH)} or null")
     if snap is True:
-        if row.get("refresh_strategy") not in (None, ""):
-            raise ValueError("When is_snapshot is true, refresh_strategy must be null")
-        if row.get("refresh_interval_minutes") not in (None, ""):
-            raise ValueError("When is_snapshot is true, refresh_interval_minutes should be null")
-    else:
-        if not row.get("refresh_strategy"):
-            raise ValueError("Active policies (is_snapshot false) require refresh_strategy")
-        if row.get("refresh_interval_minutes") in (None, ""):
-            raise ValueError("Active policies require refresh_interval_minutes")
+        raise ValueError("Snapshot policies are not supported (set is_snapshot=false)")
+    if not row.get("refresh_strategy"):
+        raise ValueError("refresh_strategy is required (FULL or INCREMENTAL)")
+    # FULL/INCREMENTAL require an interval for scheduled dispatch (scheduler uses due query).
+    if row.get("refresh_strategy") in ("FULL", "INCREMENTAL") and row.get("refresh_interval_minutes") in (None, ""):
+        raise ValueError(f"{row.get('refresh_strategy')} requires refresh_interval_minutes")
 
 
 def validate_relation_row(row: Dict[str, Any], partial: bool = False) -> None:
