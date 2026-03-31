@@ -630,6 +630,59 @@ export const api = {
         return response.data;
     },
 
+    // Developer Console — Flattening policies
+    getFlatteningTablePolicies: async () => {
+        const response = await axiosInstance.get("/dev-console/flattening-policies/table-policies");
+        return response.data;
+    },
+    createFlatteningTablePolicy: async (data) => {
+        const response = await axiosInstance.post("/dev-console/flattening-policies/table-policies", data);
+        return response.data;
+    },
+    updateFlatteningTablePolicy: async (id, data) => {
+        const response = await axiosInstance.put(`/dev-console/flattening-policies/table-policies/${id}`, data);
+        return response.data;
+    },
+    deleteFlatteningTablePolicy: async (id) => {
+        const response = await axiosInstance.delete(`/dev-console/flattening-policies/table-policies/${id}`);
+        return response.data;
+    },
+    getFlatteningRelationPolicies: async (tableName = null) => {
+        const params = tableName ? { table_name: tableName } : {};
+        const response = await axiosInstance.get("/dev-console/flattening-policies/relation-policies", { params });
+        return response.data;
+    },
+    createFlatteningRelationPolicy: async (data) => {
+        const response = await axiosInstance.post("/dev-console/flattening-policies/relation-policies", data);
+        return response.data;
+    },
+    updateFlatteningRelationPolicy: async (id, data) => {
+        const response = await axiosInstance.put(`/dev-console/flattening-policies/relation-policies/${id}`, data);
+        return response.data;
+    },
+    deleteFlatteningRelationPolicy: async (id) => {
+        const response = await axiosInstance.delete(`/dev-console/flattening-policies/relation-policies/${id}`);
+        return response.data;
+    },
+
+    // Developer Console — Data lifecycle
+    getDataLifecyclePolicies: async () => {
+        const response = await axiosInstance.get("/dev-console/data-lifecycle-policies/");
+        return response.data;
+    },
+    createDataLifecyclePolicy: async (data) => {
+        const response = await axiosInstance.post("/dev-console/data-lifecycle-policies/", data);
+        return response.data;
+    },
+    updateDataLifecyclePolicy: async (id, data) => {
+        const response = await axiosInstance.put(`/dev-console/data-lifecycle-policies/${id}`, data);
+        return response.data;
+    },
+    deleteDataLifecyclePolicy: async (id) => {
+        const response = await axiosInstance.delete(`/dev-console/data-lifecycle-policies/${id}`);
+        return response.data;
+    },
+
     // Jobs / Scheduler (Dev Console)
     getWorkers: async () => {
         const response = await axiosInstance.get("/workers");

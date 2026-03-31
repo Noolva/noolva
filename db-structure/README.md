@@ -14,7 +14,7 @@ The SQL files are numbered to ensure correct dependency verification during exec
 | **03** | `03_apps_and_modules.sql` | **Platform** | `apps`, `modules`, `module_features`. Supports Scoping (Global/Tenant) & Cloning logic. |
 | **04** | `04_roles_and_permissions.sql` | **Access** | `roles`, `role_module_features`, `user_module_features`. RBAC & Granular Permissions. |
 | **05** | `05_data_models.sql` | **Data Engine** | `data_models`, `data_model_fields` (Dynamic Tables). `field_types`, `collections` (Option Sets), `ui_component_types`, `app_views`, `menus`. |
-| **06** | `06_api_and_operations.sql` | **Ops & API** | `api_endpoints` (REST/Flattened), `data_flattening_rules` (Computed Views), `audit_logs`. |
+| **06** | `06_api_and_operations.sql` | **Ops & API** | `flattening_table_policy`, `flattening_relation_policy`, `data_lifecycle_policy`, `api_endpoints`, `audit_logs`. |
 | **07** | `07_system_utilities.sql` | **Utilities** | `actions`, `workflows`, `workflow_runs`, `job_queue` (Executor). `settings` (Global/Tenant config), `integrations`, `assets`. |
 | **08** | `08_ai_model.sql` | **AI Engine** | `ai_knowledge_nodes` (Graph), `ai_knowledge_relations` (Edges), `ai_events` (Fact Store), `ai_knowledge_vectors` (Embeddings). |
 | **09** | `09_ai_addons.sql` | **AI Extensions** | `ai_query_plans` (Audit), `ai_rules` (Logic Engine), `ai_entity_aliases`. |

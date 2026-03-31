@@ -411,6 +411,14 @@ BEGIN
         INSERT INTO public.menus (menu_title,parent_id,type,route_path,icon,app_id,scope,is_builtin,order_no,created_by)
         VALUES ('Schedulers',NULL,'item','dev_console_schedulers','clock-circle',dev_console_app_id,'saas',TRUE,55,system_user_id);
     END IF;
+    IF NOT EXISTS (SELECT 1 FROM public.menus WHERE app_id=dev_console_app_id AND parent_id IS NULL AND menu_title='Flattened Datas') THEN
+        INSERT INTO public.menus (menu_title,parent_id,type,route_path,icon,app_id,scope,is_builtin,order_no,created_by)
+        VALUES ('Flattened Datas',NULL,'item','dev_console_flattened_datas','table',dev_console_app_id,'saas',TRUE,52,system_user_id);
+    END IF;
+    IF NOT EXISTS (SELECT 1 FROM public.menus WHERE app_id=dev_console_app_id AND parent_id IS NULL AND menu_title='Data Life Cycles') THEN
+        INSERT INTO public.menus (menu_title,parent_id,type,route_path,icon,app_id,scope,is_builtin,order_no,created_by)
+        VALUES ('Data Life Cycles',NULL,'item','dev_console_data_lifecycle','swap',dev_console_app_id,'saas',TRUE,53,system_user_id);
+    END IF;
 
     -- Menus for Organization app (all direct children, parent_id = NULL)
     IF NOT EXISTS (SELECT 1 FROM public.menus WHERE app_id=organization_app_id AND parent_id IS NULL AND menu_title='Companies') THEN
