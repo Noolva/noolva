@@ -1,6 +1,7 @@
 """
 Developer Console — flattening table / relation policies CRUD.
 """
+import json
 from typing import Dict, List, Optional
 
 from fastapi import APIRouter, Depends, HTTPException
@@ -16,6 +17,121 @@ from utils.flattening_policy import (
 )
 
 router = APIRouter(prefix="/dev-console/flattening-policies", tags=["Developer Console - Flattening Policies"])
+
+def _safe_json(obj):
+    try:
+        if isinstance(obj, str):
+            return json.loads(obj) if obj.strip() else {}
+        return obj if isinstance(obj, dict) else {}
+    except Exception:
+        return {}
+
+
+@router.get("/relation-candidates")
+async def relation_candidates(
+    table_name: str,
+    user: Dict = Depends(verify_jwt_token(["saas_admin", "saas_employee", "tenant_admin"])),
+    db=Depends(get_db),
+):
+    """
+    Returns both:
+    - outgoing (m2o): relation fields on this model
+    - incoming (o2m): other models whose relation fields target this model
+    """
+    if not user:
+        raise HTTPException(status_code=401, detail="Authentication required")
+    tn = (table_name or "").strip()
+    if not tn:
+        raise HTTPException(status_code=400, detail="table_name is required")
+
+    model = await PostgresDB.fetchrow(
+        """
+        SELECT model_id, model_name, table_name, display_name
+        FROM public.data_models
+        WHERE table_name = $1
+        LIMIT 1
+        """,
+        tn,
+    )
+    if not model:
+        raise HTTPException(status_code=404, detail="No data model for table_name")
+    model_id = int(model["model_id"])
+    model_name = model["model_name"]
+
+    # Outgoing relations (m2o)
+    outgoing_rows = await PostgresDB.fetch(
+        """
+        SELECT dmf.field_name, dmf.display_name, dmf.field_config_json
+        FROM public.data_model_fields dmf
+        JOIN public.field_types ft ON ft.field_type_id = dmf.field_type_id
+        WHERE dmf.model_id = $1
+          AND ft.type_code = 'relation'
+        ORDER BY dmf.order_no, dmf.field_name
+        """,
+        model_id,
+    )
+    outgoing = []
+    for r in outgoing_rows or []:
+        cfg = _safe_json(r.get("field_config_json"))
+        target = cfg.get("target_model") or cfg.get("targetModel") or cfg.get("target_table")
+        outgoing.append(
+            {
+                "key": r["field_name"],  # store directly in flattening_relation_policy.relation_name
+                "label": f'{r["field_name"]} — {(r.get("display_name") or r["field_name"])}'
+                + (f" → {target}" if target else ""),
+                "kind": "outgoing",
+                "field_name": r["field_name"],
+                "target_model": target,
+                "suggested_relation_type": "m2o",
+                "suggested_strategy": "denormalize",
+            }
+        )
+
+    # Incoming relations (o2m): other models that point to this model via field_config_json.target_model
+    incoming_rows = await PostgresDB.fetch(
+        """
+        SELECT dm.model_id, dm.model_name, dm.table_name, dm.display_name,
+               dmf.field_name, dmf.display_name AS field_display_name,
+               dmf.field_config_json
+        FROM public.data_model_fields dmf
+        JOIN public.data_models dm ON dm.model_id = dmf.model_id
+        JOIN public.field_types ft ON ft.field_type_id = dmf.field_type_id
+        WHERE ft.type_code = 'relation'
+          AND dmf.model_id <> $1
+          AND (
+            (dmf.field_config_json->>'target_model') = $2
+            OR (dmf.field_config_json->>'target_model') = $3
+          )
+        ORDER BY dm.model_name, dmf.field_name
+        """,
+        model_id,
+        model_name,
+        tn,
+    )
+    incoming = []
+    for r in incoming_rows or []:
+        child_table = r.get("table_name")
+        fk_field = r.get("field_name")
+        # encode to keep unique and preserve FK info for later engine
+        rel_key = f"{child_table}.{fk_field}" if child_table and fk_field else f"{r.get('model_name')}.{fk_field}"
+        incoming.append(
+            {
+                "key": rel_key,  # store encoded in relation_name
+                "label": f'{rel_key} — {(r.get("display_name") or r.get("model_name"))} → {model_name}',
+                "kind": "incoming",
+                "child_model_name": r.get("model_name"),
+                "child_table_name": child_table,
+                "child_fk_field": fk_field,
+                "suggested_relation_type": "o2m",
+                "suggested_strategy": "json",
+            }
+        )
+
+    return {
+        "model": {"model_id": model_id, "model_name": model_name, "table_name": tn},
+        "outgoing": outgoing,
+        "incoming": incoming,
+    }
 
 
 class FlatteningTablePolicyCreate(BaseModel):
