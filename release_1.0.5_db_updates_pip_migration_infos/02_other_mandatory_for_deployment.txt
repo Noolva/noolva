@@ -14,6 +14,18 @@ Apply in order when promoting this release across environments (dev, staging, pr
    - Run 03_flattening_policies_and_job_workflows.sql (flattening policies + dispatch_flattening_refreshes workflow).
    - Run 04_data_lifecycle_and_job_workflows.sql (data_lifecycle_policy enums/table + lifecycle + purge_soft_deleted templates).
    - Canonical copies live under db-structure/update_old_db_flattening_policies_and_jobs.sql and update_old_db_data_lifecycle_and_jobs.sql.
+   - OPTIONAL incremental: Run 06_flattening_policy_destination_and_db_tables.sql if you already ran 03 earlier and you want destination + DB-tables mode + s3 folder normalization.
+   - OPTIONAL incremental: Run 07_flattening_disable_snapshot.sql to make is_snapshot always FALSE (snapshot mode is not used).
+   - OPTIONAL incremental: Run 08_data_lifecycle_destination_table_archived_prefix.sql to set destination_table = archived_<table_name> on existing lifecycle policies.
+   - Run 09_data_lifecycle_archive_purge_columns.sql for archive_source_table + purge columns + lifecycle_policies_purge_due endpoint + purge_lifecycle_after_archive + dispatch_lifecycle_purge (restart workers).
+   - Run 10_data_lifecycle_batch_ledger_purge_due.sql for batch ledger table, lifecycle_root_table, updated purge_due endpoint, and **legacy policy migration** (root table_name → flat target + lifecycle_root_table + destination_table). Review optional TRUNCATE/DROP in db-structure/update_old_db_data_lifecycle_migrate_root_to_flat_source.sql comments only if you need a clean dev DB.
+   - Run **11_dev_console_lifecycle_batch_ledger_menu.sql** so the Developer Console shows **Lifecycle batch ledger** (route `dev_console_data_lifecycle_ledger`). Without this row in `public.menus`, the UI page exists in code but does not appear in the sidebar. Same SQL as `db-structure/update_old_db_dev_console_lifecycle_ledger_menu.sql` (idempotent).
+   - Run **12_client_instances_offline.sql** for **client instances** + offline sync tables + **Client instances** Developer Console menu (`dev_console_client_instances`). Canonical: `db-structure/update_old_db_client_instances_offline.sql`. Restart API after SQL.
+   - Run **15_instance_menus.sql** for **instance_menus** + **instance_menu_client_config** + Developer Console menu **Instance menus** (`dev_console_instance_menus`). Canonical: `db-structure/update_old_db_instance_menus.sql`.
+   - Run **13_global_icons.sql** for initial **global_icons** table, legacy seed, **assets** rows, and App Studio menu **Global icons** (`studio_global_icons`), if you have not created the table yet. Canonical: `db-structure/update_old_db_global_icons.sql`.
+   - Run **14_global_icons_v2_platform_metadata.sql** for **description**, **keywords**, **Windows/Linux** path columns, and **per-platform files** (web/android/ios/macos/windows/linux under `public/global_icons/...`). Canonical: `db-structure/update_old_db_global_icons_v2_descriptions_platform_assets.sql`. Re-run **Sync all to S3** in App Studio → Global icons so all six objects per key are uploaded (900 files for 150 keys).
+   - pip: `pyarrow` added to api/app/requirements.txt (Parquet export). Optional: ICEBERG_WAREHOUSE or LIFECYCLE_PARQUET_DIR, ICEBERG_SQL_CATALOG_URI + ICEBERG_APPEND_TABLE for PyIceberg append.
+   - Alternative to 11: re-apply the Developer Console `menus` block from `db-structure/noolvandb_feeds.sql`.
 
 4) Firebase / secrets
    - Place Firebase service account JSON on the server (not committed to git).
@@ -28,10 +40,11 @@ Apply in order when promoting this release across environments (dev, staging, pr
    - Re-apply the Developer Console section of db-structure/noolvandb_feeds.sql on each DB, or insert the two menus manually for app_name=developer_console.
 
 5c) Job workers
-   - Workers must load new handlers: refresh_flattening_table, sync_lifecycle_table, purge_soft_deleted (restart job worker processes).
+   - Workers must load new handlers: refresh_flattening_table, sync_lifecycle_table, purge_lifecycle_after_archive, purge_soft_deleted (restart job worker processes).
 
 5d) Schedulers (optional)
    - Point a scheduler job at template dispatch_flattening_refreshes and/or dispatch_lifecycle_syncs when interval-based refresh is required.
+   - Optional: scheduler for dispatch_lifecycle_purge when policies use purge_enabled (separate from archive sync).
 
 6) Optional workflow
    - For broadcast FCM to mobile, ensure process_alarm job payload includes company_id when alarm_target is all_devices (see how-to-connect-websocket).

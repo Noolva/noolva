@@ -1,0 +1,14 @@
+Platform	Stack
+🍎 macOS	SwiftUI
+🪟 Windows	C# + WinUI
+🐧 Linux	Qt (C++)
+📱 iOS	SwiftUI
+🤖 Android	Kotlin + Compose
+
+Global icons (public.global_icons + api/assets/global_icons/): use icon_path_* from API for CDN/local sync.
+• Android (Compose): icon_path_android → bundled .xml vector drawable in res/drawable (or download from CDN).
+• iOS / macOS (SwiftUI): icon_path_ios / icon_path_macos → SVG (iOS uses fill currentColor for template mode).
+• Windows (WinUI): icon_path_windows → PNG 32×32 tiles.
+• Linux (Qt): icon_path_linux → SVG (e.g. QSvgWidget / QIcon from file or network).
+
+cdn.avkaran.com/public

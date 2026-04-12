@@ -1,0 +1,174 @@
+HELPER SYSTEM DESIGN PLAN
+
+1.  OBJECTIVE Design a centralized, scalable helper/documentation system
+    that:
+
+-   Supports multiple user roles (Internal, Configuration Manager,
+    Customer)
+-   Provides context-aware help within the UI
+-   Maintains a single source of truth
+-   Enables dynamic filtering and retrieval of content
+
+------------------------------------------------------------------------
+
+2.  CORE PRINCIPLES
+
+-   Single Source of Truth (no duplicate documents)
+-   Role-Based Visibility (content filtering)
+-   Context-Aware Delivery (based on UI page/form)
+-   Progressive Disclosure (basic → advanced → technical)
+
+------------------------------------------------------------------------
+
+3.  USER ROLES
+
+4.  Customer
+
+    -   Basic usage
+    -   Limited visibility
+
+5.  Configuration Manager
+
+    -   Setup and configuration
+    -   Business logic understanding
+
+6.  Internal
+
+    -   Full access (technical + architecture + DB)
+
+------------------------------------------------------------------------
+
+4.  CONTENT STRUCTURE
+
+Each Topic contains:
+
+-   Overview (All users)
+-   How to Use (Customer + Config)
+-   Configuration Guide (Config only)
+-   Technical Details (Internal only)
+-   API / DB / Architecture (Internal only)
+-   Examples (Filtered by role)
+-   FAQ (All users)
+
+------------------------------------------------------------------------
+
+5.  CONTENT METADATA FORMAT
+
+Each content block should include:
+
+-   topic
+-   section
+-   content
+-   visible_for (roles)
+-   context_tags (page/form/module)
+-   level (basic/medium/advanced)
+
+Example:
+
+{ topic: “inspection_checklist”, section: “configuration”, visible_for:
+[“config_manager”, “internal”], context_tags: [“form:inspection”],
+level: “medium” }
+
+------------------------------------------------------------------------
+
+6.  CONTEXT-AWARE HELP SYSTEM
+
+UI sends context:
+
+-   topic
+-   page
+-   fields
+-   user role
+
+Example:
+
+helpContext = { topic: “inspection_checklist”, page: “inspection_form”,
+role: “customer” }
+
+API:
+
+GET /help?topic=…&page=…&role=…
+
+------------------------------------------------------------------------
+
+7.  UI IMPLEMENTATION
+
+8.  Inline Help
+
+    -   Tooltips for fields
+    -   Small hints
+
+9.  Side Panel (Primary)
+
+    -   Dynamic help content
+    -   Context-aware
+
+10. Full Documentation Page
+
+    -   Deep knowledge
+    -   Search enabled
+
+------------------------------------------------------------------------
+
+8.  FIELD-LEVEL HELP
+
+Each field contains:
+
+-   Description
+-   Visibility rules
+
+Example:
+
+{ field: “equipment_id”, help: “Select equipment for inspection”,
+visible_for: [“all”] }
+
+------------------------------------------------------------------------
+
+9.  ARCHITECTURE
+
+UI (Forms/Pages) ↓ Help API Layer ↓ Knowledge Base (DB/Markdown)
+
+Knowledge Base includes: - Topics - Sections - Tags - Visibility rules
+
+------------------------------------------------------------------------
+
+10. STORAGE OPTIONS
+
+Option A: PostgreSQL (Recommended) - Use JSONB for flexibility
+
+Option B: Markdown Files - With metadata headers
+
+Option C: Hybrid (Best) - Markdown for content - DB for
+indexing/filtering
+
+------------------------------------------------------------------------
+
+11. SEARCH & AI (ADVANCED)
+
+-   Use vector embeddings for semantic search
+-   Filter results by role + context
+-   Integrate AI assistant for Q&A
+
+------------------------------------------------------------------------
+
+12. BEST PRACTICES
+
+DO: - Use tags instead of duplicating content - Keep modular sections -
+Build context-driven retrieval
+
+DON’T: - Create separate documents per role - Hardcode help in UI - Use
+static PDFs only
+
+------------------------------------------------------------------------
+
+13. FUTURE ENHANCEMENTS
+
+-   AI assistant in help panel
+-   Usage analytics for help content
+-   Video tutorials per topic
+-   “Show advanced” toggle
+-   Personalized recommendations
+
+------------------------------------------------------------------------
+
+END OF PLAN

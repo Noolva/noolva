@@ -30,8 +30,7 @@ Lifecycle policies may also use **`s3`** destination with `movement_type = copy`
 
 - **`flattening_table_policy`** — One row per **flattened physical table** (the read model).
   - `table_name`: must match a row in `public.data_models.table_name` before the policy can be saved (Developer Console enforces this when creating read endpoints).
-  - `is_snapshot = true`: one-time / no scheduled refresh; `refresh_strategy` and interval should be null.
-  - `is_snapshot = false`: **active** policy — requires `refresh_strategy` (`FULL`, `INCREMENTAL`, or `VERSIONED`) and `refresh_interval_minutes` for the due query used by the dispatcher workflow.
+  - Snapshot mode is **not used**. Policies are always treated as active (`is_snapshot=false`) and require `refresh_strategy` + `refresh_interval_minutes`.
   - `is_active`, `batch_size`, `last_refreshed`, `last_processed_value` support operations and future incremental checkpoints.
 
 - **`flattening_relation_policy`** — How each **relation** on that table is materialized.
@@ -40,7 +39,7 @@ Lifecycle policies may also use **`s3`** destination with `movement_type = copy`
   - `target_table`: required when `strategy = separate`.
   - **FK:** `table_name` references `flattening_table_policy(table_name)` with `ON DELETE CASCADE`.
 
-The **flattening engine** (SQL generation, denormalize/json/separate execution) is intentionally **out of scope** for the first iteration; the job handler **updates `last_refreshed`** for non-snapshot policies so scheduling and plumbing can be tested end-to-end.
+The **flattening engine** (SQL generation, denormalize/json/separate execution) is intentionally **out of scope** for the first iteration; the job handler updates `last_refreshed` / `last_processed_value` so scheduling and plumbing can be tested end-to-end.
 
 ### Read-only Auto CRUD endpoints
 
@@ -69,7 +68,7 @@ On **delete** of a table policy, only endpoints whose `custom_json` matches that
 | Template | Kind | Purpose |
 |----------|------|---------|
 | `dispatch_flattening_refreshes` | workflow | 1) `custom_query_endpoint` → `/job-workflows/flattening_policies_due` 2) `create_jobs_from_records` → enqueue `refresh_flattening_table` per due row. |
-| `refresh_flattening_table` | task | `core_function` — loads policy by `policy_id`; stub refresh + `last_refreshed` for non-snapshot rows. |
+| `refresh_flattening_table` | task | `core_function` — loads policy by `policy_id`; checkpoint logic + `last_refreshed` / `last_processed_value`. |
 
 Attach **`dispatch_flattening_refreshes`** to a **scheduler** at whatever cadence you want; **due logic** uses `last_refreshed` + `refresh_interval_minutes` so rows are not spammed.
 
@@ -150,3 +149,5 @@ If those tables are not migrated yet, the check fails open with a log warning so
 | Router registration | [`api/app/main.py`](../api/app/main.py) |
 
 For general job/workflow step shapes, see [`docs/job_templates_guide.md`](job_templates_guide.md) and the alarm workflow doc in the same folder.
+
+**Client instances / offline sync** (native apps using flattened S3 + HOT Auto CRUD) is documented in [`docs/client_offline_sync.md`](client_offline_sync.md).

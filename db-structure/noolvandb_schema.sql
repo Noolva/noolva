@@ -705,6 +705,25 @@ CREATE INDEX idx_icons_search ON public.icons USING GIN(
 );
 
 -- ==========================================
+-- 1.8 Global icons (per-platform S3 paths for client instances: Web SVG, Android vector drawable,
+--    iOS/macOS SwiftUI-friendly SVG, WinUI PNG, Linux/Qt SVG; plus description + keywords for search)
+-- ==========================================
+CREATE TABLE public.global_icons (
+    id SERIAL PRIMARY KEY,
+    icon_key TEXT NOT NULL UNIQUE,
+    icon_path_web TEXT,
+    icon_path_android TEXT,
+    icon_path_ios TEXT,
+    icon_path_macos TEXT,
+    icon_path_windows TEXT,
+    icon_path_linux TEXT,
+    description TEXT,
+    keywords TEXT[] NOT NULL DEFAULT ARRAY[]::TEXT[]
+);
+
+CREATE INDEX idx_global_icons_keywords ON public.global_icons USING GIN (keywords);
+
+-- ==========================================
 -- 2. Data Model Fields (Merged Model Fields + Table Columns)
 -- ==========================================
 CREATE TABLE public.data_model_fields (
@@ -864,12 +883,16 @@ CREATE TABLE public.audit_logs_default PARTITION OF public.audit_logs
 CREATE TABLE public.flattening_table_policy (
     id SERIAL PRIMARY KEY,
     table_name TEXT UNIQUE NOT NULL,
+    destination TEXT NOT NULL DEFAULT 'postgres' CHECK (destination IN ('postgres', 's3', 'iceberg')),
+    is_db_table BOOLEAN DEFAULT FALSE NOT NULL,
+    is_public_on_s3 BOOLEAN,
+    target_table_name TEXT,
     refresh_strategy TEXT CHECK (refresh_strategy IS NULL OR refresh_strategy IN ('FULL', 'INCREMENTAL', 'VERSIONED')),
     refresh_interval_minutes INT,
     batch_size INT,
     last_refreshed TIMESTAMPTZ,
     last_processed_value TIMESTAMPTZ,
-    is_snapshot BOOLEAN DEFAULT TRUE NOT NULL,
+    is_snapshot BOOLEAN DEFAULT FALSE NOT NULL,
     is_active BOOLEAN DEFAULT TRUE NOT NULL,
     created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP NOT NULL,
     last_updated TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP NOT NULL
@@ -911,10 +934,42 @@ CREATE TABLE public.data_lifecycle_policy (
     sync_interval_minutes INT,
     last_synced_at TIMESTAMPTZ,
     last_processed_value TIMESTAMPTZ,
+    archive_source_table TEXT,
+    purge_enabled BOOLEAN DEFAULT FALSE NOT NULL,
+    purge_after_interval_minutes INT,
+    last_archive_completed_at TIMESTAMPTZ,
+    last_purge_completed_at TIMESTAMPTZ,
+    lifecycle_root_table TEXT,
     is_active BOOLEAN DEFAULT TRUE NOT NULL,
     created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP NOT NULL,
     last_updated TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP NOT NULL
 );
+
+CREATE TABLE public.data_lifecycle_batch_ledger (
+    id BIGSERIAL PRIMARY KEY,
+    policy_id INT NOT NULL REFERENCES public.data_lifecycle_policy(id) ON DELETE CASCADE,
+    operation TEXT NOT NULL CHECK (operation IN (
+        'archive_postgres',
+        'iceberg_export',
+        'purge_hot',
+        'purge_archived'
+    )),
+    source_table TEXT NOT NULL,
+    destination_type TEXT NOT NULL,
+    destination_detail TEXT,
+    rows_affected INT DEFAULT 0,
+    status TEXT NOT NULL DEFAULT 'completed' CHECK (status IN ('started', 'completed', 'failed')),
+    error_message TEXT,
+    started_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    completed_at TIMESTAMPTZ,
+    last_processed_snapshot TIMESTAMPTZ,
+    purged_at TIMESTAMPTZ,
+    extra JSONB DEFAULT '{}'::jsonb
+);
+
+CREATE INDEX idx_lc_batch_ledger_policy_started ON public.data_lifecycle_batch_ledger(policy_id, started_at DESC);
+CREATE INDEX idx_lc_batch_ledger_purge_pending ON public.data_lifecycle_batch_ledger(policy_id, operation)
+    WHERE operation = 'iceberg_export' AND purged_at IS NULL AND status = 'completed';
 
 -- ==========================================
 -- 4. API Endpoints (Unified Access)
@@ -965,6 +1020,102 @@ CREATE INDEX idx_flattening_relation_policy_table ON public.flattening_relation_
 CREATE INDEX idx_data_lifecycle_policy_due ON public.data_lifecycle_policy(is_active, destination_type) WHERE is_active = TRUE;
 CREATE INDEX idx_data_lifecycle_policy_last_sync ON public.data_lifecycle_policy(last_synced_at);
 CREATE INDEX idx_api_endpoints_path ON public.api_endpoints(path);
+
+-- ==========================================
+-- 4b. Client instances (native/web shells; offline sync config per instance)
+-- ==========================================
+CREATE TABLE public.instances (
+    instance_id SERIAL PRIMARY KEY,
+    instance_uuid UUID DEFAULT gen_random_uuid() NOT NULL UNIQUE,
+    name TEXT NOT NULL UNIQUE,
+    description TEXT,
+    company_id INTEGER REFERENCES public.companies(company_id) ON DELETE SET NULL,
+    is_active BOOLEAN DEFAULT TRUE NOT NULL,
+    idate TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP NOT NULL,
+    last_updated TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP NOT NULL
+);
+
+CREATE INDEX idx_instances_company ON public.instances(company_id);
+
+CREATE TABLE public.instance_offline_settings (
+    instance_id INTEGER PRIMARY KEY REFERENCES public.instances(instance_id) ON DELETE CASCADE,
+    enable_offline_data BOOLEAN DEFAULT FALSE NOT NULL,
+    schema_pack_version TEXT NOT NULL DEFAULT '1',
+    operator_notes TEXT,
+    last_updated TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP NOT NULL
+);
+
+CREATE TABLE public.client_offline_dataset (
+    id SERIAL PRIMARY KEY,
+    instance_id INTEGER NOT NULL REFERENCES public.instances(instance_id) ON DELETE CASCADE,
+    dataset_key TEXT NOT NULL,
+    label TEXT,
+    source_kind TEXT NOT NULL CHECK (source_kind IN ('hot_auto_crud_get', 'flattened_api_get', 'flattened_s3')),
+    model_id INTEGER REFERENCES public.data_models(model_id) ON DELETE SET NULL,
+    flattening_policy_id INTEGER REFERENCES public.flattening_table_policy(id) ON DELETE SET NULL,
+    read_endpoint_id INTEGER REFERENCES public.api_endpoints(endpoint_id) ON DELETE SET NULL,
+    incremental_field TEXT,
+    batch_size INTEGER,
+    local_lifecycle_jsonb JSONB DEFAULT '{}'::jsonb NOT NULL,
+    is_active BOOLEAN DEFAULT TRUE NOT NULL,
+    idate TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP NOT NULL,
+    last_updated TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP NOT NULL,
+    UNIQUE (instance_id, dataset_key)
+);
+
+CREATE INDEX idx_client_offline_dataset_instance ON public.client_offline_dataset(instance_id);
+
+CREATE TABLE public.client_offline_write_endpoint (
+    id SERIAL PRIMARY KEY,
+    instance_id INTEGER NOT NULL REFERENCES public.instances(instance_id) ON DELETE CASCADE,
+    endpoint_id INTEGER NOT NULL REFERENCES public.api_endpoints(endpoint_id) ON DELETE CASCADE,
+    notes TEXT,
+    is_active BOOLEAN DEFAULT TRUE NOT NULL,
+    idate TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP NOT NULL,
+    last_updated TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP NOT NULL,
+    UNIQUE (instance_id, endpoint_id)
+);
+
+CREATE INDEX idx_client_offline_write_endpoint_instance ON public.client_offline_write_endpoint(instance_id);
+
+-- Per-client-app navigation (native/web shells) — distinct from Noolva console `menus`.
+CREATE TABLE public.instance_menus (
+    id SERIAL PRIMARY KEY,
+    instance_id INTEGER NOT NULL REFERENCES public.instances(instance_id) ON DELETE CASCADE,
+    menu_title TEXT NOT NULL,
+    route_path TEXT,
+    is_builtin BOOLEAN NOT NULL DEFAULT FALSE,
+    icon_key TEXT,
+    parent_id INTEGER REFERENCES public.instance_menus(id) ON DELETE CASCADE,
+    sort_order INTEGER NOT NULL DEFAULT 0,
+    created_by INTEGER REFERENCES public.users(user_id) ON DELETE SET NULL,
+    idate TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    last_updated TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+COMMENT ON TABLE public.instance_menus IS 'Navigation items for client instance apps (mobile/desktop/web shells), not Noolva console menus.';
+
+CREATE UNIQUE INDEX uq_instance_menus_top_level_title ON public.instance_menus (instance_id, menu_title) WHERE parent_id IS NULL;
+CREATE UNIQUE INDEX uq_instance_menus_child_title ON public.instance_menus (instance_id, parent_id, menu_title) WHERE parent_id IS NOT NULL;
+CREATE INDEX idx_instance_menus_instance ON public.instance_menus (instance_id);
+CREATE INDEX idx_instance_menus_parent ON public.instance_menus (parent_id);
+
+CREATE TABLE public.instance_menu_client_config (
+    id SERIAL PRIMARY KEY,
+    instance_menu_id INTEGER NOT NULL REFERENCES public.instance_menus(id) ON DELETE CASCADE,
+    client_type TEXT NOT NULL CHECK (client_type IN ('web', 'android', 'ios', 'macos', 'linux')),
+    render_mode TEXT NOT NULL CHECK (render_mode IN ('web', 'native', 'webview')),
+    is_enabled BOOLEAN NOT NULL DEFAULT TRUE,
+    created_by INTEGER REFERENCES public.users(user_id) ON DELETE SET NULL,
+    idate TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    last_updated TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE (instance_menu_id, client_type)
+);
+
+COMMENT ON TABLE public.instance_menu_client_config IS 'How each client stack renders/enables a given instance menu row.';
+
+CREATE INDEX idx_instance_menu_client_config_menu ON public.instance_menu_client_config (instance_menu_id);
+
 -- 07_system_utilities.sql
 -- Classification: Operational Utilities
 -- Description: Job Scheduler (workers, templates, jobs), Integrations, Assets.
