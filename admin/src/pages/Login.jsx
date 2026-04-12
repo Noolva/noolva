@@ -21,7 +21,6 @@ import { useAuth } from '../contexts/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import * as apiUtils from '../utils/api';
 import ErrorModal from '../components/ErrorModal';
-import { NOOLVA_CONSOLE } from '../branding';
 import '../index.css';
 
 // Helper to navigate with account parameter preserved
@@ -77,7 +76,7 @@ const Login = () => {
                     const result = await switchAccount(account);
 
                     if (result.success) {
-                        const accountId = apiUtils.getAccountIdFromUrl();
+                        const accountId = apiUtils.getCurrentAccountId();
                         navigateWithAccount(navigate, '/', accountId);
                         return;
                     }
@@ -122,7 +121,7 @@ const Login = () => {
                 const result = await loginVerifyTotp(totpStep.tempToken, values.totp_code?.trim() || '');
                 if (result.success) {
                     setTotpStep({ active: false, tempToken: null });
-                    const accountId = apiUtils.getAccountIdFromUrl();
+                    const accountId = apiUtils.getCurrentAccountId();
                     navigateWithAccount(navigate, '/', accountId);
                 } else {
                     setErrorDetails(result.error || { message: 'Invalid code', errorData: { description: 'Invalid or expired code' } });
@@ -135,7 +134,7 @@ const Login = () => {
             const result = await login(values.identifier, values.password, values.company_id || null);
 
             if (result.success) {
-                const accountId = apiUtils.getAccountIdFromUrl();
+                const accountId = apiUtils.getCurrentAccountId();
                 navigateWithAccount(navigate, '/', accountId);
             } else if (result.requiresTotp && result.tempToken) {
                 setTotpStep({ active: true, tempToken: result.tempToken });
@@ -200,7 +199,7 @@ const Login = () => {
                         }}
                         className="login-brand"
                     >
-                        {NOOLVA_CONSOLE}
+                        Noolva
                     </div>
 
                     <Title level={2} style={{ color: 'white', marginBottom: '16px' }}>

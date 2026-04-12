@@ -77,14 +77,6 @@ async def _get_default_s3_service(company_id: Optional[int]):
         credentials = enc.decrypt(row["encrypted_credentials"])
     except Exception as e:
         raise HTTPException(status_code=500, detail="Failed to decrypt S3 credentials") from e
-    # credentials may be stored as JSON string; normalize to dict
-    if isinstance(credentials, str):
-        try:
-            credentials = json.loads(credentials) if credentials.strip() else {}
-        except Exception:
-            credentials = {}
-    if not isinstance(credentials, dict):
-        credentials = {}
     raw_config = row.get("config")
     if isinstance(raw_config, dict):
         config = raw_config

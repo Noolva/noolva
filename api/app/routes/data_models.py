@@ -32,35 +32,6 @@ def _is_safe_identifier(value: str) -> bool:
     return bool(re.fullmatch(r"[A-Za-z_][A-Za-z0-9_]*", value or ""))
 
 
-async def _forbid_mutation_on_flattened_model(model_id: int) -> None:
-    """
-    Flattening creates system models with model_name like 'flattened_<source_table>'.
-    They must remain read-only to avoid corrupting derived data.
-    """
-    m = await PostgresDB.fetchrow(
-        """
-        SELECT model_id, model_name, is_system_model, description
-        FROM public.data_models
-        WHERE model_id = $1
-        LIMIT 1
-        """,
-        model_id,
-    )
-    if not m:
-        return
-    name = (m.get("model_name") or "").strip().lower()
-    desc = (m.get("description") or "")
-    is_flattened = name.startswith("flattened_") or ("generated_by_flattening_table_policy_id=" in desc)
-    is_lifecycle_arch = name.startswith("lifecycle_archived_") or (
-        "generated_by_data_lifecycle_policy_id=" in desc
-    )
-    if is_flattened or is_lifecycle_arch:
-        raise HTTPException(
-            status_code=403,
-            detail="This system model is read-only (flattened or lifecycle archive).",
-        )
-
-
 async def _get_user_role_ids(user_id: int, company_id: Optional[int]) -> List[int]:
     """
     Match the same role resolution logic used by MenuService.
@@ -1016,7 +987,6 @@ async def update_data_model(
         raise HTTPException(status_code=401, detail="Authentication required")
 
     try:
-        await _forbid_mutation_on_flattened_model(model_id)
         # Get existing model
         existing = await PostgresDB.fetchrow(
             "SELECT model_id, table_name, table_alias FROM public.data_models WHERE model_id = $1",
@@ -1431,7 +1401,6 @@ async def delete_data_model(
         raise HTTPException(status_code=401, detail="Authentication required")
 
     try:
-        await _forbid_mutation_on_flattened_model(model_id)
         # Get model info
         model = await PostgresDB.fetchrow(
             "SELECT model_id, table_name, is_system_model FROM public.data_models WHERE model_id = $1",
@@ -1584,7 +1553,6 @@ async def add_field(
         raise HTTPException(status_code=401, detail="Authentication required")
 
     try:
-        await _forbid_mutation_on_flattened_model(model_id)
         # Get model
         model = await PostgresDB.fetchrow(
             "SELECT model_id, table_name FROM public.data_models WHERE model_id = $1",
@@ -1716,7 +1684,6 @@ async def reorder_fields(
         raise HTTPException(status_code=400, detail="field_ids cannot be empty")
 
     try:
-        await _forbid_mutation_on_flattened_model(model_id)
         # Ensure all fields belong to this model
         rows = await PostgresDB.fetch(
             """
@@ -1763,7 +1730,6 @@ async def update_field(
         raise HTTPException(status_code=401, detail="Authentication required")
 
     try:
-        await _forbid_mutation_on_flattened_model(model_id)
         # Get field
         field = await PostgresDB.fetchrow(
             "SELECT field_id, field_name, model_id FROM public.data_model_fields WHERE field_id = $1 AND model_id = $2",
@@ -1859,7 +1825,6 @@ async def delete_field(
         raise HTTPException(status_code=401, detail="Authentication required")
 
     try:
-        await _forbid_mutation_on_flattened_model(model_id)
         # Get field and model info
         field = await PostgresDB.fetchrow(
             """
@@ -2151,8 +2116,6 @@ async def auto_list_records(
     model = await _get_model_by_name(model_name)
     if not model:
         raise HTTPException(status_code=404, detail="Model not found")
-    if (model_name or "").strip().lower().startswith("flattened_"):
-        raise HTTPException(status_code=403, detail="Flattened models are read-only.")
 
     user = await resolve_bearer_to_user(authorization)
     if not model.get("is_public") and not user:
@@ -2327,8 +2290,6 @@ async def auto_create_record(
     model = await _get_model_by_name(model_name)
     if not model:
         raise HTTPException(status_code=404, detail="Model not found")
-    if (model_name or "").strip().lower().startswith("lifecycle_archived_"):
-        raise HTTPException(status_code=403, detail="Lifecycle archive system models are read-only.")
 
     user = await resolve_bearer_to_user(authorization)
     if not user:
@@ -2448,9 +2409,6 @@ async def auto_update_record(
     model = await _get_model_by_name(model_name)
     if not model:
         raise HTTPException(status_code=404, detail="Model not found")
-    _mn = (model_name or "").strip().lower()
-    if _mn.startswith("flattened_") or _mn.startswith("lifecycle_archived_"):
-        raise HTTPException(status_code=403, detail="This system model is read-only.")
 
     user = await resolve_bearer_to_user(authorization)
     if not user:
@@ -2604,9 +2562,6 @@ async def auto_delete_record(
     model = await _get_model_by_name(model_name)
     if not model:
         raise HTTPException(status_code=404, detail="Model not found")
-    _mn2 = (model_name or "").strip().lower()
-    if _mn2.startswith("flattened_") or _mn2.startswith("lifecycle_archived_"):
-        raise HTTPException(status_code=403, detail="This system model is read-only.")
 
     user = await resolve_bearer_to_user(authorization)
     if not user:
@@ -2716,17 +2671,6 @@ async def execute_custom_endpoint_direct(
             custom_json = json.loads(custom_json)
         except Exception:
             custom_json = {}
-    if custom_json.get("lifecycle_iceberg_read_stub") is True:
-        return {
-            "endpoint_id": endpoint_id,
-            "columns": [],
-            "records": [],
-            "limit": limit,
-            "offset": offset,
-            "row_count": 0,
-            "not_implemented": True,
-            "detail": "Iceberg data reading is not implemented yet.",
-        }
     query_sql = (custom_json.get("query") or "").strip()
     if not query_sql:
         raise ValueError("Custom endpoint has no query configured")
@@ -2936,11 +2880,6 @@ async def custom_endpoint_get(
             custom_json = json.loads(custom_json)
         except Exception:
             custom_json = {}
-    if custom_json.get("lifecycle_iceberg_read_stub") is True:
-        raise HTTPException(
-            status_code=501,
-            detail="Iceberg data reading is in progress and not implemented yet.",
-        )
     query_sql = (custom_json.get("query") or "").strip()
     if not query_sql:
         raise HTTPException(status_code=400, detail="Custom endpoint has no query configured")

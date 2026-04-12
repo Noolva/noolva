@@ -1,10 +1,5 @@
 # Noolva Development Rules
 
-## Product naming (user-facing and docs)
-- Refer to the backend service under `api/` as **Noolva API** (not generic “the API” in UI copy, errors, or operator docs).
-- Refer to the admin web app under `admin/` as **Noolva console** (not “admin UI” or “the admin app” in those same places).
-- Repository folder names `api` and `admin` stay as technical paths; use the branded names when text is shown to people or written for clarity in rules and release notes.
-
 ## Database Schema & Feeds
 - `db-structure/noolvandb_schema.sql` contains full schema - always update here when making schema changes
 - `db-structure/noolvandb_feeds.sql` contains all essential feeds or inbuilt saas/tenant data - update here whenever schema changes
@@ -19,14 +14,14 @@
 - Make entries in assets table in `noolvandb_feeds.sql`
 
 ## File uploads (forms and external apps)
-- For uploading files to the **default S3 bucket** (from integrations table), use the Noolva API endpoint **POST /upload**
+- For uploading files to the **default S3 bucket** (from integrations table), use the API endpoint **POST /upload**
 - Auth: `Authorization: Bearer <JWT or PAT>` (PAT is for external apps / scripts)
 - Request: `multipart/form-data` with `file` or `files` (at least one required), optional `key` (S3 path), optional `is_public` (true/false; false = private, signed URL required), optional `model_name`, `field_name`, `record_id` for model-attachments (path = bucket_prefix + public|private + model-attachments/&lt;model_name&gt;/&lt;id&gt;)
 - Response: single file `{ "success", "s3_key", "public_url", "bucket", "is_public" }`; multiple files `{ "success", "uploads": [...], "count" }`
 - When `model_name` + `field_name` are provided, field_config (filters, max_size_mb) is validated for file/image fields
 - Use this endpoint whenever the app or forms need to upload files to S3 (do not add duplicate upload endpoints)
 
-## Component Development (Noolva console)
+## Component Development
 - Always implement components as VC (View Component) in `admin/src/components/ViewComponents/`
 - Use VC components in pages - keep them reusable and changeable
 - For new pages: always use components from existing VC components or implement new ones if required
@@ -36,7 +31,7 @@
 - For showing errors: always use `ErrorModal.jsx`
 
 ## Development Notifications
-- Whenever Noolva API restart or Noolva console (React) npm install/restart is needed, inform the user after making changes
+- Whenever API restart or React npm install/restart is needed, inform the user after making changes
 
 ## Release bundles (per-version deploy: DB + pip + checklist)
 - For each release that touches **database**, **pip**, or **mandatory deploy steps**, **also** add/update a folder at repo root:
@@ -49,13 +44,13 @@
 - When preparing a new release, **create a new** `release_<semver>_db_updates_pip_migration_infos/` folder (do not overwrite older release folders).
 
 ## Runtime & DB Operations (Agent vs User)
-- The agent must **not** run the Noolva API server, Noolva console dev server, or apply database migrations directly.
+- The agent must **not** run the API server, React dev server, or apply database migrations directly.
 - The agent should **only**:
-  - Modify source files (Noolva API, Noolva console, SQL, docs, etc.).
+  - Modify source files (API, React, SQL, docs, etc.).
   - Create/update schema files in `db-structure/noolvandb_schema.sql` and related SQL.
   - Create/update **separate** migration/update files (e.g. `db-structure/update_old_db_*.sql`, `migration_*.sql`) with queries needed to update existing/old databases.
   - When the change is part of a release, add/update the **`release_<semver>_db_updates_pip_migration_infos/`** bundle as in **Release bundles** above.
 - The **user** will manually:
-  - Start/stop Noolva API and Noolva console servers.
+  - Start/stop API and React servers.
   - Run `npm`/`pip` commands.
   - Apply SQL migrations and DB updates.

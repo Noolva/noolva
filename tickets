@@ -34,20 +34,14 @@ NF0017/feature/job-scheduler-system-implementation
 NF0018/feature/integrations-page-finalize-first-releasex
 NF0019/hotfix/env-injection-console-base-dir-dyncamic-static-filenames
 NF0020/hotfix/norobots-fix-at-api
-NF0021/feature/websocket-support-mac-windows-android-ios-ubuntu-fcm-support-api-flattening-data-life-cycle
 ======
-NF0022/feature/data-flattening-enhancments/offline-data/offline-updsert/global icons/client instances/instance menus
+NF0021/feature/websocket-support-mac-windows-android-ios-ubuntu-fcm-support-api
+flattening-data-life-cycle
 add in schedule, between timings, then every 20 mins or 30 minutes.
 --------
 api-endpoints add inbuilt endpoints, and add if pat also support,
-done:
 
-
-
-Platform Designer
-system desginer,
-system architect
-App Designer
+Edge Device Agent (EDA)
 
 Android Agent : Native Kotlin
 Desktop Agent: ios: Swift limited agent
