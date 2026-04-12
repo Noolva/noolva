@@ -26,8 +26,7 @@ pg_dump -h 192.168.106.2 -p 5432 -U noolvan noolvandb > noolvandb_bkp20260322_1.
 backup schema only:
 pg_dump -h 192.168.106.2 -p 5432 -U noolvan -n public -s noolvandb > public_schema.sql
 
-backup from live,:
-pg_dump -h 13.205.112.96 -p 5432 -U karandev karandevdb > noolvandb_bkp20260103.sql
-karan@2026India
+
+
 restore:
 psql -h localhost -p 5432 -U ravi -d ravidb < noolvandb_bkp20260322_1.sql

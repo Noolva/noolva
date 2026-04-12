@@ -5,7 +5,6 @@
 
 import axios from 'axios';
 import { resolveApiBaseUrl, resolveGoogleAuthUrl, resolveAppScope } from '../config/runtimeApi.js';
-import { NOOLVA_API } from '../branding';
 
 // VITE_API_URL = build-time API origin (optional). For same-host deploys, leave unset → relative /api.
 // Per-environment override without rebuild: public/runtime-config.json → loaded in main.jsx (apiOrigin).
@@ -101,7 +100,7 @@ export const getCurrentAccountId = () => {
 /**
  * Set current account ID - updates URL, sessionStorage, and localStorage
  */
-export const setCurrentAccountId = (accountId, { updateUrl = true } = {}) => {
+export const setCurrentAccountId = (accountId) => {
     if (typeof window === 'undefined') return;
 
     if (accountId) {
@@ -111,12 +110,10 @@ export const setCurrentAccountId = (accountId, { updateUrl = true } = {}) => {
         // Update localStorage (for backward compatibility)
         localStorage.setItem('current_account_id', accountIdStr);
 
-        // Update URL parameter without page reload (optional)
-        if (updateUrl) {
-            const url = new URL(window.location.href);
-            url.searchParams.set('account', accountIdStr);
-            window.history.replaceState({}, '', url.toString());
-        }
+        // Update URL parameter without page reload
+        const url = new URL(window.location.href);
+        url.searchParams.set('account', accountIdStr);
+        window.history.replaceState({}, '', url.toString());
     } else {
         sessionStorage.removeItem('current_account_id');
         localStorage.removeItem('current_account_id');
@@ -293,7 +290,7 @@ axiosInstance.interceptors.response.use(
             });
         } else if (error.request) {
             // Request was made but no response received (ACTUAL network error)
-            error.message = `Network error: Unable to connect to ${resolveApiBaseUrl() || NOOLVA_API}. Please check if ${NOOLVA_API} is running.`;
+            error.message = `Network error: Unable to connect to ${resolveApiBaseUrl() || 'the API server'}. Please check if the API server is running.`;
             error.errorData = {
                 description: error.message,
                 solution: "Verify your network connection and try again."
@@ -655,12 +652,6 @@ export const api = {
         const response = await axiosInstance.get("/dev-console/flattening-policies/relation-policies", { params });
         return response.data;
     },
-    getFlatteningRelationCandidates: async (tableName) => {
-        const response = await axiosInstance.get("/dev-console/flattening-policies/relation-candidates", {
-            params: { table_name: tableName }
-        });
-        return response.data;
-    },
     createFlatteningRelationPolicy: async (data) => {
         const response = await axiosInstance.post("/dev-console/flattening-policies/relation-policies", data);
         return response.data;
@@ -679,20 +670,6 @@ export const api = {
         const response = await axiosInstance.get("/dev-console/data-lifecycle-policies/");
         return response.data;
     },
-    getLifecycleTableHints: async (tableName) => {
-        const response = await axiosInstance.get("/dev-console/data-lifecycle-policies/table-hints", {
-            params: { table_name: tableName },
-        });
-        return response.data;
-    },
-    getLifecycleSourceTableOptions: async () => {
-        const response = await axiosInstance.get("/dev-console/data-lifecycle-policies/source-table-options");
-        return response.data;
-    },
-    getLifecycleBatchLedger: async (params = {}) => {
-        const response = await axiosInstance.get("/dev-console/data-lifecycle-policies/batch-ledger", { params });
-        return response.data;
-    },
     createDataLifecyclePolicy: async (data) => {
         const response = await axiosInstance.post("/dev-console/data-lifecycle-policies/", data);
         return response.data;
@@ -703,107 +680,6 @@ export const api = {
     },
     deleteDataLifecyclePolicy: async (id) => {
         const response = await axiosInstance.delete(`/dev-console/data-lifecycle-policies/${id}`);
-        return response.data;
-    },
-
-    // Developer Console — Client instances (offline sync)
-    listClientInstances: async () => {
-        const response = await axiosInstance.get('/dev-console/instances');
-        return response.data;
-    },
-    createClientInstance: async (data) => {
-        const response = await axiosInstance.post('/dev-console/instances', data);
-        return response.data;
-    },
-    getClientInstance: async (instanceId) => {
-        const response = await axiosInstance.get(`/dev-console/instances/${instanceId}`);
-        return response.data;
-    },
-    updateClientInstance: async (instanceId, data) => {
-        const response = await axiosInstance.put(`/dev-console/instances/${instanceId}`, data);
-        return response.data;
-    },
-    deleteClientInstance: async (instanceId) => {
-        const response = await axiosInstance.delete(`/dev-console/instances/${instanceId}`);
-        return response.data;
-    },
-    updateClientInstanceOfflineSettings: async (instanceId, data) => {
-        const response = await axiosInstance.put(`/dev-console/instances/${instanceId}/offline-settings`, data);
-        return response.data;
-    },
-    listClientInstanceDatasets: async (instanceId) => {
-        const response = await axiosInstance.get(`/dev-console/instances/${instanceId}/datasets`);
-        return response.data;
-    },
-    createClientInstanceDataset: async (instanceId, data) => {
-        const response = await axiosInstance.post(`/dev-console/instances/${instanceId}/datasets`, data);
-        return response.data;
-    },
-    updateClientInstanceDataset: async (instanceId, datasetId, data) => {
-        const response = await axiosInstance.put(`/dev-console/instances/${instanceId}/datasets/${datasetId}`, data);
-        return response.data;
-    },
-    deleteClientInstanceDataset: async (instanceId, datasetId) => {
-        const response = await axiosInstance.delete(`/dev-console/instances/${instanceId}/datasets/${datasetId}`);
-        return response.data;
-    },
-    listClientInstanceWriteEndpoints: async (instanceId) => {
-        const response = await axiosInstance.get(`/dev-console/instances/${instanceId}/write-endpoints`);
-        return response.data;
-    },
-    createClientInstanceWriteEndpoint: async (instanceId, data) => {
-        const response = await axiosInstance.post(`/dev-console/instances/${instanceId}/write-endpoints`, data);
-        return response.data;
-    },
-    deleteClientInstanceWriteEndpoint: async (instanceId, rowId) => {
-        const response = await axiosInstance.delete(`/dev-console/instances/${instanceId}/write-endpoints/${rowId}`);
-        return response.data;
-    },
-    helperAutoCrudWriteEndpoints: async (params = {}) => {
-        const response = await axiosInstance.get('/dev-console/instances/helpers/auto-crud-write-endpoints', { params });
-        return response.data;
-    },
-    helperFlatteningS3Policies: async () => {
-        const response = await axiosInstance.get('/dev-console/instances/helpers/flattening-s3-policies');
-        return response.data;
-    },
-    helperFlatteningPostgresPolicies: async () => {
-        const response = await axiosInstance.get('/dev-console/instances/helpers/flattening-postgres-policies');
-        return response.data;
-    },
-    helperDataModelsForInstances: async (params = {}) => {
-        const response = await axiosInstance.get('/dev-console/instances/helpers/data-models', { params });
-        return response.data;
-    },
-    helperFlatteningReadEndpoints: async (params = {}) => {
-        const response = await axiosInstance.get('/dev-console/instances/helpers/flattening-read-endpoints', { params });
-        return response.data;
-    },
-    listInstanceMenus: async (instanceId) => {
-        const response = await axiosInstance.get(`/dev-console/instances/${instanceId}/instance-menus`);
-        return response.data;
-    },
-    createInstanceMenu: async (instanceId, data) => {
-        const response = await axiosInstance.post(`/dev-console/instances/${instanceId}/instance-menus`, data);
-        return response.data;
-    },
-    updateInstanceMenu: async (instanceId, menuId, data) => {
-        const response = await axiosInstance.put(`/dev-console/instances/${instanceId}/instance-menus/${menuId}`, data);
-        return response.data;
-    },
-    updateInstanceMenuClientConfigs: async (instanceId, menuId, data) => {
-        const response = await axiosInstance.put(
-            `/dev-console/instances/${instanceId}/instance-menus/${menuId}/client-configs`,
-            data,
-        );
-        return response.data;
-    },
-    deleteInstanceMenu: async (instanceId, menuId) => {
-        const response = await axiosInstance.delete(`/dev-console/instances/${instanceId}/instance-menus/${menuId}`);
-        return response.data;
-    },
-    getClientOfflineManifest: async (instanceRef) => {
-        const response = await axiosInstance.get(`/instances/${instanceRef}/offline/manifest`);
         return response.data;
     },
 
@@ -1131,26 +1007,6 @@ export const api = {
 
     getIconTypes: async () => {
         const response = await axiosInstance.get("/icons/types/list");
-        return response.data;
-    },
-
-    getGlobalIconsList: async ({ check_s3 = false } = {}) => {
-        const response = await axiosInstance.get("/global-icons/list", {
-            params: check_s3 ? { check_s3: true } : {},
-        });
-        return response.data;
-    },
-
-    syncGlobalIconsToS3: async (payload) => {
-        const response = await axiosInstance.post("/global-icons/sync", payload);
-        return response.data;
-    },
-
-    fetchGlobalIconFileBlob: async (iconKey, platform = "web") => {
-        const response = await axiosInstance.get(`/global-icons/file/${encodeURIComponent(iconKey)}`, {
-            params: { platform },
-            responseType: "blob",
-        });
         return response.data;
     },
 
