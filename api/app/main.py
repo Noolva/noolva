@@ -235,6 +235,17 @@ except Exception as e:
     logger.error("Failed to register flattening/lifecycle routers: %s", e)
     raise
 
+try:
+    from routes import instances_dev_console
+    from routes import instances_offline_client
+
+    api.include_router(instances_dev_console.router, tags=["Developer Console - Client instances"])
+    api.include_router(instances_offline_client.router, tags=["Client instances - Offline sync"])
+    logger.info("Client instances routers registered")
+except Exception as e:
+    logger.error("Failed to register client instances routers: %s", e)
+    raise
+
 # Import and include menus router (CRUD operations)
 try:
     from routes import menus
@@ -269,6 +280,15 @@ try:
     logger.info("Icons router registered successfully at /api/icons")
 except Exception as e:
     logger.error(f"Failed to register icons router: {e}")
+    raise
+
+try:
+    from routes import global_icons as global_icons_routes
+
+    api.include_router(global_icons_routes.router, prefix="/global-icons", tags=["App Studio - Global icons"])
+    logger.info("Global icons router registered successfully at /api/global-icons")
+except Exception as e:
+    logger.error(f"Failed to register global_icons router: {e}")
     raise
 
 # Import and include collections router

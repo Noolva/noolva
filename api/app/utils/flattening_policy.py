@@ -10,17 +10,18 @@ from typing import Any, Dict, List, Optional
 logger = logging.getLogger("noolva_api.flattening_policy")
 
 VALID_REFRESH = frozenset({"FULL", "INCREMENTAL"})
+VALID_DESTINATION = frozenset({"postgres", "s3", "iceberg"})
 
 
 def validate_table_policy_row(row: Dict[str, Any], partial: bool = False) -> None:
-    snap = row.get("is_snapshot")
-    if snap is None and not partial:
-        snap = False
+    # Snapshot mode is not used; treat as always false.
+    snap = False
+    dest = (row.get("destination") or "postgres").strip().lower()
+    if dest not in VALID_DESTINATION:
+        raise ValueError(f"destination must be one of {sorted(VALID_DESTINATION)}")
     strat = row.get("refresh_strategy")
     if strat is not None and strat not in VALID_REFRESH:
         raise ValueError(f"refresh_strategy must be one of {sorted(VALID_REFRESH)} or null")
-    if snap is True:
-        raise ValueError("Snapshot policies are not supported (set is_snapshot=false)")
     if not row.get("refresh_strategy"):
         raise ValueError("refresh_strategy is required (FULL or INCREMENTAL)")
     # FULL/INCREMENTAL require an interval for scheduled dispatch (scheduler uses due query).
@@ -50,7 +51,8 @@ def validate_relation_row(row: Dict[str, Any], partial: bool = False) -> None:
 
 def sql_due_flattening_policies() -> str:
     return """
-SELECT id, table_name, refresh_strategy, refresh_interval_minutes, batch_size
+SELECT id, table_name, destination, is_db_table, is_public_on_s3,
+       refresh_strategy, refresh_interval_minutes, batch_size
 FROM public.flattening_table_policy
 WHERE COALESCE(is_active, true) = true
   AND is_snapshot = false
@@ -83,14 +85,23 @@ async def ensure_flattening_read_endpoints(policy_id: int, table_name: str, user
     """
     from classes.postgres_db import PostgresDB
 
+    # Prefer auto-generated flattened_* model for this policy if present.
     model = await PostgresDB.fetchrow(
         """
         SELECT model_id, model_name, table_name
         FROM public.data_models
         WHERE table_name = $1
+        ORDER BY
+          CASE
+            WHEN is_system_model = TRUE AND COALESCE(description,'') LIKE $2 THEN 0
+            WHEN model_name LIKE 'flattened_%' THEN 1
+            ELSE 9
+          END,
+          model_id DESC
         LIMIT 1
         """,
         table_name.strip(),
+        f"%generated_by_flattening_table_policy_id={int(policy_id)}%",
     )
     if not model:
         raise ValueError(

@@ -49,8 +49,9 @@ export const AuthProvider = ({ children }) => {
                         if (!account && storedAccounts.length > 0) {
                             account = storedAccounts[0];
                             currentAccountId = account.id.toString();
-                            // Update URL and storage with default account
-                            setCurrentAccountId(account.id);
+                            // Store default account for this tab, but don't force it into URL
+                            // (so operators can remove `?account=...` from the URL and it stays removed)
+                            setCurrentAccountId(account.id, { updateUrl: false });
                         }
 
                         setCurrentAccount(account || null);

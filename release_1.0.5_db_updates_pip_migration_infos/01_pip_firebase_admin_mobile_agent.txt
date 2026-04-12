@@ -5,3 +5,4 @@
 
 # New package for this release (also listed in requirements.txt):
 firebase-admin==6.5.0
+pyarrow>=14.0.0

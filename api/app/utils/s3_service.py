@@ -270,6 +270,33 @@ class S3Service:
                 'message': f'Upload error: {str(e)}',
                 'error': str(e)
             }
+
+    def public_url_for_logical_key(self, logical_s3_key: str) -> Optional[str]:
+        """Build public CDN/object URL for a logical key (before bucket prefix is applied)."""
+        logical_s3_key = (logical_s3_key or "").strip().lstrip("/")
+        if not logical_s3_key:
+            return None
+        full_key = self._build_s3_key(logical_s3_key)
+        if self.cdn_url:
+            return urljoin(self.cdn_url.rstrip("/") + "/", full_key)
+        if self.endpoint_url:
+            return urljoin(self.endpoint_url.rstrip("/") + "/", f"{self.bucket_name}/{full_key}")
+        return f"https://{self.bucket_name}.s3.{self.region}.amazonaws.com/{full_key}"
+
+    def object_exists(self, logical_s3_key: str) -> bool:
+        """Return True if object exists at logical key (bucket prefix applied)."""
+        logical_s3_key = (logical_s3_key or "").strip().lstrip("/")
+        if not logical_s3_key:
+            return False
+        full_key = self._build_s3_key(logical_s3_key)
+        try:
+            self.s3_client.head_object(Bucket=self.bucket_name, Key=full_key)
+            return True
+        except ClientError as e:
+            code = e.response.get("Error", {}).get("Code", "")
+            if code in ("404", "NoSuchKey", "NotFound"):
+                return False
+            raise
     
     def upload_fileobj(
         self,

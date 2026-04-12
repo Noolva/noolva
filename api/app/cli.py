@@ -53,7 +53,7 @@ def runserver(
     """Start the FastAPI ERP server."""
     typer.echo(f"📝 Logs will be written to: {LOG_FILE}")
     cli_logger.info(f"CLI - runserver - Starting server on {host}:{port}")
-    uvicorn.run("main:app", host=host, port=port, reload=True, log_config=None, access_log=False)
+    uvicorn.run("main:app", host=host, port=port, reload=False, log_config=None, access_log=False)
 @cli.command()
 def login(
     username: str = typer.Option(None, "--username", "-u", prompt=True, help="Your username"),

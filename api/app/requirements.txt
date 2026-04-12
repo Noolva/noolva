@@ -70,3 +70,6 @@ croniter>=2.0.0
 
 # Firebase Cloud Messaging (mobile agent wake / sync; karandev / production: pip install -r api/app/requirements.txt)
 firebase-admin==6.5.0
+
+# Data lifecycle → Iceberg/Parquet export (optional PyIceberg append via ICEBERG_SQL_CATALOG_URI)
+pyarrow>=14.0.0

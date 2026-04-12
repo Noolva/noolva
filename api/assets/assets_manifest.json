@@ -247,6 +247,6306 @@
       "mime_type": "image/svg+xml",
       "is_public": true,
       "description": "Single Choice field type image"
+    },
+    {
+      "file_name": "global_icons/web/home.svg",
+      "original_name": "home.svg",
+      "mime_type": "image/svg+xml",
+      "is_public": true,
+      "description": "Global icon (web): home"
+    },
+    {
+      "file_name": "global_icons/android/home.xml",
+      "original_name": "home.xml",
+      "mime_type": "application/xml",
+      "is_public": true,
+      "description": "Global icon (android): home"
+    },
+    {
+      "file_name": "global_icons/ios/home.svg",
+      "original_name": "home.svg",
+      "mime_type": "image/svg+xml",
+      "is_public": true,
+      "description": "Global icon (ios): home"
+    },
+    {
+      "file_name": "global_icons/macos/home.svg",
+      "original_name": "home.svg",
+      "mime_type": "image/svg+xml",
+      "is_public": true,
+      "description": "Global icon (macos): home"
+    },
+    {
+      "file_name": "global_icons/windows/home.png",
+      "original_name": "home.png",
+      "mime_type": "image/png",
+      "is_public": true,
+      "description": "Global icon (windows): home"
+    },
+    {
+      "file_name": "global_icons/linux/home.svg",
+      "original_name": "home.svg",
+      "mime_type": "image/svg+xml",
+      "is_public": true,
+      "description": "Global icon (linux): home"
+    },
+    {
+      "file_name": "global_icons/web/user.svg",
+      "original_name": "user.svg",
+      "mime_type": "image/svg+xml",
+      "is_public": true,
+      "description": "Global icon (web): user"
+    },
+    {
+      "file_name": "global_icons/android/user.xml",
+      "original_name": "user.xml",
+      "mime_type": "application/xml",
+      "is_public": true,
+      "description": "Global icon (android): user"
+    },
+    {
+      "file_name": "global_icons/ios/user.svg",
+      "original_name": "user.svg",
+      "mime_type": "image/svg+xml",
+      "is_public": true,
+      "description": "Global icon (ios): user"
+    },
+    {
+      "file_name": "global_icons/macos/user.svg",
+      "original_name": "user.svg",
+      "mime_type": "image/svg+xml",
+      "is_public": true,
+      "description": "Global icon (macos): user"
+    },
+    {
+      "file_name": "global_icons/windows/user.png",
+      "original_name": "user.png",
+      "mime_type": "image/png",
+      "is_public": true,
+      "description": "Global icon (windows): user"
+    },
+    {
+      "file_name": "global_icons/linux/user.svg",
+      "original_name": "user.svg",
+      "mime_type": "image/svg+xml",
+      "is_public": true,
+      "description": "Global icon (linux): user"
+    },
+    {
+      "file_name": "global_icons/web/users.svg",
+      "original_name": "users.svg",
+      "mime_type": "image/svg+xml",
+      "is_public": true,
+      "description": "Global icon (web): users"
+    },
+    {
+      "file_name": "global_icons/android/users.xml",
+      "original_name": "users.xml",
+      "mime_type": "application/xml",
+      "is_public": true,
+      "description": "Global icon (android): users"
+    },
+    {
+      "file_name": "global_icons/ios/users.svg",
+      "original_name": "users.svg",
+      "mime_type": "image/svg+xml",
+      "is_public": true,
+      "description": "Global icon (ios): users"
+    },
+    {
+      "file_name": "global_icons/macos/users.svg",
+      "original_name": "users.svg",
+      "mime_type": "image/svg+xml",
+      "is_public": true,
+      "description": "Global icon (macos): users"
+    },
+    {
+      "file_name": "global_icons/windows/users.png",
+      "original_name": "users.png",
+      "mime_type": "image/png",
+      "is_public": true,
+      "description": "Global icon (windows): users"
+    },
+    {
+      "file_name": "global_icons/linux/users.svg",
+      "original_name": "users.svg",
+      "mime_type": "image/svg+xml",
+      "is_public": true,
+      "description": "Global icon (linux): users"
+    },
+    {
+      "file_name": "global_icons/web/settings.svg",
+      "original_name": "settings.svg",
+      "mime_type": "image/svg+xml",
+      "is_public": true,
+      "description": "Global icon (web): settings"
+    },
+    {
+      "file_name": "global_icons/android/settings.xml",
+      "original_name": "settings.xml",
+      "mime_type": "application/xml",
+      "is_public": true,
+      "description": "Global icon (android): settings"
+    },
+    {
+      "file_name": "global_icons/ios/settings.svg",
+      "original_name": "settings.svg",
+      "mime_type": "image/svg+xml",
+      "is_public": true,
+      "description": "Global icon (ios): settings"
+    },
+    {
+      "file_name": "global_icons/macos/settings.svg",
+      "original_name": "settings.svg",
+      "mime_type": "image/svg+xml",
+      "is_public": true,
+      "description": "Global icon (macos): settings"
+    },
+    {
+      "file_name": "global_icons/windows/settings.png",
+      "original_name": "settings.png",
+      "mime_type": "image/png",
+      "is_public": true,
+      "description": "Global icon (windows): settings"
+    },
+    {
+      "file_name": "global_icons/linux/settings.svg",
+      "original_name": "settings.svg",
+      "mime_type": "image/svg+xml",
+      "is_public": true,
+      "description": "Global icon (linux): settings"
+    },
+    {
+      "file_name": "global_icons/web/search.svg",
+      "original_name": "search.svg",
+      "mime_type": "image/svg+xml",
+      "is_public": true,
+      "description": "Global icon (web): search"
+    },
+    {
+      "file_name": "global_icons/android/search.xml",
+      "original_name": "search.xml",
+      "mime_type": "application/xml",
+      "is_public": true,
+      "description": "Global icon (android): search"
+    },
+    {
+      "file_name": "global_icons/ios/search.svg",
+      "original_name": "search.svg",
+      "mime_type": "image/svg+xml",
+      "is_public": true,
+      "description": "Global icon (ios): search"
+    },
+    {
+      "file_name": "global_icons/macos/search.svg",
+      "original_name": "search.svg",
+      "mime_type": "image/svg+xml",
+      "is_public": true,
+      "description": "Global icon (macos): search"
+    },
+    {
+      "file_name": "global_icons/windows/search.png",
+      "original_name": "search.png",
+      "mime_type": "image/png",
+      "is_public": true,
+      "description": "Global icon (windows): search"
+    },
+    {
+      "file_name": "global_icons/linux/search.svg",
+      "original_name": "search.svg",
+      "mime_type": "image/svg+xml",
+      "is_public": true,
+      "description": "Global icon (linux): search"
+    },
+    {
+      "file_name": "global_icons/web/menu.svg",
+      "original_name": "menu.svg",
+      "mime_type": "image/svg+xml",
+      "is_public": true,
+      "description": "Global icon (web): menu"
+    },
+    {
+      "file_name": "global_icons/android/menu.xml",
+      "original_name": "menu.xml",
+      "mime_type": "application/xml",
+      "is_public": true,
+      "description": "Global icon (android): menu"
+    },
+    {
+      "file_name": "global_icons/ios/menu.svg",
+      "original_name": "menu.svg",
+      "mime_type": "image/svg+xml",
+      "is_public": true,
+      "description": "Global icon (ios): menu"
+    },
+    {
+      "file_name": "global_icons/macos/menu.svg",
+      "original_name": "menu.svg",
+      "mime_type": "image/svg+xml",
+      "is_public": true,
+      "description": "Global icon (macos): menu"
+    },
+    {
+      "file_name": "global_icons/windows/menu.png",
+      "original_name": "menu.png",
+      "mime_type": "image/png",
+      "is_public": true,
+      "description": "Global icon (windows): menu"
+    },
+    {
+      "file_name": "global_icons/linux/menu.svg",
+      "original_name": "menu.svg",
+      "mime_type": "image/svg+xml",
+      "is_public": true,
+      "description": "Global icon (linux): menu"
+    },
+    {
+      "file_name": "global_icons/web/close.svg",
+      "original_name": "close.svg",
+      "mime_type": "image/svg+xml",
+      "is_public": true,
+      "description": "Global icon (web): close"
+    },
+    {
+      "file_name": "global_icons/android/close.xml",
+      "original_name": "close.xml",
+      "mime_type": "application/xml",
+      "is_public": true,
+      "description": "Global icon (android): close"
+    },
+    {
+      "file_name": "global_icons/ios/close.svg",
+      "original_name": "close.svg",
+      "mime_type": "image/svg+xml",
+      "is_public": true,
+      "description": "Global icon (ios): close"
+    },
+    {
+      "file_name": "global_icons/macos/close.svg",
+      "original_name": "close.svg",
+      "mime_type": "image/svg+xml",
+      "is_public": true,
+      "description": "Global icon (macos): close"
+    },
+    {
+      "file_name": "global_icons/windows/close.png",
+      "original_name": "close.png",
+      "mime_type": "image/png",
+      "is_public": true,
+      "description": "Global icon (windows): close"
+    },
+    {
+      "file_name": "global_icons/linux/close.svg",
+      "original_name": "close.svg",
+      "mime_type": "image/svg+xml",
+      "is_public": true,
+      "description": "Global icon (linux): close"
+    },
+    {
+      "file_name": "global_icons/web/add.svg",
+      "original_name": "add.svg",
+      "mime_type": "image/svg+xml",
+      "is_public": true,
+      "description": "Global icon (web): add"
+    },
+    {
+      "file_name": "global_icons/android/add.xml",
+      "original_name": "add.xml",
+      "mime_type": "application/xml",
+      "is_public": true,
+      "description": "Global icon (android): add"
+    },
+    {
+      "file_name": "global_icons/ios/add.svg",
+      "original_name": "add.svg",
+      "mime_type": "image/svg+xml",
+      "is_public": true,
+      "description": "Global icon (ios): add"
+    },
+    {
+      "file_name": "global_icons/macos/add.svg",
+      "original_name": "add.svg",
+      "mime_type": "image/svg+xml",
+      "is_public": true,
+      "description": "Global icon (macos): add"
+    },
+    {
+      "file_name": "global_icons/windows/add.png",
+      "original_name": "add.png",
+      "mime_type": "image/png",
+      "is_public": true,
+      "description": "Global icon (windows): add"
+    },
+    {
+      "file_name": "global_icons/linux/add.svg",
+      "original_name": "add.svg",
+      "mime_type": "image/svg+xml",
+      "is_public": true,
+      "description": "Global icon (linux): add"
+    },
+    {
+      "file_name": "global_icons/web/edit.svg",
+      "original_name": "edit.svg",
+      "mime_type": "image/svg+xml",
+      "is_public": true,
+      "description": "Global icon (web): edit"
+    },
+    {
+      "file_name": "global_icons/android/edit.xml",
+      "original_name": "edit.xml",
+      "mime_type": "application/xml",
+      "is_public": true,
+      "description": "Global icon (android): edit"
+    },
+    {
+      "file_name": "global_icons/ios/edit.svg",
+      "original_name": "edit.svg",
+      "mime_type": "image/svg+xml",
+      "is_public": true,
+      "description": "Global icon (ios): edit"
+    },
+    {
+      "file_name": "global_icons/macos/edit.svg",
+      "original_name": "edit.svg",
+      "mime_type": "image/svg+xml",
+      "is_public": true,
+      "description": "Global icon (macos): edit"
+    },
+    {
+      "file_name": "global_icons/windows/edit.png",
+      "original_name": "edit.png",
+      "mime_type": "image/png",
+      "is_public": true,
+      "description": "Global icon (windows): edit"
+    },
+    {
+      "file_name": "global_icons/linux/edit.svg",
+      "original_name": "edit.svg",
+      "mime_type": "image/svg+xml",
+      "is_public": true,
+      "description": "Global icon (linux): edit"
+    },
+    {
+      "file_name": "global_icons/web/delete.svg",
+      "original_name": "delete.svg",
+      "mime_type": "image/svg+xml",
+      "is_public": true,
+      "description": "Global icon (web): delete"
+    },
+    {
+      "file_name": "global_icons/android/delete.xml",
+      "original_name": "delete.xml",
+      "mime_type": "application/xml",
+      "is_public": true,
+      "description": "Global icon (android): delete"
+    },
+    {
+      "file_name": "global_icons/ios/delete.svg",
+      "original_name": "delete.svg",
+      "mime_type": "image/svg+xml",
+      "is_public": true,
+      "description": "Global icon (ios): delete"
+    },
+    {
+      "file_name": "global_icons/macos/delete.svg",
+      "original_name": "delete.svg",
+      "mime_type": "image/svg+xml",
+      "is_public": true,
+      "description": "Global icon (macos): delete"
+    },
+    {
+      "file_name": "global_icons/windows/delete.png",
+      "original_name": "delete.png",
+      "mime_type": "image/png",
+      "is_public": true,
+      "description": "Global icon (windows): delete"
+    },
+    {
+      "file_name": "global_icons/linux/delete.svg",
+      "original_name": "delete.svg",
+      "mime_type": "image/svg+xml",
+      "is_public": true,
+      "description": "Global icon (linux): delete"
+    },
+    {
+      "file_name": "global_icons/web/save.svg",
+      "original_name": "save.svg",
+      "mime_type": "image/svg+xml",
+      "is_public": true,
+      "description": "Global icon (web): save"
+    },
+    {
+      "file_name": "global_icons/android/save.xml",
+      "original_name": "save.xml",
+      "mime_type": "application/xml",
+      "is_public": true,
+      "description": "Global icon (android): save"
+    },
+    {
+      "file_name": "global_icons/ios/save.svg",
+      "original_name": "save.svg",
+      "mime_type": "image/svg+xml",
+      "is_public": true,
+      "description": "Global icon (ios): save"
+    },
+    {
+      "file_name": "global_icons/macos/save.svg",
+      "original_name": "save.svg",
+      "mime_type": "image/svg+xml",
+      "is_public": true,
+      "description": "Global icon (macos): save"
+    },
+    {
+      "file_name": "global_icons/windows/save.png",
+      "original_name": "save.png",
+      "mime_type": "image/png",
+      "is_public": true,
+      "description": "Global icon (windows): save"
+    },
+    {
+      "file_name": "global_icons/linux/save.svg",
+      "original_name": "save.svg",
+      "mime_type": "image/svg+xml",
+      "is_public": true,
+      "description": "Global icon (linux): save"
+    },
+    {
+      "file_name": "global_icons/web/cancel.svg",
+      "original_name": "cancel.svg",
+      "mime_type": "image/svg+xml",
+      "is_public": true,
+      "description": "Global icon (web): cancel"
+    },
+    {
+      "file_name": "global_icons/android/cancel.xml",
+      "original_name": "cancel.xml",
+      "mime_type": "application/xml",
+      "is_public": true,
+      "description": "Global icon (android): cancel"
+    },
+    {
+      "file_name": "global_icons/ios/cancel.svg",
+      "original_name": "cancel.svg",
+      "mime_type": "image/svg+xml",
+      "is_public": true,
+      "description": "Global icon (ios): cancel"
+    },
+    {
+      "file_name": "global_icons/macos/cancel.svg",
+      "original_name": "cancel.svg",
+      "mime_type": "image/svg+xml",
+      "is_public": true,
+      "description": "Global icon (macos): cancel"
+    },
+    {
+      "file_name": "global_icons/windows/cancel.png",
+      "original_name": "cancel.png",
+      "mime_type": "image/png",
+      "is_public": true,
+      "description": "Global icon (windows): cancel"
+    },
+    {
+      "file_name": "global_icons/linux/cancel.svg",
+      "original_name": "cancel.svg",
+      "mime_type": "image/svg+xml",
+      "is_public": true,
+      "description": "Global icon (linux): cancel"
+    },
+    {
+      "file_name": "global_icons/web/check.svg",
+      "original_name": "check.svg",
+      "mime_type": "image/svg+xml",
+      "is_public": true,
+      "description": "Global icon (web): check"
+    },
+    {
+      "file_name": "global_icons/android/check.xml",
+      "original_name": "check.xml",
+      "mime_type": "application/xml",
+      "is_public": true,
+      "description": "Global icon (android): check"
+    },
+    {
+      "file_name": "global_icons/ios/check.svg",
+      "original_name": "check.svg",
+      "mime_type": "image/svg+xml",
+      "is_public": true,
+      "description": "Global icon (ios): check"
+    },
+    {
+      "file_name": "global_icons/macos/check.svg",
+      "original_name": "check.svg",
+      "mime_type": "image/svg+xml",
+      "is_public": true,
+      "description": "Global icon (macos): check"
+    },
+    {
+      "file_name": "global_icons/windows/check.png",
+      "original_name": "check.png",
+      "mime_type": "image/png",
+      "is_public": true,
+      "description": "Global icon (windows): check"
+    },
+    {
+      "file_name": "global_icons/linux/check.svg",
+      "original_name": "check.svg",
+      "mime_type": "image/svg+xml",
+      "is_public": true,
+      "description": "Global icon (linux): check"
+    },
+    {
+      "file_name": "global_icons/web/back.svg",
+      "original_name": "back.svg",
+      "mime_type": "image/svg+xml",
+      "is_public": true,
+      "description": "Global icon (web): back"
+    },
+    {
+      "file_name": "global_icons/android/back.xml",
+      "original_name": "back.xml",
+      "mime_type": "application/xml",
+      "is_public": true,
+      "description": "Global icon (android): back"
+    },
+    {
+      "file_name": "global_icons/ios/back.svg",
+      "original_name": "back.svg",
+      "mime_type": "image/svg+xml",
+      "is_public": true,
+      "description": "Global icon (ios): back"
+    },
+    {
+      "file_name": "global_icons/macos/back.svg",
+      "original_name": "back.svg",
+      "mime_type": "image/svg+xml",
+      "is_public": true,
+      "description": "Global icon (macos): back"
+    },
+    {
+      "file_name": "global_icons/windows/back.png",
+      "original_name": "back.png",
+      "mime_type": "image/png",
+      "is_public": true,
+      "description": "Global icon (windows): back"
+    },
+    {
+      "file_name": "global_icons/linux/back.svg",
+      "original_name": "back.svg",
+      "mime_type": "image/svg+xml",
+      "is_public": true,
+      "description": "Global icon (linux): back"
+    },
+    {
+      "file_name": "global_icons/web/forward.svg",
+      "original_name": "forward.svg",
+      "mime_type": "image/svg+xml",
+      "is_public": true,
+      "description": "Global icon (web): forward"
+    },
+    {
+      "file_name": "global_icons/android/forward.xml",
+      "original_name": "forward.xml",
+      "mime_type": "application/xml",
+      "is_public": true,
+      "description": "Global icon (android): forward"
+    },
+    {
+      "file_name": "global_icons/ios/forward.svg",
+      "original_name": "forward.svg",
+      "mime_type": "image/svg+xml",
+      "is_public": true,
+      "description": "Global icon (ios): forward"
+    },
+    {
+      "file_name": "global_icons/macos/forward.svg",
+      "original_name": "forward.svg",
+      "mime_type": "image/svg+xml",
+      "is_public": true,
+      "description": "Global icon (macos): forward"
+    },
+    {
+      "file_name": "global_icons/windows/forward.png",
+      "original_name": "forward.png",
+      "mime_type": "image/png",
+      "is_public": true,
+      "description": "Global icon (windows): forward"
+    },
+    {
+      "file_name": "global_icons/linux/forward.svg",
+      "original_name": "forward.svg",
+      "mime_type": "image/svg+xml",
+      "is_public": true,
+      "description": "Global icon (linux): forward"
+    },
+    {
+      "file_name": "global_icons/web/refresh.svg",
+      "original_name": "refresh.svg",
+      "mime_type": "image/svg+xml",
+      "is_public": true,
+      "description": "Global icon (web): refresh"
+    },
+    {
+      "file_name": "global_icons/android/refresh.xml",
+      "original_name": "refresh.xml",
+      "mime_type": "application/xml",
+      "is_public": true,
+      "description": "Global icon (android): refresh"
+    },
+    {
+      "file_name": "global_icons/ios/refresh.svg",
+      "original_name": "refresh.svg",
+      "mime_type": "image/svg+xml",
+      "is_public": true,
+      "description": "Global icon (ios): refresh"
+    },
+    {
+      "file_name": "global_icons/macos/refresh.svg",
+      "original_name": "refresh.svg",
+      "mime_type": "image/svg+xml",
+      "is_public": true,
+      "description": "Global icon (macos): refresh"
+    },
+    {
+      "file_name": "global_icons/windows/refresh.png",
+      "original_name": "refresh.png",
+      "mime_type": "image/png",
+      "is_public": true,
+      "description": "Global icon (windows): refresh"
+    },
+    {
+      "file_name": "global_icons/linux/refresh.svg",
+      "original_name": "refresh.svg",
+      "mime_type": "image/svg+xml",
+      "is_public": true,
+      "description": "Global icon (linux): refresh"
+    },
+    {
+      "file_name": "global_icons/web/download.svg",
+      "original_name": "download.svg",
+      "mime_type": "image/svg+xml",
+      "is_public": true,
+      "description": "Global icon (web): download"
+    },
+    {
+      "file_name": "global_icons/android/download.xml",
+      "original_name": "download.xml",
+      "mime_type": "application/xml",
+      "is_public": true,
+      "description": "Global icon (android): download"
+    },
+    {
+      "file_name": "global_icons/ios/download.svg",
+      "original_name": "download.svg",
+      "mime_type": "image/svg+xml",
+      "is_public": true,
+      "description": "Global icon (ios): download"
+    },
+    {
+      "file_name": "global_icons/macos/download.svg",
+      "original_name": "download.svg",
+      "mime_type": "image/svg+xml",
+      "is_public": true,
+      "description": "Global icon (macos): download"
+    },
+    {
+      "file_name": "global_icons/windows/download.png",
+      "original_name": "download.png",
+      "mime_type": "image/png",
+      "is_public": true,
+      "description": "Global icon (windows): download"
+    },
+    {
+      "file_name": "global_icons/linux/download.svg",
+      "original_name": "download.svg",
+      "mime_type": "image/svg+xml",
+      "is_public": true,
+      "description": "Global icon (linux): download"
+    },
+    {
+      "file_name": "global_icons/web/upload.svg",
+      "original_name": "upload.svg",
+      "mime_type": "image/svg+xml",
+      "is_public": true,
+      "description": "Global icon (web): upload"
+    },
+    {
+      "file_name": "global_icons/android/upload.xml",
+      "original_name": "upload.xml",
+      "mime_type": "application/xml",
+      "is_public": true,
+      "description": "Global icon (android): upload"
+    },
+    {
+      "file_name": "global_icons/ios/upload.svg",
+      "original_name": "upload.svg",
+      "mime_type": "image/svg+xml",
+      "is_public": true,
+      "description": "Global icon (ios): upload"
+    },
+    {
+      "file_name": "global_icons/macos/upload.svg",
+      "original_name": "upload.svg",
+      "mime_type": "image/svg+xml",
+      "is_public": true,
+      "description": "Global icon (macos): upload"
+    },
+    {
+      "file_name": "global_icons/windows/upload.png",
+      "original_name": "upload.png",
+      "mime_type": "image/png",
+      "is_public": true,
+      "description": "Global icon (windows): upload"
+    },
+    {
+      "file_name": "global_icons/linux/upload.svg",
+      "original_name": "upload.svg",
+      "mime_type": "image/svg+xml",
+      "is_public": true,
+      "description": "Global icon (linux): upload"
+    },
+    {
+      "file_name": "global_icons/web/share.svg",
+      "original_name": "share.svg",
+      "mime_type": "image/svg+xml",
+      "is_public": true,
+      "description": "Global icon (web): share"
+    },
+    {
+      "file_name": "global_icons/android/share.xml",
+      "original_name": "share.xml",
+      "mime_type": "application/xml",
+      "is_public": true,
+      "description": "Global icon (android): share"
+    },
+    {
+      "file_name": "global_icons/ios/share.svg",
+      "original_name": "share.svg",
+      "mime_type": "image/svg+xml",
+      "is_public": true,
+      "description": "Global icon (ios): share"
+    },
+    {
+      "file_name": "global_icons/macos/share.svg",
+      "original_name": "share.svg",
+      "mime_type": "image/svg+xml",
+      "is_public": true,
+      "description": "Global icon (macos): share"
+    },
+    {
+      "file_name": "global_icons/windows/share.png",
+      "original_name": "share.png",
+      "mime_type": "image/png",
+      "is_public": true,
+      "description": "Global icon (windows): share"
+    },
+    {
+      "file_name": "global_icons/linux/share.svg",
+      "original_name": "share.svg",
+      "mime_type": "image/svg+xml",
+      "is_public": true,
+      "description": "Global icon (linux): share"
+    },
+    {
+      "file_name": "global_icons/web/link.svg",
+      "original_name": "link.svg",
+      "mime_type": "image/svg+xml",
+      "is_public": true,
+      "description": "Global icon (web): link"
+    },
+    {
+      "file_name": "global_icons/android/link.xml",
+      "original_name": "link.xml",
+      "mime_type": "application/xml",
+      "is_public": true,
+      "description": "Global icon (android): link"
+    },
+    {
+      "file_name": "global_icons/ios/link.svg",
+      "original_name": "link.svg",
+      "mime_type": "image/svg+xml",
+      "is_public": true,
+      "description": "Global icon (ios): link"
+    },
+    {
+      "file_name": "global_icons/macos/link.svg",
+      "original_name": "link.svg",
+      "mime_type": "image/svg+xml",
+      "is_public": true,
+      "description": "Global icon (macos): link"
+    },
+    {
+      "file_name": "global_icons/windows/link.png",
+      "original_name": "link.png",
+      "mime_type": "image/png",
+      "is_public": true,
+      "description": "Global icon (windows): link"
+    },
+    {
+      "file_name": "global_icons/linux/link.svg",
+      "original_name": "link.svg",
+      "mime_type": "image/svg+xml",
+      "is_public": true,
+      "description": "Global icon (linux): link"
+    },
+    {
+      "file_name": "global_icons/web/copy.svg",
+      "original_name": "copy.svg",
+      "mime_type": "image/svg+xml",
+      "is_public": true,
+      "description": "Global icon (web): copy"
+    },
+    {
+      "file_name": "global_icons/android/copy.xml",
+      "original_name": "copy.xml",
+      "mime_type": "application/xml",
+      "is_public": true,
+      "description": "Global icon (android): copy"
+    },
+    {
+      "file_name": "global_icons/ios/copy.svg",
+      "original_name": "copy.svg",
+      "mime_type": "image/svg+xml",
+      "is_public": true,
+      "description": "Global icon (ios): copy"
+    },
+    {
+      "file_name": "global_icons/macos/copy.svg",
+      "original_name": "copy.svg",
+      "mime_type": "image/svg+xml",
+      "is_public": true,
+      "description": "Global icon (macos): copy"
+    },
+    {
+      "file_name": "global_icons/windows/copy.png",
+      "original_name": "copy.png",
+      "mime_type": "image/png",
+      "is_public": true,
+      "description": "Global icon (windows): copy"
+    },
+    {
+      "file_name": "global_icons/linux/copy.svg",
+      "original_name": "copy.svg",
+      "mime_type": "image/svg+xml",
+      "is_public": true,
+      "description": "Global icon (linux): copy"
+    },
+    {
+      "file_name": "global_icons/web/filter.svg",
+      "original_name": "filter.svg",
+      "mime_type": "image/svg+xml",
+      "is_public": true,
+      "description": "Global icon (web): filter"
+    },
+    {
+      "file_name": "global_icons/android/filter.xml",
+      "original_name": "filter.xml",
+      "mime_type": "application/xml",
+      "is_public": true,
+      "description": "Global icon (android): filter"
+    },
+    {
+      "file_name": "global_icons/ios/filter.svg",
+      "original_name": "filter.svg",
+      "mime_type": "image/svg+xml",
+      "is_public": true,
+      "description": "Global icon (ios): filter"
+    },
+    {
+      "file_name": "global_icons/macos/filter.svg",
+      "original_name": "filter.svg",
+      "mime_type": "image/svg+xml",
+      "is_public": true,
+      "description": "Global icon (macos): filter"
+    },
+    {
+      "file_name": "global_icons/windows/filter.png",
+      "original_name": "filter.png",
+      "mime_type": "image/png",
+      "is_public": true,
+      "description": "Global icon (windows): filter"
+    },
+    {
+      "file_name": "global_icons/linux/filter.svg",
+      "original_name": "filter.svg",
+      "mime_type": "image/svg+xml",
+      "is_public": true,
+      "description": "Global icon (linux): filter"
+    },
+    {
+      "file_name": "global_icons/web/sort.svg",
+      "original_name": "sort.svg",
+      "mime_type": "image/svg+xml",
+      "is_public": true,
+      "description": "Global icon (web): sort"
+    },
+    {
+      "file_name": "global_icons/android/sort.xml",
+      "original_name": "sort.xml",
+      "mime_type": "application/xml",
+      "is_public": true,
+      "description": "Global icon (android): sort"
+    },
+    {
+      "file_name": "global_icons/ios/sort.svg",
+      "original_name": "sort.svg",
+      "mime_type": "image/svg+xml",
+      "is_public": true,
+      "description": "Global icon (ios): sort"
+    },
+    {
+      "file_name": "global_icons/macos/sort.svg",
+      "original_name": "sort.svg",
+      "mime_type": "image/svg+xml",
+      "is_public": true,
+      "description": "Global icon (macos): sort"
+    },
+    {
+      "file_name": "global_icons/windows/sort.png",
+      "original_name": "sort.png",
+      "mime_type": "image/png",
+      "is_public": true,
+      "description": "Global icon (windows): sort"
+    },
+    {
+      "file_name": "global_icons/linux/sort.svg",
+      "original_name": "sort.svg",
+      "mime_type": "image/svg+xml",
+      "is_public": true,
+      "description": "Global icon (linux): sort"
+    },
+    {
+      "file_name": "global_icons/web/calendar.svg",
+      "original_name": "calendar.svg",
+      "mime_type": "image/svg+xml",
+      "is_public": true,
+      "description": "Global icon (web): calendar"
+    },
+    {
+      "file_name": "global_icons/android/calendar.xml",
+      "original_name": "calendar.xml",
+      "mime_type": "application/xml",
+      "is_public": true,
+      "description": "Global icon (android): calendar"
+    },
+    {
+      "file_name": "global_icons/ios/calendar.svg",
+      "original_name": "calendar.svg",
+      "mime_type": "image/svg+xml",
+      "is_public": true,
+      "description": "Global icon (ios): calendar"
+    },
+    {
+      "file_name": "global_icons/macos/calendar.svg",
+      "original_name": "calendar.svg",
+      "mime_type": "image/svg+xml",
+      "is_public": true,
+      "description": "Global icon (macos): calendar"
+    },
+    {
+      "file_name": "global_icons/windows/calendar.png",
+      "original_name": "calendar.png",
+      "mime_type": "image/png",
+      "is_public": true,
+      "description": "Global icon (windows): calendar"
+    },
+    {
+      "file_name": "global_icons/linux/calendar.svg",
+      "original_name": "calendar.svg",
+      "mime_type": "image/svg+xml",
+      "is_public": true,
+      "description": "Global icon (linux): calendar"
+    },
+    {
+      "file_name": "global_icons/web/clock.svg",
+      "original_name": "clock.svg",
+      "mime_type": "image/svg+xml",
+      "is_public": true,
+      "description": "Global icon (web): clock"
+    },
+    {
+      "file_name": "global_icons/android/clock.xml",
+      "original_name": "clock.xml",
+      "mime_type": "application/xml",
+      "is_public": true,
+      "description": "Global icon (android): clock"
+    },
+    {
+      "file_name": "global_icons/ios/clock.svg",
+      "original_name": "clock.svg",
+      "mime_type": "image/svg+xml",
+      "is_public": true,
+      "description": "Global icon (ios): clock"
+    },
+    {
+      "file_name": "global_icons/macos/clock.svg",
+      "original_name": "clock.svg",
+      "mime_type": "image/svg+xml",
+      "is_public": true,
+      "description": "Global icon (macos): clock"
+    },
+    {
+      "file_name": "global_icons/windows/clock.png",
+      "original_name": "clock.png",
+      "mime_type": "image/png",
+      "is_public": true,
+      "description": "Global icon (windows): clock"
+    },
+    {
+      "file_name": "global_icons/linux/clock.svg",
+      "original_name": "clock.svg",
+      "mime_type": "image/svg+xml",
+      "is_public": true,
+      "description": "Global icon (linux): clock"
+    },
+    {
+      "file_name": "global_icons/web/mail.svg",
+      "original_name": "mail.svg",
+      "mime_type": "image/svg+xml",
+      "is_public": true,
+      "description": "Global icon (web): mail"
+    },
+    {
+      "file_name": "global_icons/android/mail.xml",
+      "original_name": "mail.xml",
+      "mime_type": "application/xml",
+      "is_public": true,
+      "description": "Global icon (android): mail"
+    },
+    {
+      "file_name": "global_icons/ios/mail.svg",
+      "original_name": "mail.svg",
+      "mime_type": "image/svg+xml",
+      "is_public": true,
+      "description": "Global icon (ios): mail"
+    },
+    {
+      "file_name": "global_icons/macos/mail.svg",
+      "original_name": "mail.svg",
+      "mime_type": "image/svg+xml",
+      "is_public": true,
+      "description": "Global icon (macos): mail"
+    },
+    {
+      "file_name": "global_icons/windows/mail.png",
+      "original_name": "mail.png",
+      "mime_type": "image/png",
+      "is_public": true,
+      "description": "Global icon (windows): mail"
+    },
+    {
+      "file_name": "global_icons/linux/mail.svg",
+      "original_name": "mail.svg",
+      "mime_type": "image/svg+xml",
+      "is_public": true,
+      "description": "Global icon (linux): mail"
+    },
+    {
+      "file_name": "global_icons/web/phone.svg",
+      "original_name": "phone.svg",
+      "mime_type": "image/svg+xml",
+      "is_public": true,
+      "description": "Global icon (web): phone"
+    },
+    {
+      "file_name": "global_icons/android/phone.xml",
+      "original_name": "phone.xml",
+      "mime_type": "application/xml",
+      "is_public": true,
+      "description": "Global icon (android): phone"
+    },
+    {
+      "file_name": "global_icons/ios/phone.svg",
+      "original_name": "phone.svg",
+      "mime_type": "image/svg+xml",
+      "is_public": true,
+      "description": "Global icon (ios): phone"
+    },
+    {
+      "file_name": "global_icons/macos/phone.svg",
+      "original_name": "phone.svg",
+      "mime_type": "image/svg+xml",
+      "is_public": true,
+      "description": "Global icon (macos): phone"
+    },
+    {
+      "file_name": "global_icons/windows/phone.png",
+      "original_name": "phone.png",
+      "mime_type": "image/png",
+      "is_public": true,
+      "description": "Global icon (windows): phone"
+    },
+    {
+      "file_name": "global_icons/linux/phone.svg",
+      "original_name": "phone.svg",
+      "mime_type": "image/svg+xml",
+      "is_public": true,
+      "description": "Global icon (linux): phone"
+    },
+    {
+      "file_name": "global_icons/web/map.svg",
+      "original_name": "map.svg",
+      "mime_type": "image/svg+xml",
+      "is_public": true,
+      "description": "Global icon (web): map"
+    },
+    {
+      "file_name": "global_icons/android/map.xml",
+      "original_name": "map.xml",
+      "mime_type": "application/xml",
+      "is_public": true,
+      "description": "Global icon (android): map"
+    },
+    {
+      "file_name": "global_icons/ios/map.svg",
+      "original_name": "map.svg",
+      "mime_type": "image/svg+xml",
+      "is_public": true,
+      "description": "Global icon (ios): map"
+    },
+    {
+      "file_name": "global_icons/macos/map.svg",
+      "original_name": "map.svg",
+      "mime_type": "image/svg+xml",
+      "is_public": true,
+      "description": "Global icon (macos): map"
+    },
+    {
+      "file_name": "global_icons/windows/map.png",
+      "original_name": "map.png",
+      "mime_type": "image/png",
+      "is_public": true,
+      "description": "Global icon (windows): map"
+    },
+    {
+      "file_name": "global_icons/linux/map.svg",
+      "original_name": "map.svg",
+      "mime_type": "image/svg+xml",
+      "is_public": true,
+      "description": "Global icon (linux): map"
+    },
+    {
+      "file_name": "global_icons/web/location.svg",
+      "original_name": "location.svg",
+      "mime_type": "image/svg+xml",
+      "is_public": true,
+      "description": "Global icon (web): location"
+    },
+    {
+      "file_name": "global_icons/android/location.xml",
+      "original_name": "location.xml",
+      "mime_type": "application/xml",
+      "is_public": true,
+      "description": "Global icon (android): location"
+    },
+    {
+      "file_name": "global_icons/ios/location.svg",
+      "original_name": "location.svg",
+      "mime_type": "image/svg+xml",
+      "is_public": true,
+      "description": "Global icon (ios): location"
+    },
+    {
+      "file_name": "global_icons/macos/location.svg",
+      "original_name": "location.svg",
+      "mime_type": "image/svg+xml",
+      "is_public": true,
+      "description": "Global icon (macos): location"
+    },
+    {
+      "file_name": "global_icons/windows/location.png",
+      "original_name": "location.png",
+      "mime_type": "image/png",
+      "is_public": true,
+      "description": "Global icon (windows): location"
+    },
+    {
+      "file_name": "global_icons/linux/location.svg",
+      "original_name": "location.svg",
+      "mime_type": "image/svg+xml",
+      "is_public": true,
+      "description": "Global icon (linux): location"
+    },
+    {
+      "file_name": "global_icons/web/camera.svg",
+      "original_name": "camera.svg",
+      "mime_type": "image/svg+xml",
+      "is_public": true,
+      "description": "Global icon (web): camera"
+    },
+    {
+      "file_name": "global_icons/android/camera.xml",
+      "original_name": "camera.xml",
+      "mime_type": "application/xml",
+      "is_public": true,
+      "description": "Global icon (android): camera"
+    },
+    {
+      "file_name": "global_icons/ios/camera.svg",
+      "original_name": "camera.svg",
+      "mime_type": "image/svg+xml",
+      "is_public": true,
+      "description": "Global icon (ios): camera"
+    },
+    {
+      "file_name": "global_icons/macos/camera.svg",
+      "original_name": "camera.svg",
+      "mime_type": "image/svg+xml",
+      "is_public": true,
+      "description": "Global icon (macos): camera"
+    },
+    {
+      "file_name": "global_icons/windows/camera.png",
+      "original_name": "camera.png",
+      "mime_type": "image/png",
+      "is_public": true,
+      "description": "Global icon (windows): camera"
+    },
+    {
+      "file_name": "global_icons/linux/camera.svg",
+      "original_name": "camera.svg",
+      "mime_type": "image/svg+xml",
+      "is_public": true,
+      "description": "Global icon (linux): camera"
+    },
+    {
+      "file_name": "global_icons/web/image.svg",
+      "original_name": "image.svg",
+      "mime_type": "image/svg+xml",
+      "is_public": true,
+      "description": "Global icon (web): image"
+    },
+    {
+      "file_name": "global_icons/android/image.xml",
+      "original_name": "image.xml",
+      "mime_type": "application/xml",
+      "is_public": true,
+      "description": "Global icon (android): image"
+    },
+    {
+      "file_name": "global_icons/ios/image.svg",
+      "original_name": "image.svg",
+      "mime_type": "image/svg+xml",
+      "is_public": true,
+      "description": "Global icon (ios): image"
+    },
+    {
+      "file_name": "global_icons/macos/image.svg",
+      "original_name": "image.svg",
+      "mime_type": "image/svg+xml",
+      "is_public": true,
+      "description": "Global icon (macos): image"
+    },
+    {
+      "file_name": "global_icons/windows/image.png",
+      "original_name": "image.png",
+      "mime_type": "image/png",
+      "is_public": true,
+      "description": "Global icon (windows): image"
+    },
+    {
+      "file_name": "global_icons/linux/image.svg",
+      "original_name": "image.svg",
+      "mime_type": "image/svg+xml",
+      "is_public": true,
+      "description": "Global icon (linux): image"
+    },
+    {
+      "file_name": "global_icons/web/file.svg",
+      "original_name": "file.svg",
+      "mime_type": "image/svg+xml",
+      "is_public": true,
+      "description": "Global icon (web): file"
+    },
+    {
+      "file_name": "global_icons/android/file.xml",
+      "original_name": "file.xml",
+      "mime_type": "application/xml",
+      "is_public": true,
+      "description": "Global icon (android): file"
+    },
+    {
+      "file_name": "global_icons/ios/file.svg",
+      "original_name": "file.svg",
+      "mime_type": "image/svg+xml",
+      "is_public": true,
+      "description": "Global icon (ios): file"
+    },
+    {
+      "file_name": "global_icons/macos/file.svg",
+      "original_name": "file.svg",
+      "mime_type": "image/svg+xml",
+      "is_public": true,
+      "description": "Global icon (macos): file"
+    },
+    {
+      "file_name": "global_icons/windows/file.png",
+      "original_name": "file.png",
+      "mime_type": "image/png",
+      "is_public": true,
+      "description": "Global icon (windows): file"
+    },
+    {
+      "file_name": "global_icons/linux/file.svg",
+      "original_name": "file.svg",
+      "mime_type": "image/svg+xml",
+      "is_public": true,
+      "description": "Global icon (linux): file"
+    },
+    {
+      "file_name": "global_icons/web/folder.svg",
+      "original_name": "folder.svg",
+      "mime_type": "image/svg+xml",
+      "is_public": true,
+      "description": "Global icon (web): folder"
+    },
+    {
+      "file_name": "global_icons/android/folder.xml",
+      "original_name": "folder.xml",
+      "mime_type": "application/xml",
+      "is_public": true,
+      "description": "Global icon (android): folder"
+    },
+    {
+      "file_name": "global_icons/ios/folder.svg",
+      "original_name": "folder.svg",
+      "mime_type": "image/svg+xml",
+      "is_public": true,
+      "description": "Global icon (ios): folder"
+    },
+    {
+      "file_name": "global_icons/macos/folder.svg",
+      "original_name": "folder.svg",
+      "mime_type": "image/svg+xml",
+      "is_public": true,
+      "description": "Global icon (macos): folder"
+    },
+    {
+      "file_name": "global_icons/windows/folder.png",
+      "original_name": "folder.png",
+      "mime_type": "image/png",
+      "is_public": true,
+      "description": "Global icon (windows): folder"
+    },
+    {
+      "file_name": "global_icons/linux/folder.svg",
+      "original_name": "folder.svg",
+      "mime_type": "image/svg+xml",
+      "is_public": true,
+      "description": "Global icon (linux): folder"
+    },
+    {
+      "file_name": "global_icons/web/document.svg",
+      "original_name": "document.svg",
+      "mime_type": "image/svg+xml",
+      "is_public": true,
+      "description": "Global icon (web): document"
+    },
+    {
+      "file_name": "global_icons/android/document.xml",
+      "original_name": "document.xml",
+      "mime_type": "application/xml",
+      "is_public": true,
+      "description": "Global icon (android): document"
+    },
+    {
+      "file_name": "global_icons/ios/document.svg",
+      "original_name": "document.svg",
+      "mime_type": "image/svg+xml",
+      "is_public": true,
+      "description": "Global icon (ios): document"
+    },
+    {
+      "file_name": "global_icons/macos/document.svg",
+      "original_name": "document.svg",
+      "mime_type": "image/svg+xml",
+      "is_public": true,
+      "description": "Global icon (macos): document"
+    },
+    {
+      "file_name": "global_icons/windows/document.png",
+      "original_name": "document.png",
+      "mime_type": "image/png",
+      "is_public": true,
+      "description": "Global icon (windows): document"
+    },
+    {
+      "file_name": "global_icons/linux/document.svg",
+      "original_name": "document.svg",
+      "mime_type": "image/svg+xml",
+      "is_public": true,
+      "description": "Global icon (linux): document"
+    },
+    {
+      "file_name": "global_icons/web/print.svg",
+      "original_name": "print.svg",
+      "mime_type": "image/svg+xml",
+      "is_public": true,
+      "description": "Global icon (web): print"
+    },
+    {
+      "file_name": "global_icons/android/print.xml",
+      "original_name": "print.xml",
+      "mime_type": "application/xml",
+      "is_public": true,
+      "description": "Global icon (android): print"
+    },
+    {
+      "file_name": "global_icons/ios/print.svg",
+      "original_name": "print.svg",
+      "mime_type": "image/svg+xml",
+      "is_public": true,
+      "description": "Global icon (ios): print"
+    },
+    {
+      "file_name": "global_icons/macos/print.svg",
+      "original_name": "print.svg",
+      "mime_type": "image/svg+xml",
+      "is_public": true,
+      "description": "Global icon (macos): print"
+    },
+    {
+      "file_name": "global_icons/windows/print.png",
+      "original_name": "print.png",
+      "mime_type": "image/png",
+      "is_public": true,
+      "description": "Global icon (windows): print"
+    },
+    {
+      "file_name": "global_icons/linux/print.svg",
+      "original_name": "print.svg",
+      "mime_type": "image/svg+xml",
+      "is_public": true,
+      "description": "Global icon (linux): print"
+    },
+    {
+      "file_name": "global_icons/web/lock.svg",
+      "original_name": "lock.svg",
+      "mime_type": "image/svg+xml",
+      "is_public": true,
+      "description": "Global icon (web): lock"
+    },
+    {
+      "file_name": "global_icons/android/lock.xml",
+      "original_name": "lock.xml",
+      "mime_type": "application/xml",
+      "is_public": true,
+      "description": "Global icon (android): lock"
+    },
+    {
+      "file_name": "global_icons/ios/lock.svg",
+      "original_name": "lock.svg",
+      "mime_type": "image/svg+xml",
+      "is_public": true,
+      "description": "Global icon (ios): lock"
+    },
+    {
+      "file_name": "global_icons/macos/lock.svg",
+      "original_name": "lock.svg",
+      "mime_type": "image/svg+xml",
+      "is_public": true,
+      "description": "Global icon (macos): lock"
+    },
+    {
+      "file_name": "global_icons/windows/lock.png",
+      "original_name": "lock.png",
+      "mime_type": "image/png",
+      "is_public": true,
+      "description": "Global icon (windows): lock"
+    },
+    {
+      "file_name": "global_icons/linux/lock.svg",
+      "original_name": "lock.svg",
+      "mime_type": "image/svg+xml",
+      "is_public": true,
+      "description": "Global icon (linux): lock"
+    },
+    {
+      "file_name": "global_icons/web/unlock.svg",
+      "original_name": "unlock.svg",
+      "mime_type": "image/svg+xml",
+      "is_public": true,
+      "description": "Global icon (web): unlock"
+    },
+    {
+      "file_name": "global_icons/android/unlock.xml",
+      "original_name": "unlock.xml",
+      "mime_type": "application/xml",
+      "is_public": true,
+      "description": "Global icon (android): unlock"
+    },
+    {
+      "file_name": "global_icons/ios/unlock.svg",
+      "original_name": "unlock.svg",
+      "mime_type": "image/svg+xml",
+      "is_public": true,
+      "description": "Global icon (ios): unlock"
+    },
+    {
+      "file_name": "global_icons/macos/unlock.svg",
+      "original_name": "unlock.svg",
+      "mime_type": "image/svg+xml",
+      "is_public": true,
+      "description": "Global icon (macos): unlock"
+    },
+    {
+      "file_name": "global_icons/windows/unlock.png",
+      "original_name": "unlock.png",
+      "mime_type": "image/png",
+      "is_public": true,
+      "description": "Global icon (windows): unlock"
+    },
+    {
+      "file_name": "global_icons/linux/unlock.svg",
+      "original_name": "unlock.svg",
+      "mime_type": "image/svg+xml",
+      "is_public": true,
+      "description": "Global icon (linux): unlock"
+    },
+    {
+      "file_name": "global_icons/web/key.svg",
+      "original_name": "key.svg",
+      "mime_type": "image/svg+xml",
+      "is_public": true,
+      "description": "Global icon (web): key"
+    },
+    {
+      "file_name": "global_icons/android/key.xml",
+      "original_name": "key.xml",
+      "mime_type": "application/xml",
+      "is_public": true,
+      "description": "Global icon (android): key"
+    },
+    {
+      "file_name": "global_icons/ios/key.svg",
+      "original_name": "key.svg",
+      "mime_type": "image/svg+xml",
+      "is_public": true,
+      "description": "Global icon (ios): key"
+    },
+    {
+      "file_name": "global_icons/macos/key.svg",
+      "original_name": "key.svg",
+      "mime_type": "image/svg+xml",
+      "is_public": true,
+      "description": "Global icon (macos): key"
+    },
+    {
+      "file_name": "global_icons/windows/key.png",
+      "original_name": "key.png",
+      "mime_type": "image/png",
+      "is_public": true,
+      "description": "Global icon (windows): key"
+    },
+    {
+      "file_name": "global_icons/linux/key.svg",
+      "original_name": "key.svg",
+      "mime_type": "image/svg+xml",
+      "is_public": true,
+      "description": "Global icon (linux): key"
+    },
+    {
+      "file_name": "global_icons/web/star.svg",
+      "original_name": "star.svg",
+      "mime_type": "image/svg+xml",
+      "is_public": true,
+      "description": "Global icon (web): star"
+    },
+    {
+      "file_name": "global_icons/android/star.xml",
+      "original_name": "star.xml",
+      "mime_type": "application/xml",
+      "is_public": true,
+      "description": "Global icon (android): star"
+    },
+    {
+      "file_name": "global_icons/ios/star.svg",
+      "original_name": "star.svg",
+      "mime_type": "image/svg+xml",
+      "is_public": true,
+      "description": "Global icon (ios): star"
+    },
+    {
+      "file_name": "global_icons/macos/star.svg",
+      "original_name": "star.svg",
+      "mime_type": "image/svg+xml",
+      "is_public": true,
+      "description": "Global icon (macos): star"
+    },
+    {
+      "file_name": "global_icons/windows/star.png",
+      "original_name": "star.png",
+      "mime_type": "image/png",
+      "is_public": true,
+      "description": "Global icon (windows): star"
+    },
+    {
+      "file_name": "global_icons/linux/star.svg",
+      "original_name": "star.svg",
+      "mime_type": "image/svg+xml",
+      "is_public": true,
+      "description": "Global icon (linux): star"
+    },
+    {
+      "file_name": "global_icons/web/heart.svg",
+      "original_name": "heart.svg",
+      "mime_type": "image/svg+xml",
+      "is_public": true,
+      "description": "Global icon (web): heart"
+    },
+    {
+      "file_name": "global_icons/android/heart.xml",
+      "original_name": "heart.xml",
+      "mime_type": "application/xml",
+      "is_public": true,
+      "description": "Global icon (android): heart"
+    },
+    {
+      "file_name": "global_icons/ios/heart.svg",
+      "original_name": "heart.svg",
+      "mime_type": "image/svg+xml",
+      "is_public": true,
+      "description": "Global icon (ios): heart"
+    },
+    {
+      "file_name": "global_icons/macos/heart.svg",
+      "original_name": "heart.svg",
+      "mime_type": "image/svg+xml",
+      "is_public": true,
+      "description": "Global icon (macos): heart"
+    },
+    {
+      "file_name": "global_icons/windows/heart.png",
+      "original_name": "heart.png",
+      "mime_type": "image/png",
+      "is_public": true,
+      "description": "Global icon (windows): heart"
+    },
+    {
+      "file_name": "global_icons/linux/heart.svg",
+      "original_name": "heart.svg",
+      "mime_type": "image/svg+xml",
+      "is_public": true,
+      "description": "Global icon (linux): heart"
+    },
+    {
+      "file_name": "global_icons/web/bell.svg",
+      "original_name": "bell.svg",
+      "mime_type": "image/svg+xml",
+      "is_public": true,
+      "description": "Global icon (web): bell"
+    },
+    {
+      "file_name": "global_icons/android/bell.xml",
+      "original_name": "bell.xml",
+      "mime_type": "application/xml",
+      "is_public": true,
+      "description": "Global icon (android): bell"
+    },
+    {
+      "file_name": "global_icons/ios/bell.svg",
+      "original_name": "bell.svg",
+      "mime_type": "image/svg+xml",
+      "is_public": true,
+      "description": "Global icon (ios): bell"
+    },
+    {
+      "file_name": "global_icons/macos/bell.svg",
+      "original_name": "bell.svg",
+      "mime_type": "image/svg+xml",
+      "is_public": true,
+      "description": "Global icon (macos): bell"
+    },
+    {
+      "file_name": "global_icons/windows/bell.png",
+      "original_name": "bell.png",
+      "mime_type": "image/png",
+      "is_public": true,
+      "description": "Global icon (windows): bell"
+    },
+    {
+      "file_name": "global_icons/linux/bell.svg",
+      "original_name": "bell.svg",
+      "mime_type": "image/svg+xml",
+      "is_public": true,
+      "description": "Global icon (linux): bell"
+    },
+    {
+      "file_name": "global_icons/web/flag.svg",
+      "original_name": "flag.svg",
+      "mime_type": "image/svg+xml",
+      "is_public": true,
+      "description": "Global icon (web): flag"
+    },
+    {
+      "file_name": "global_icons/android/flag.xml",
+      "original_name": "flag.xml",
+      "mime_type": "application/xml",
+      "is_public": true,
+      "description": "Global icon (android): flag"
+    },
+    {
+      "file_name": "global_icons/ios/flag.svg",
+      "original_name": "flag.svg",
+      "mime_type": "image/svg+xml",
+      "is_public": true,
+      "description": "Global icon (ios): flag"
+    },
+    {
+      "file_name": "global_icons/macos/flag.svg",
+      "original_name": "flag.svg",
+      "mime_type": "image/svg+xml",
+      "is_public": true,
+      "description": "Global icon (macos): flag"
+    },
+    {
+      "file_name": "global_icons/windows/flag.png",
+      "original_name": "flag.png",
+      "mime_type": "image/png",
+      "is_public": true,
+      "description": "Global icon (windows): flag"
+    },
+    {
+      "file_name": "global_icons/linux/flag.svg",
+      "original_name": "flag.svg",
+      "mime_type": "image/svg+xml",
+      "is_public": true,
+      "description": "Global icon (linux): flag"
+    },
+    {
+      "file_name": "global_icons/web/bookmark.svg",
+      "original_name": "bookmark.svg",
+      "mime_type": "image/svg+xml",
+      "is_public": true,
+      "description": "Global icon (web): bookmark"
+    },
+    {
+      "file_name": "global_icons/android/bookmark.xml",
+      "original_name": "bookmark.xml",
+      "mime_type": "application/xml",
+      "is_public": true,
+      "description": "Global icon (android): bookmark"
+    },
+    {
+      "file_name": "global_icons/ios/bookmark.svg",
+      "original_name": "bookmark.svg",
+      "mime_type": "image/svg+xml",
+      "is_public": true,
+      "description": "Global icon (ios): bookmark"
+    },
+    {
+      "file_name": "global_icons/macos/bookmark.svg",
+      "original_name": "bookmark.svg",
+      "mime_type": "image/svg+xml",
+      "is_public": true,
+      "description": "Global icon (macos): bookmark"
+    },
+    {
+      "file_name": "global_icons/windows/bookmark.png",
+      "original_name": "bookmark.png",
+      "mime_type": "image/png",
+      "is_public": true,
+      "description": "Global icon (windows): bookmark"
+    },
+    {
+      "file_name": "global_icons/linux/bookmark.svg",
+      "original_name": "bookmark.svg",
+      "mime_type": "image/svg+xml",
+      "is_public": true,
+      "description": "Global icon (linux): bookmark"
+    },
+    {
+      "file_name": "global_icons/web/tag.svg",
+      "original_name": "tag.svg",
+      "mime_type": "image/svg+xml",
+      "is_public": true,
+      "description": "Global icon (web): tag"
+    },
+    {
+      "file_name": "global_icons/android/tag.xml",
+      "original_name": "tag.xml",
+      "mime_type": "application/xml",
+      "is_public": true,
+      "description": "Global icon (android): tag"
+    },
+    {
+      "file_name": "global_icons/ios/tag.svg",
+      "original_name": "tag.svg",
+      "mime_type": "image/svg+xml",
+      "is_public": true,
+      "description": "Global icon (ios): tag"
+    },
+    {
+      "file_name": "global_icons/macos/tag.svg",
+      "original_name": "tag.svg",
+      "mime_type": "image/svg+xml",
+      "is_public": true,
+      "description": "Global icon (macos): tag"
+    },
+    {
+      "file_name": "global_icons/windows/tag.png",
+      "original_name": "tag.png",
+      "mime_type": "image/png",
+      "is_public": true,
+      "description": "Global icon (windows): tag"
+    },
+    {
+      "file_name": "global_icons/linux/tag.svg",
+      "original_name": "tag.svg",
+      "mime_type": "image/svg+xml",
+      "is_public": true,
+      "description": "Global icon (linux): tag"
+    },
+    {
+      "file_name": "global_icons/web/cart.svg",
+      "original_name": "cart.svg",
+      "mime_type": "image/svg+xml",
+      "is_public": true,
+      "description": "Global icon (web): cart"
+    },
+    {
+      "file_name": "global_icons/android/cart.xml",
+      "original_name": "cart.xml",
+      "mime_type": "application/xml",
+      "is_public": true,
+      "description": "Global icon (android): cart"
+    },
+    {
+      "file_name": "global_icons/ios/cart.svg",
+      "original_name": "cart.svg",
+      "mime_type": "image/svg+xml",
+      "is_public": true,
+      "description": "Global icon (ios): cart"
+    },
+    {
+      "file_name": "global_icons/macos/cart.svg",
+      "original_name": "cart.svg",
+      "mime_type": "image/svg+xml",
+      "is_public": true,
+      "description": "Global icon (macos): cart"
+    },
+    {
+      "file_name": "global_icons/windows/cart.png",
+      "original_name": "cart.png",
+      "mime_type": "image/png",
+      "is_public": true,
+      "description": "Global icon (windows): cart"
+    },
+    {
+      "file_name": "global_icons/linux/cart.svg",
+      "original_name": "cart.svg",
+      "mime_type": "image/svg+xml",
+      "is_public": true,
+      "description": "Global icon (linux): cart"
+    },
+    {
+      "file_name": "global_icons/web/shop.svg",
+      "original_name": "shop.svg",
+      "mime_type": "image/svg+xml",
+      "is_public": true,
+      "description": "Global icon (web): shop"
+    },
+    {
+      "file_name": "global_icons/android/shop.xml",
+      "original_name": "shop.xml",
+      "mime_type": "application/xml",
+      "is_public": true,
+      "description": "Global icon (android): shop"
+    },
+    {
+      "file_name": "global_icons/ios/shop.svg",
+      "original_name": "shop.svg",
+      "mime_type": "image/svg+xml",
+      "is_public": true,
+      "description": "Global icon (ios): shop"
+    },
+    {
+      "file_name": "global_icons/macos/shop.svg",
+      "original_name": "shop.svg",
+      "mime_type": "image/svg+xml",
+      "is_public": true,
+      "description": "Global icon (macos): shop"
+    },
+    {
+      "file_name": "global_icons/windows/shop.png",
+      "original_name": "shop.png",
+      "mime_type": "image/png",
+      "is_public": true,
+      "description": "Global icon (windows): shop"
+    },
+    {
+      "file_name": "global_icons/linux/shop.svg",
+      "original_name": "shop.svg",
+      "mime_type": "image/svg+xml",
+      "is_public": true,
+      "description": "Global icon (linux): shop"
+    },
+    {
+      "file_name": "global_icons/web/credit_card.svg",
+      "original_name": "credit_card.svg",
+      "mime_type": "image/svg+xml",
+      "is_public": true,
+      "description": "Global icon (web): credit_card"
+    },
+    {
+      "file_name": "global_icons/android/credit_card.xml",
+      "original_name": "credit_card.xml",
+      "mime_type": "application/xml",
+      "is_public": true,
+      "description": "Global icon (android): credit_card"
+    },
+    {
+      "file_name": "global_icons/ios/credit_card.svg",
+      "original_name": "credit_card.svg",
+      "mime_type": "image/svg+xml",
+      "is_public": true,
+      "description": "Global icon (ios): credit_card"
+    },
+    {
+      "file_name": "global_icons/macos/credit_card.svg",
+      "original_name": "credit_card.svg",
+      "mime_type": "image/svg+xml",
+      "is_public": true,
+      "description": "Global icon (macos): credit_card"
+    },
+    {
+      "file_name": "global_icons/windows/credit_card.png",
+      "original_name": "credit_card.png",
+      "mime_type": "image/png",
+      "is_public": true,
+      "description": "Global icon (windows): credit_card"
+    },
+    {
+      "file_name": "global_icons/linux/credit_card.svg",
+      "original_name": "credit_card.svg",
+      "mime_type": "image/svg+xml",
+      "is_public": true,
+      "description": "Global icon (linux): credit_card"
+    },
+    {
+      "file_name": "global_icons/web/dollar.svg",
+      "original_name": "dollar.svg",
+      "mime_type": "image/svg+xml",
+      "is_public": true,
+      "description": "Global icon (web): dollar"
+    },
+    {
+      "file_name": "global_icons/android/dollar.xml",
+      "original_name": "dollar.xml",
+      "mime_type": "application/xml",
+      "is_public": true,
+      "description": "Global icon (android): dollar"
+    },
+    {
+      "file_name": "global_icons/ios/dollar.svg",
+      "original_name": "dollar.svg",
+      "mime_type": "image/svg+xml",
+      "is_public": true,
+      "description": "Global icon (ios): dollar"
+    },
+    {
+      "file_name": "global_icons/macos/dollar.svg",
+      "original_name": "dollar.svg",
+      "mime_type": "image/svg+xml",
+      "is_public": true,
+      "description": "Global icon (macos): dollar"
+    },
+    {
+      "file_name": "global_icons/windows/dollar.png",
+      "original_name": "dollar.png",
+      "mime_type": "image/png",
+      "is_public": true,
+      "description": "Global icon (windows): dollar"
+    },
+    {
+      "file_name": "global_icons/linux/dollar.svg",
+      "original_name": "dollar.svg",
+      "mime_type": "image/svg+xml",
+      "is_public": true,
+      "description": "Global icon (linux): dollar"
+    },
+    {
+      "file_name": "global_icons/web/chart.svg",
+      "original_name": "chart.svg",
+      "mime_type": "image/svg+xml",
+      "is_public": true,
+      "description": "Global icon (web): chart"
+    },
+    {
+      "file_name": "global_icons/android/chart.xml",
+      "original_name": "chart.xml",
+      "mime_type": "application/xml",
+      "is_public": true,
+      "description": "Global icon (android): chart"
+    },
+    {
+      "file_name": "global_icons/ios/chart.svg",
+      "original_name": "chart.svg",
+      "mime_type": "image/svg+xml",
+      "is_public": true,
+      "description": "Global icon (ios): chart"
+    },
+    {
+      "file_name": "global_icons/macos/chart.svg",
+      "original_name": "chart.svg",
+      "mime_type": "image/svg+xml",
+      "is_public": true,
+      "description": "Global icon (macos): chart"
+    },
+    {
+      "file_name": "global_icons/windows/chart.png",
+      "original_name": "chart.png",
+      "mime_type": "image/png",
+      "is_public": true,
+      "description": "Global icon (windows): chart"
+    },
+    {
+      "file_name": "global_icons/linux/chart.svg",
+      "original_name": "chart.svg",
+      "mime_type": "image/svg+xml",
+      "is_public": true,
+      "description": "Global icon (linux): chart"
+    },
+    {
+      "file_name": "global_icons/web/graph.svg",
+      "original_name": "graph.svg",
+      "mime_type": "image/svg+xml",
+      "is_public": true,
+      "description": "Global icon (web): graph"
+    },
+    {
+      "file_name": "global_icons/android/graph.xml",
+      "original_name": "graph.xml",
+      "mime_type": "application/xml",
+      "is_public": true,
+      "description": "Global icon (android): graph"
+    },
+    {
+      "file_name": "global_icons/ios/graph.svg",
+      "original_name": "graph.svg",
+      "mime_type": "image/svg+xml",
+      "is_public": true,
+      "description": "Global icon (ios): graph"
+    },
+    {
+      "file_name": "global_icons/macos/graph.svg",
+      "original_name": "graph.svg",
+      "mime_type": "image/svg+xml",
+      "is_public": true,
+      "description": "Global icon (macos): graph"
+    },
+    {
+      "file_name": "global_icons/windows/graph.png",
+      "original_name": "graph.png",
+      "mime_type": "image/png",
+      "is_public": true,
+      "description": "Global icon (windows): graph"
+    },
+    {
+      "file_name": "global_icons/linux/graph.svg",
+      "original_name": "graph.svg",
+      "mime_type": "image/svg+xml",
+      "is_public": true,
+      "description": "Global icon (linux): graph"
+    },
+    {
+      "file_name": "global_icons/web/table.svg",
+      "original_name": "table.svg",
+      "mime_type": "image/svg+xml",
+      "is_public": true,
+      "description": "Global icon (web): table"
+    },
+    {
+      "file_name": "global_icons/android/table.xml",
+      "original_name": "table.xml",
+      "mime_type": "application/xml",
+      "is_public": true,
+      "description": "Global icon (android): table"
+    },
+    {
+      "file_name": "global_icons/ios/table.svg",
+      "original_name": "table.svg",
+      "mime_type": "image/svg+xml",
+      "is_public": true,
+      "description": "Global icon (ios): table"
+    },
+    {
+      "file_name": "global_icons/macos/table.svg",
+      "original_name": "table.svg",
+      "mime_type": "image/svg+xml",
+      "is_public": true,
+      "description": "Global icon (macos): table"
+    },
+    {
+      "file_name": "global_icons/windows/table.png",
+      "original_name": "table.png",
+      "mime_type": "image/png",
+      "is_public": true,
+      "description": "Global icon (windows): table"
+    },
+    {
+      "file_name": "global_icons/linux/table.svg",
+      "original_name": "table.svg",
+      "mime_type": "image/svg+xml",
+      "is_public": true,
+      "description": "Global icon (linux): table"
+    },
+    {
+      "file_name": "global_icons/web/list.svg",
+      "original_name": "list.svg",
+      "mime_type": "image/svg+xml",
+      "is_public": true,
+      "description": "Global icon (web): list"
+    },
+    {
+      "file_name": "global_icons/android/list.xml",
+      "original_name": "list.xml",
+      "mime_type": "application/xml",
+      "is_public": true,
+      "description": "Global icon (android): list"
+    },
+    {
+      "file_name": "global_icons/ios/list.svg",
+      "original_name": "list.svg",
+      "mime_type": "image/svg+xml",
+      "is_public": true,
+      "description": "Global icon (ios): list"
+    },
+    {
+      "file_name": "global_icons/macos/list.svg",
+      "original_name": "list.svg",
+      "mime_type": "image/svg+xml",
+      "is_public": true,
+      "description": "Global icon (macos): list"
+    },
+    {
+      "file_name": "global_icons/windows/list.png",
+      "original_name": "list.png",
+      "mime_type": "image/png",
+      "is_public": true,
+      "description": "Global icon (windows): list"
+    },
+    {
+      "file_name": "global_icons/linux/list.svg",
+      "original_name": "list.svg",
+      "mime_type": "image/svg+xml",
+      "is_public": true,
+      "description": "Global icon (linux): list"
+    },
+    {
+      "file_name": "global_icons/web/grid.svg",
+      "original_name": "grid.svg",
+      "mime_type": "image/svg+xml",
+      "is_public": true,
+      "description": "Global icon (web): grid"
+    },
+    {
+      "file_name": "global_icons/android/grid.xml",
+      "original_name": "grid.xml",
+      "mime_type": "application/xml",
+      "is_public": true,
+      "description": "Global icon (android): grid"
+    },
+    {
+      "file_name": "global_icons/ios/grid.svg",
+      "original_name": "grid.svg",
+      "mime_type": "image/svg+xml",
+      "is_public": true,
+      "description": "Global icon (ios): grid"
+    },
+    {
+      "file_name": "global_icons/macos/grid.svg",
+      "original_name": "grid.svg",
+      "mime_type": "image/svg+xml",
+      "is_public": true,
+      "description": "Global icon (macos): grid"
+    },
+    {
+      "file_name": "global_icons/windows/grid.png",
+      "original_name": "grid.png",
+      "mime_type": "image/png",
+      "is_public": true,
+      "description": "Global icon (windows): grid"
+    },
+    {
+      "file_name": "global_icons/linux/grid.svg",
+      "original_name": "grid.svg",
+      "mime_type": "image/svg+xml",
+      "is_public": true,
+      "description": "Global icon (linux): grid"
+    },
+    {
+      "file_name": "global_icons/web/layout.svg",
+      "original_name": "layout.svg",
+      "mime_type": "image/svg+xml",
+      "is_public": true,
+      "description": "Global icon (web): layout"
+    },
+    {
+      "file_name": "global_icons/android/layout.xml",
+      "original_name": "layout.xml",
+      "mime_type": "application/xml",
+      "is_public": true,
+      "description": "Global icon (android): layout"
+    },
+    {
+      "file_name": "global_icons/ios/layout.svg",
+      "original_name": "layout.svg",
+      "mime_type": "image/svg+xml",
+      "is_public": true,
+      "description": "Global icon (ios): layout"
+    },
+    {
+      "file_name": "global_icons/macos/layout.svg",
+      "original_name": "layout.svg",
+      "mime_type": "image/svg+xml",
+      "is_public": true,
+      "description": "Global icon (macos): layout"
+    },
+    {
+      "file_name": "global_icons/windows/layout.png",
+      "original_name": "layout.png",
+      "mime_type": "image/png",
+      "is_public": true,
+      "description": "Global icon (windows): layout"
+    },
+    {
+      "file_name": "global_icons/linux/layout.svg",
+      "original_name": "layout.svg",
+      "mime_type": "image/svg+xml",
+      "is_public": true,
+      "description": "Global icon (linux): layout"
+    },
+    {
+      "file_name": "global_icons/web/mobile.svg",
+      "original_name": "mobile.svg",
+      "mime_type": "image/svg+xml",
+      "is_public": true,
+      "description": "Global icon (web): mobile"
+    },
+    {
+      "file_name": "global_icons/android/mobile.xml",
+      "original_name": "mobile.xml",
+      "mime_type": "application/xml",
+      "is_public": true,
+      "description": "Global icon (android): mobile"
+    },
+    {
+      "file_name": "global_icons/ios/mobile.svg",
+      "original_name": "mobile.svg",
+      "mime_type": "image/svg+xml",
+      "is_public": true,
+      "description": "Global icon (ios): mobile"
+    },
+    {
+      "file_name": "global_icons/macos/mobile.svg",
+      "original_name": "mobile.svg",
+      "mime_type": "image/svg+xml",
+      "is_public": true,
+      "description": "Global icon (macos): mobile"
+    },
+    {
+      "file_name": "global_icons/windows/mobile.png",
+      "original_name": "mobile.png",
+      "mime_type": "image/png",
+      "is_public": true,
+      "description": "Global icon (windows): mobile"
+    },
+    {
+      "file_name": "global_icons/linux/mobile.svg",
+      "original_name": "mobile.svg",
+      "mime_type": "image/svg+xml",
+      "is_public": true,
+      "description": "Global icon (linux): mobile"
+    },
+    {
+      "file_name": "global_icons/web/tablet.svg",
+      "original_name": "tablet.svg",
+      "mime_type": "image/svg+xml",
+      "is_public": true,
+      "description": "Global icon (web): tablet"
+    },
+    {
+      "file_name": "global_icons/android/tablet.xml",
+      "original_name": "tablet.xml",
+      "mime_type": "application/xml",
+      "is_public": true,
+      "description": "Global icon (android): tablet"
+    },
+    {
+      "file_name": "global_icons/ios/tablet.svg",
+      "original_name": "tablet.svg",
+      "mime_type": "image/svg+xml",
+      "is_public": true,
+      "description": "Global icon (ios): tablet"
+    },
+    {
+      "file_name": "global_icons/macos/tablet.svg",
+      "original_name": "tablet.svg",
+      "mime_type": "image/svg+xml",
+      "is_public": true,
+      "description": "Global icon (macos): tablet"
+    },
+    {
+      "file_name": "global_icons/windows/tablet.png",
+      "original_name": "tablet.png",
+      "mime_type": "image/png",
+      "is_public": true,
+      "description": "Global icon (windows): tablet"
+    },
+    {
+      "file_name": "global_icons/linux/tablet.svg",
+      "original_name": "tablet.svg",
+      "mime_type": "image/svg+xml",
+      "is_public": true,
+      "description": "Global icon (linux): tablet"
+    },
+    {
+      "file_name": "global_icons/web/desktop.svg",
+      "original_name": "desktop.svg",
+      "mime_type": "image/svg+xml",
+      "is_public": true,
+      "description": "Global icon (web): desktop"
+    },
+    {
+      "file_name": "global_icons/android/desktop.xml",
+      "original_name": "desktop.xml",
+      "mime_type": "application/xml",
+      "is_public": true,
+      "description": "Global icon (android): desktop"
+    },
+    {
+      "file_name": "global_icons/ios/desktop.svg",
+      "original_name": "desktop.svg",
+      "mime_type": "image/svg+xml",
+      "is_public": true,
+      "description": "Global icon (ios): desktop"
+    },
+    {
+      "file_name": "global_icons/macos/desktop.svg",
+      "original_name": "desktop.svg",
+      "mime_type": "image/svg+xml",
+      "is_public": true,
+      "description": "Global icon (macos): desktop"
+    },
+    {
+      "file_name": "global_icons/windows/desktop.png",
+      "original_name": "desktop.png",
+      "mime_type": "image/png",
+      "is_public": true,
+      "description": "Global icon (windows): desktop"
+    },
+    {
+      "file_name": "global_icons/linux/desktop.svg",
+      "original_name": "desktop.svg",
+      "mime_type": "image/svg+xml",
+      "is_public": true,
+      "description": "Global icon (linux): desktop"
+    },
+    {
+      "file_name": "global_icons/web/wifi.svg",
+      "original_name": "wifi.svg",
+      "mime_type": "image/svg+xml",
+      "is_public": true,
+      "description": "Global icon (web): wifi"
+    },
+    {
+      "file_name": "global_icons/android/wifi.xml",
+      "original_name": "wifi.xml",
+      "mime_type": "application/xml",
+      "is_public": true,
+      "description": "Global icon (android): wifi"
+    },
+    {
+      "file_name": "global_icons/ios/wifi.svg",
+      "original_name": "wifi.svg",
+      "mime_type": "image/svg+xml",
+      "is_public": true,
+      "description": "Global icon (ios): wifi"
+    },
+    {
+      "file_name": "global_icons/macos/wifi.svg",
+      "original_name": "wifi.svg",
+      "mime_type": "image/svg+xml",
+      "is_public": true,
+      "description": "Global icon (macos): wifi"
+    },
+    {
+      "file_name": "global_icons/windows/wifi.png",
+      "original_name": "wifi.png",
+      "mime_type": "image/png",
+      "is_public": true,
+      "description": "Global icon (windows): wifi"
+    },
+    {
+      "file_name": "global_icons/linux/wifi.svg",
+      "original_name": "wifi.svg",
+      "mime_type": "image/svg+xml",
+      "is_public": true,
+      "description": "Global icon (linux): wifi"
+    },
+    {
+      "file_name": "global_icons/web/bluetooth.svg",
+      "original_name": "bluetooth.svg",
+      "mime_type": "image/svg+xml",
+      "is_public": true,
+      "description": "Global icon (web): bluetooth"
+    },
+    {
+      "file_name": "global_icons/android/bluetooth.xml",
+      "original_name": "bluetooth.xml",
+      "mime_type": "application/xml",
+      "is_public": true,
+      "description": "Global icon (android): bluetooth"
+    },
+    {
+      "file_name": "global_icons/ios/bluetooth.svg",
+      "original_name": "bluetooth.svg",
+      "mime_type": "image/svg+xml",
+      "is_public": true,
+      "description": "Global icon (ios): bluetooth"
+    },
+    {
+      "file_name": "global_icons/macos/bluetooth.svg",
+      "original_name": "bluetooth.svg",
+      "mime_type": "image/svg+xml",
+      "is_public": true,
+      "description": "Global icon (macos): bluetooth"
+    },
+    {
+      "file_name": "global_icons/windows/bluetooth.png",
+      "original_name": "bluetooth.png",
+      "mime_type": "image/png",
+      "is_public": true,
+      "description": "Global icon (windows): bluetooth"
+    },
+    {
+      "file_name": "global_icons/linux/bluetooth.svg",
+      "original_name": "bluetooth.svg",
+      "mime_type": "image/svg+xml",
+      "is_public": true,
+      "description": "Global icon (linux): bluetooth"
+    },
+    {
+      "file_name": "global_icons/web/battery.svg",
+      "original_name": "battery.svg",
+      "mime_type": "image/svg+xml",
+      "is_public": true,
+      "description": "Global icon (web): battery"
+    },
+    {
+      "file_name": "global_icons/android/battery.xml",
+      "original_name": "battery.xml",
+      "mime_type": "application/xml",
+      "is_public": true,
+      "description": "Global icon (android): battery"
+    },
+    {
+      "file_name": "global_icons/ios/battery.svg",
+      "original_name": "battery.svg",
+      "mime_type": "image/svg+xml",
+      "is_public": true,
+      "description": "Global icon (ios): battery"
+    },
+    {
+      "file_name": "global_icons/macos/battery.svg",
+      "original_name": "battery.svg",
+      "mime_type": "image/svg+xml",
+      "is_public": true,
+      "description": "Global icon (macos): battery"
+    },
+    {
+      "file_name": "global_icons/windows/battery.png",
+      "original_name": "battery.png",
+      "mime_type": "image/png",
+      "is_public": true,
+      "description": "Global icon (windows): battery"
+    },
+    {
+      "file_name": "global_icons/linux/battery.svg",
+      "original_name": "battery.svg",
+      "mime_type": "image/svg+xml",
+      "is_public": true,
+      "description": "Global icon (linux): battery"
+    },
+    {
+      "file_name": "global_icons/web/volume.svg",
+      "original_name": "volume.svg",
+      "mime_type": "image/svg+xml",
+      "is_public": true,
+      "description": "Global icon (web): volume"
+    },
+    {
+      "file_name": "global_icons/android/volume.xml",
+      "original_name": "volume.xml",
+      "mime_type": "application/xml",
+      "is_public": true,
+      "description": "Global icon (android): volume"
+    },
+    {
+      "file_name": "global_icons/ios/volume.svg",
+      "original_name": "volume.svg",
+      "mime_type": "image/svg+xml",
+      "is_public": true,
+      "description": "Global icon (ios): volume"
+    },
+    {
+      "file_name": "global_icons/macos/volume.svg",
+      "original_name": "volume.svg",
+      "mime_type": "image/svg+xml",
+      "is_public": true,
+      "description": "Global icon (macos): volume"
+    },
+    {
+      "file_name": "global_icons/windows/volume.png",
+      "original_name": "volume.png",
+      "mime_type": "image/png",
+      "is_public": true,
+      "description": "Global icon (windows): volume"
+    },
+    {
+      "file_name": "global_icons/linux/volume.svg",
+      "original_name": "volume.svg",
+      "mime_type": "image/svg+xml",
+      "is_public": true,
+      "description": "Global icon (linux): volume"
+    },
+    {
+      "file_name": "global_icons/web/play.svg",
+      "original_name": "play.svg",
+      "mime_type": "image/svg+xml",
+      "is_public": true,
+      "description": "Global icon (web): play"
+    },
+    {
+      "file_name": "global_icons/android/play.xml",
+      "original_name": "play.xml",
+      "mime_type": "application/xml",
+      "is_public": true,
+      "description": "Global icon (android): play"
+    },
+    {
+      "file_name": "global_icons/ios/play.svg",
+      "original_name": "play.svg",
+      "mime_type": "image/svg+xml",
+      "is_public": true,
+      "description": "Global icon (ios): play"
+    },
+    {
+      "file_name": "global_icons/macos/play.svg",
+      "original_name": "play.svg",
+      "mime_type": "image/svg+xml",
+      "is_public": true,
+      "description": "Global icon (macos): play"
+    },
+    {
+      "file_name": "global_icons/windows/play.png",
+      "original_name": "play.png",
+      "mime_type": "image/png",
+      "is_public": true,
+      "description": "Global icon (windows): play"
+    },
+    {
+      "file_name": "global_icons/linux/play.svg",
+      "original_name": "play.svg",
+      "mime_type": "image/svg+xml",
+      "is_public": true,
+      "description": "Global icon (linux): play"
+    },
+    {
+      "file_name": "global_icons/web/pause.svg",
+      "original_name": "pause.svg",
+      "mime_type": "image/svg+xml",
+      "is_public": true,
+      "description": "Global icon (web): pause"
+    },
+    {
+      "file_name": "global_icons/android/pause.xml",
+      "original_name": "pause.xml",
+      "mime_type": "application/xml",
+      "is_public": true,
+      "description": "Global icon (android): pause"
+    },
+    {
+      "file_name": "global_icons/ios/pause.svg",
+      "original_name": "pause.svg",
+      "mime_type": "image/svg+xml",
+      "is_public": true,
+      "description": "Global icon (ios): pause"
+    },
+    {
+      "file_name": "global_icons/macos/pause.svg",
+      "original_name": "pause.svg",
+      "mime_type": "image/svg+xml",
+      "is_public": true,
+      "description": "Global icon (macos): pause"
+    },
+    {
+      "file_name": "global_icons/windows/pause.png",
+      "original_name": "pause.png",
+      "mime_type": "image/png",
+      "is_public": true,
+      "description": "Global icon (windows): pause"
+    },
+    {
+      "file_name": "global_icons/linux/pause.svg",
+      "original_name": "pause.svg",
+      "mime_type": "image/svg+xml",
+      "is_public": true,
+      "description": "Global icon (linux): pause"
+    },
+    {
+      "file_name": "global_icons/web/stop.svg",
+      "original_name": "stop.svg",
+      "mime_type": "image/svg+xml",
+      "is_public": true,
+      "description": "Global icon (web): stop"
+    },
+    {
+      "file_name": "global_icons/android/stop.xml",
+      "original_name": "stop.xml",
+      "mime_type": "application/xml",
+      "is_public": true,
+      "description": "Global icon (android): stop"
+    },
+    {
+      "file_name": "global_icons/ios/stop.svg",
+      "original_name": "stop.svg",
+      "mime_type": "image/svg+xml",
+      "is_public": true,
+      "description": "Global icon (ios): stop"
+    },
+    {
+      "file_name": "global_icons/macos/stop.svg",
+      "original_name": "stop.svg",
+      "mime_type": "image/svg+xml",
+      "is_public": true,
+      "description": "Global icon (macos): stop"
+    },
+    {
+      "file_name": "global_icons/windows/stop.png",
+      "original_name": "stop.png",
+      "mime_type": "image/png",
+      "is_public": true,
+      "description": "Global icon (windows): stop"
+    },
+    {
+      "file_name": "global_icons/linux/stop.svg",
+      "original_name": "stop.svg",
+      "mime_type": "image/svg+xml",
+      "is_public": true,
+      "description": "Global icon (linux): stop"
+    },
+    {
+      "file_name": "global_icons/web/next_track.svg",
+      "original_name": "next_track.svg",
+      "mime_type": "image/svg+xml",
+      "is_public": true,
+      "description": "Global icon (web): next_track"
+    },
+    {
+      "file_name": "global_icons/android/next_track.xml",
+      "original_name": "next_track.xml",
+      "mime_type": "application/xml",
+      "is_public": true,
+      "description": "Global icon (android): next_track"
+    },
+    {
+      "file_name": "global_icons/ios/next_track.svg",
+      "original_name": "next_track.svg",
+      "mime_type": "image/svg+xml",
+      "is_public": true,
+      "description": "Global icon (ios): next_track"
+    },
+    {
+      "file_name": "global_icons/macos/next_track.svg",
+      "original_name": "next_track.svg",
+      "mime_type": "image/svg+xml",
+      "is_public": true,
+      "description": "Global icon (macos): next_track"
+    },
+    {
+      "file_name": "global_icons/windows/next_track.png",
+      "original_name": "next_track.png",
+      "mime_type": "image/png",
+      "is_public": true,
+      "description": "Global icon (windows): next_track"
+    },
+    {
+      "file_name": "global_icons/linux/next_track.svg",
+      "original_name": "next_track.svg",
+      "mime_type": "image/svg+xml",
+      "is_public": true,
+      "description": "Global icon (linux): next_track"
+    },
+    {
+      "file_name": "global_icons/web/previous_track.svg",
+      "original_name": "previous_track.svg",
+      "mime_type": "image/svg+xml",
+      "is_public": true,
+      "description": "Global icon (web): previous_track"
+    },
+    {
+      "file_name": "global_icons/android/previous_track.xml",
+      "original_name": "previous_track.xml",
+      "mime_type": "application/xml",
+      "is_public": true,
+      "description": "Global icon (android): previous_track"
+    },
+    {
+      "file_name": "global_icons/ios/previous_track.svg",
+      "original_name": "previous_track.svg",
+      "mime_type": "image/svg+xml",
+      "is_public": true,
+      "description": "Global icon (ios): previous_track"
+    },
+    {
+      "file_name": "global_icons/macos/previous_track.svg",
+      "original_name": "previous_track.svg",
+      "mime_type": "image/svg+xml",
+      "is_public": true,
+      "description": "Global icon (macos): previous_track"
+    },
+    {
+      "file_name": "global_icons/windows/previous_track.png",
+      "original_name": "previous_track.png",
+      "mime_type": "image/png",
+      "is_public": true,
+      "description": "Global icon (windows): previous_track"
+    },
+    {
+      "file_name": "global_icons/linux/previous_track.svg",
+      "original_name": "previous_track.svg",
+      "mime_type": "image/svg+xml",
+      "is_public": true,
+      "description": "Global icon (linux): previous_track"
+    },
+    {
+      "file_name": "global_icons/web/info.svg",
+      "original_name": "info.svg",
+      "mime_type": "image/svg+xml",
+      "is_public": true,
+      "description": "Global icon (web): info"
+    },
+    {
+      "file_name": "global_icons/android/info.xml",
+      "original_name": "info.xml",
+      "mime_type": "application/xml",
+      "is_public": true,
+      "description": "Global icon (android): info"
+    },
+    {
+      "file_name": "global_icons/ios/info.svg",
+      "original_name": "info.svg",
+      "mime_type": "image/svg+xml",
+      "is_public": true,
+      "description": "Global icon (ios): info"
+    },
+    {
+      "file_name": "global_icons/macos/info.svg",
+      "original_name": "info.svg",
+      "mime_type": "image/svg+xml",
+      "is_public": true,
+      "description": "Global icon (macos): info"
+    },
+    {
+      "file_name": "global_icons/windows/info.png",
+      "original_name": "info.png",
+      "mime_type": "image/png",
+      "is_public": true,
+      "description": "Global icon (windows): info"
+    },
+    {
+      "file_name": "global_icons/linux/info.svg",
+      "original_name": "info.svg",
+      "mime_type": "image/svg+xml",
+      "is_public": true,
+      "description": "Global icon (linux): info"
+    },
+    {
+      "file_name": "global_icons/web/help.svg",
+      "original_name": "help.svg",
+      "mime_type": "image/svg+xml",
+      "is_public": true,
+      "description": "Global icon (web): help"
+    },
+    {
+      "file_name": "global_icons/android/help.xml",
+      "original_name": "help.xml",
+      "mime_type": "application/xml",
+      "is_public": true,
+      "description": "Global icon (android): help"
+    },
+    {
+      "file_name": "global_icons/ios/help.svg",
+      "original_name": "help.svg",
+      "mime_type": "image/svg+xml",
+      "is_public": true,
+      "description": "Global icon (ios): help"
+    },
+    {
+      "file_name": "global_icons/macos/help.svg",
+      "original_name": "help.svg",
+      "mime_type": "image/svg+xml",
+      "is_public": true,
+      "description": "Global icon (macos): help"
+    },
+    {
+      "file_name": "global_icons/windows/help.png",
+      "original_name": "help.png",
+      "mime_type": "image/png",
+      "is_public": true,
+      "description": "Global icon (windows): help"
+    },
+    {
+      "file_name": "global_icons/linux/help.svg",
+      "original_name": "help.svg",
+      "mime_type": "image/svg+xml",
+      "is_public": true,
+      "description": "Global icon (linux): help"
+    },
+    {
+      "file_name": "global_icons/web/warning.svg",
+      "original_name": "warning.svg",
+      "mime_type": "image/svg+xml",
+      "is_public": true,
+      "description": "Global icon (web): warning"
+    },
+    {
+      "file_name": "global_icons/android/warning.xml",
+      "original_name": "warning.xml",
+      "mime_type": "application/xml",
+      "is_public": true,
+      "description": "Global icon (android): warning"
+    },
+    {
+      "file_name": "global_icons/ios/warning.svg",
+      "original_name": "warning.svg",
+      "mime_type": "image/svg+xml",
+      "is_public": true,
+      "description": "Global icon (ios): warning"
+    },
+    {
+      "file_name": "global_icons/macos/warning.svg",
+      "original_name": "warning.svg",
+      "mime_type": "image/svg+xml",
+      "is_public": true,
+      "description": "Global icon (macos): warning"
+    },
+    {
+      "file_name": "global_icons/windows/warning.png",
+      "original_name": "warning.png",
+      "mime_type": "image/png",
+      "is_public": true,
+      "description": "Global icon (windows): warning"
+    },
+    {
+      "file_name": "global_icons/linux/warning.svg",
+      "original_name": "warning.svg",
+      "mime_type": "image/svg+xml",
+      "is_public": true,
+      "description": "Global icon (linux): warning"
+    },
+    {
+      "file_name": "global_icons/web/error.svg",
+      "original_name": "error.svg",
+      "mime_type": "image/svg+xml",
+      "is_public": true,
+      "description": "Global icon (web): error"
+    },
+    {
+      "file_name": "global_icons/android/error.xml",
+      "original_name": "error.xml",
+      "mime_type": "application/xml",
+      "is_public": true,
+      "description": "Global icon (android): error"
+    },
+    {
+      "file_name": "global_icons/ios/error.svg",
+      "original_name": "error.svg",
+      "mime_type": "image/svg+xml",
+      "is_public": true,
+      "description": "Global icon (ios): error"
+    },
+    {
+      "file_name": "global_icons/macos/error.svg",
+      "original_name": "error.svg",
+      "mime_type": "image/svg+xml",
+      "is_public": true,
+      "description": "Global icon (macos): error"
+    },
+    {
+      "file_name": "global_icons/windows/error.png",
+      "original_name": "error.png",
+      "mime_type": "image/png",
+      "is_public": true,
+      "description": "Global icon (windows): error"
+    },
+    {
+      "file_name": "global_icons/linux/error.svg",
+      "original_name": "error.svg",
+      "mime_type": "image/svg+xml",
+      "is_public": true,
+      "description": "Global icon (linux): error"
+    },
+    {
+      "file_name": "global_icons/web/success.svg",
+      "original_name": "success.svg",
+      "mime_type": "image/svg+xml",
+      "is_public": true,
+      "description": "Global icon (web): success"
+    },
+    {
+      "file_name": "global_icons/android/success.xml",
+      "original_name": "success.xml",
+      "mime_type": "application/xml",
+      "is_public": true,
+      "description": "Global icon (android): success"
+    },
+    {
+      "file_name": "global_icons/ios/success.svg",
+      "original_name": "success.svg",
+      "mime_type": "image/svg+xml",
+      "is_public": true,
+      "description": "Global icon (ios): success"
+    },
+    {
+      "file_name": "global_icons/macos/success.svg",
+      "original_name": "success.svg",
+      "mime_type": "image/svg+xml",
+      "is_public": true,
+      "description": "Global icon (macos): success"
+    },
+    {
+      "file_name": "global_icons/windows/success.png",
+      "original_name": "success.png",
+      "mime_type": "image/png",
+      "is_public": true,
+      "description": "Global icon (windows): success"
+    },
+    {
+      "file_name": "global_icons/linux/success.svg",
+      "original_name": "success.svg",
+      "mime_type": "image/svg+xml",
+      "is_public": true,
+      "description": "Global icon (linux): success"
+    },
+    {
+      "file_name": "global_icons/web/question.svg",
+      "original_name": "question.svg",
+      "mime_type": "image/svg+xml",
+      "is_public": true,
+      "description": "Global icon (web): question"
+    },
+    {
+      "file_name": "global_icons/android/question.xml",
+      "original_name": "question.xml",
+      "mime_type": "application/xml",
+      "is_public": true,
+      "description": "Global icon (android): question"
+    },
+    {
+      "file_name": "global_icons/ios/question.svg",
+      "original_name": "question.svg",
+      "mime_type": "image/svg+xml",
+      "is_public": true,
+      "description": "Global icon (ios): question"
+    },
+    {
+      "file_name": "global_icons/macos/question.svg",
+      "original_name": "question.svg",
+      "mime_type": "image/svg+xml",
+      "is_public": true,
+      "description": "Global icon (macos): question"
+    },
+    {
+      "file_name": "global_icons/windows/question.png",
+      "original_name": "question.png",
+      "mime_type": "image/png",
+      "is_public": true,
+      "description": "Global icon (windows): question"
+    },
+    {
+      "file_name": "global_icons/linux/question.svg",
+      "original_name": "question.svg",
+      "mime_type": "image/svg+xml",
+      "is_public": true,
+      "description": "Global icon (linux): question"
+    },
+    {
+      "file_name": "global_icons/web/eye.svg",
+      "original_name": "eye.svg",
+      "mime_type": "image/svg+xml",
+      "is_public": true,
+      "description": "Global icon (web): eye"
+    },
+    {
+      "file_name": "global_icons/android/eye.xml",
+      "original_name": "eye.xml",
+      "mime_type": "application/xml",
+      "is_public": true,
+      "description": "Global icon (android): eye"
+    },
+    {
+      "file_name": "global_icons/ios/eye.svg",
+      "original_name": "eye.svg",
+      "mime_type": "image/svg+xml",
+      "is_public": true,
+      "description": "Global icon (ios): eye"
+    },
+    {
+      "file_name": "global_icons/macos/eye.svg",
+      "original_name": "eye.svg",
+      "mime_type": "image/svg+xml",
+      "is_public": true,
+      "description": "Global icon (macos): eye"
+    },
+    {
+      "file_name": "global_icons/windows/eye.png",
+      "original_name": "eye.png",
+      "mime_type": "image/png",
+      "is_public": true,
+      "description": "Global icon (windows): eye"
+    },
+    {
+      "file_name": "global_icons/linux/eye.svg",
+      "original_name": "eye.svg",
+      "mime_type": "image/svg+xml",
+      "is_public": true,
+      "description": "Global icon (linux): eye"
+    },
+    {
+      "file_name": "global_icons/web/eye_off.svg",
+      "original_name": "eye_off.svg",
+      "mime_type": "image/svg+xml",
+      "is_public": true,
+      "description": "Global icon (web): eye_off"
+    },
+    {
+      "file_name": "global_icons/android/eye_off.xml",
+      "original_name": "eye_off.xml",
+      "mime_type": "application/xml",
+      "is_public": true,
+      "description": "Global icon (android): eye_off"
+    },
+    {
+      "file_name": "global_icons/ios/eye_off.svg",
+      "original_name": "eye_off.svg",
+      "mime_type": "image/svg+xml",
+      "is_public": true,
+      "description": "Global icon (ios): eye_off"
+    },
+    {
+      "file_name": "global_icons/macos/eye_off.svg",
+      "original_name": "eye_off.svg",
+      "mime_type": "image/svg+xml",
+      "is_public": true,
+      "description": "Global icon (macos): eye_off"
+    },
+    {
+      "file_name": "global_icons/windows/eye_off.png",
+      "original_name": "eye_off.png",
+      "mime_type": "image/png",
+      "is_public": true,
+      "description": "Global icon (windows): eye_off"
+    },
+    {
+      "file_name": "global_icons/linux/eye_off.svg",
+      "original_name": "eye_off.svg",
+      "mime_type": "image/svg+xml",
+      "is_public": true,
+      "description": "Global icon (linux): eye_off"
+    },
+    {
+      "file_name": "global_icons/web/plus.svg",
+      "original_name": "plus.svg",
+      "mime_type": "image/svg+xml",
+      "is_public": true,
+      "description": "Global icon (web): plus"
+    },
+    {
+      "file_name": "global_icons/android/plus.xml",
+      "original_name": "plus.xml",
+      "mime_type": "application/xml",
+      "is_public": true,
+      "description": "Global icon (android): plus"
+    },
+    {
+      "file_name": "global_icons/ios/plus.svg",
+      "original_name": "plus.svg",
+      "mime_type": "image/svg+xml",
+      "is_public": true,
+      "description": "Global icon (ios): plus"
+    },
+    {
+      "file_name": "global_icons/macos/plus.svg",
+      "original_name": "plus.svg",
+      "mime_type": "image/svg+xml",
+      "is_public": true,
+      "description": "Global icon (macos): plus"
+    },
+    {
+      "file_name": "global_icons/windows/plus.png",
+      "original_name": "plus.png",
+      "mime_type": "image/png",
+      "is_public": true,
+      "description": "Global icon (windows): plus"
+    },
+    {
+      "file_name": "global_icons/linux/plus.svg",
+      "original_name": "plus.svg",
+      "mime_type": "image/svg+xml",
+      "is_public": true,
+      "description": "Global icon (linux): plus"
+    },
+    {
+      "file_name": "global_icons/web/minus.svg",
+      "original_name": "minus.svg",
+      "mime_type": "image/svg+xml",
+      "is_public": true,
+      "description": "Global icon (web): minus"
+    },
+    {
+      "file_name": "global_icons/android/minus.xml",
+      "original_name": "minus.xml",
+      "mime_type": "application/xml",
+      "is_public": true,
+      "description": "Global icon (android): minus"
+    },
+    {
+      "file_name": "global_icons/ios/minus.svg",
+      "original_name": "minus.svg",
+      "mime_type": "image/svg+xml",
+      "is_public": true,
+      "description": "Global icon (ios): minus"
+    },
+    {
+      "file_name": "global_icons/macos/minus.svg",
+      "original_name": "minus.svg",
+      "mime_type": "image/svg+xml",
+      "is_public": true,
+      "description": "Global icon (macos): minus"
+    },
+    {
+      "file_name": "global_icons/windows/minus.png",
+      "original_name": "minus.png",
+      "mime_type": "image/png",
+      "is_public": true,
+      "description": "Global icon (windows): minus"
+    },
+    {
+      "file_name": "global_icons/linux/minus.svg",
+      "original_name": "minus.svg",
+      "mime_type": "image/svg+xml",
+      "is_public": true,
+      "description": "Global icon (linux): minus"
+    },
+    {
+      "file_name": "global_icons/web/expand.svg",
+      "original_name": "expand.svg",
+      "mime_type": "image/svg+xml",
+      "is_public": true,
+      "description": "Global icon (web): expand"
+    },
+    {
+      "file_name": "global_icons/android/expand.xml",
+      "original_name": "expand.xml",
+      "mime_type": "application/xml",
+      "is_public": true,
+      "description": "Global icon (android): expand"
+    },
+    {
+      "file_name": "global_icons/ios/expand.svg",
+      "original_name": "expand.svg",
+      "mime_type": "image/svg+xml",
+      "is_public": true,
+      "description": "Global icon (ios): expand"
+    },
+    {
+      "file_name": "global_icons/macos/expand.svg",
+      "original_name": "expand.svg",
+      "mime_type": "image/svg+xml",
+      "is_public": true,
+      "description": "Global icon (macos): expand"
+    },
+    {
+      "file_name": "global_icons/windows/expand.png",
+      "original_name": "expand.png",
+      "mime_type": "image/png",
+      "is_public": true,
+      "description": "Global icon (windows): expand"
+    },
+    {
+      "file_name": "global_icons/linux/expand.svg",
+      "original_name": "expand.svg",
+      "mime_type": "image/svg+xml",
+      "is_public": true,
+      "description": "Global icon (linux): expand"
+    },
+    {
+      "file_name": "global_icons/web/collapse.svg",
+      "original_name": "collapse.svg",
+      "mime_type": "image/svg+xml",
+      "is_public": true,
+      "description": "Global icon (web): collapse"
+    },
+    {
+      "file_name": "global_icons/android/collapse.xml",
+      "original_name": "collapse.xml",
+      "mime_type": "application/xml",
+      "is_public": true,
+      "description": "Global icon (android): collapse"
+    },
+    {
+      "file_name": "global_icons/ios/collapse.svg",
+      "original_name": "collapse.svg",
+      "mime_type": "image/svg+xml",
+      "is_public": true,
+      "description": "Global icon (ios): collapse"
+    },
+    {
+      "file_name": "global_icons/macos/collapse.svg",
+      "original_name": "collapse.svg",
+      "mime_type": "image/svg+xml",
+      "is_public": true,
+      "description": "Global icon (macos): collapse"
+    },
+    {
+      "file_name": "global_icons/windows/collapse.png",
+      "original_name": "collapse.png",
+      "mime_type": "image/png",
+      "is_public": true,
+      "description": "Global icon (windows): collapse"
+    },
+    {
+      "file_name": "global_icons/linux/collapse.svg",
+      "original_name": "collapse.svg",
+      "mime_type": "image/svg+xml",
+      "is_public": true,
+      "description": "Global icon (linux): collapse"
+    },
+    {
+      "file_name": "global_icons/web/more.svg",
+      "original_name": "more.svg",
+      "mime_type": "image/svg+xml",
+      "is_public": true,
+      "description": "Global icon (web): more"
+    },
+    {
+      "file_name": "global_icons/android/more.xml",
+      "original_name": "more.xml",
+      "mime_type": "application/xml",
+      "is_public": true,
+      "description": "Global icon (android): more"
+    },
+    {
+      "file_name": "global_icons/ios/more.svg",
+      "original_name": "more.svg",
+      "mime_type": "image/svg+xml",
+      "is_public": true,
+      "description": "Global icon (ios): more"
+    },
+    {
+      "file_name": "global_icons/macos/more.svg",
+      "original_name": "more.svg",
+      "mime_type": "image/svg+xml",
+      "is_public": true,
+      "description": "Global icon (macos): more"
+    },
+    {
+      "file_name": "global_icons/windows/more.png",
+      "original_name": "more.png",
+      "mime_type": "image/png",
+      "is_public": true,
+      "description": "Global icon (windows): more"
+    },
+    {
+      "file_name": "global_icons/linux/more.svg",
+      "original_name": "more.svg",
+      "mime_type": "image/svg+xml",
+      "is_public": true,
+      "description": "Global icon (linux): more"
+    },
+    {
+      "file_name": "global_icons/web/dots_vertical.svg",
+      "original_name": "dots_vertical.svg",
+      "mime_type": "image/svg+xml",
+      "is_public": true,
+      "description": "Global icon (web): dots_vertical"
+    },
+    {
+      "file_name": "global_icons/android/dots_vertical.xml",
+      "original_name": "dots_vertical.xml",
+      "mime_type": "application/xml",
+      "is_public": true,
+      "description": "Global icon (android): dots_vertical"
+    },
+    {
+      "file_name": "global_icons/ios/dots_vertical.svg",
+      "original_name": "dots_vertical.svg",
+      "mime_type": "image/svg+xml",
+      "is_public": true,
+      "description": "Global icon (ios): dots_vertical"
+    },
+    {
+      "file_name": "global_icons/macos/dots_vertical.svg",
+      "original_name": "dots_vertical.svg",
+      "mime_type": "image/svg+xml",
+      "is_public": true,
+      "description": "Global icon (macos): dots_vertical"
+    },
+    {
+      "file_name": "global_icons/windows/dots_vertical.png",
+      "original_name": "dots_vertical.png",
+      "mime_type": "image/png",
+      "is_public": true,
+      "description": "Global icon (windows): dots_vertical"
+    },
+    {
+      "file_name": "global_icons/linux/dots_vertical.svg",
+      "original_name": "dots_vertical.svg",
+      "mime_type": "image/svg+xml",
+      "is_public": true,
+      "description": "Global icon (linux): dots_vertical"
+    },
+    {
+      "file_name": "global_icons/web/arrow_up.svg",
+      "original_name": "arrow_up.svg",
+      "mime_type": "image/svg+xml",
+      "is_public": true,
+      "description": "Global icon (web): arrow_up"
+    },
+    {
+      "file_name": "global_icons/android/arrow_up.xml",
+      "original_name": "arrow_up.xml",
+      "mime_type": "application/xml",
+      "is_public": true,
+      "description": "Global icon (android): arrow_up"
+    },
+    {
+      "file_name": "global_icons/ios/arrow_up.svg",
+      "original_name": "arrow_up.svg",
+      "mime_type": "image/svg+xml",
+      "is_public": true,
+      "description": "Global icon (ios): arrow_up"
+    },
+    {
+      "file_name": "global_icons/macos/arrow_up.svg",
+      "original_name": "arrow_up.svg",
+      "mime_type": "image/svg+xml",
+      "is_public": true,
+      "description": "Global icon (macos): arrow_up"
+    },
+    {
+      "file_name": "global_icons/windows/arrow_up.png",
+      "original_name": "arrow_up.png",
+      "mime_type": "image/png",
+      "is_public": true,
+      "description": "Global icon (windows): arrow_up"
+    },
+    {
+      "file_name": "global_icons/linux/arrow_up.svg",
+      "original_name": "arrow_up.svg",
+      "mime_type": "image/svg+xml",
+      "is_public": true,
+      "description": "Global icon (linux): arrow_up"
+    },
+    {
+      "file_name": "global_icons/web/arrow_down.svg",
+      "original_name": "arrow_down.svg",
+      "mime_type": "image/svg+xml",
+      "is_public": true,
+      "description": "Global icon (web): arrow_down"
+    },
+    {
+      "file_name": "global_icons/android/arrow_down.xml",
+      "original_name": "arrow_down.xml",
+      "mime_type": "application/xml",
+      "is_public": true,
+      "description": "Global icon (android): arrow_down"
+    },
+    {
+      "file_name": "global_icons/ios/arrow_down.svg",
+      "original_name": "arrow_down.svg",
+      "mime_type": "image/svg+xml",
+      "is_public": true,
+      "description": "Global icon (ios): arrow_down"
+    },
+    {
+      "file_name": "global_icons/macos/arrow_down.svg",
+      "original_name": "arrow_down.svg",
+      "mime_type": "image/svg+xml",
+      "is_public": true,
+      "description": "Global icon (macos): arrow_down"
+    },
+    {
+      "file_name": "global_icons/windows/arrow_down.png",
+      "original_name": "arrow_down.png",
+      "mime_type": "image/png",
+      "is_public": true,
+      "description": "Global icon (windows): arrow_down"
+    },
+    {
+      "file_name": "global_icons/linux/arrow_down.svg",
+      "original_name": "arrow_down.svg",
+      "mime_type": "image/svg+xml",
+      "is_public": true,
+      "description": "Global icon (linux): arrow_down"
+    },
+    {
+      "file_name": "global_icons/web/arrow_left.svg",
+      "original_name": "arrow_left.svg",
+      "mime_type": "image/svg+xml",
+      "is_public": true,
+      "description": "Global icon (web): arrow_left"
+    },
+    {
+      "file_name": "global_icons/android/arrow_left.xml",
+      "original_name": "arrow_left.xml",
+      "mime_type": "application/xml",
+      "is_public": true,
+      "description": "Global icon (android): arrow_left"
+    },
+    {
+      "file_name": "global_icons/ios/arrow_left.svg",
+      "original_name": "arrow_left.svg",
+      "mime_type": "image/svg+xml",
+      "is_public": true,
+      "description": "Global icon (ios): arrow_left"
+    },
+    {
+      "file_name": "global_icons/macos/arrow_left.svg",
+      "original_name": "arrow_left.svg",
+      "mime_type": "image/svg+xml",
+      "is_public": true,
+      "description": "Global icon (macos): arrow_left"
+    },
+    {
+      "file_name": "global_icons/windows/arrow_left.png",
+      "original_name": "arrow_left.png",
+      "mime_type": "image/png",
+      "is_public": true,
+      "description": "Global icon (windows): arrow_left"
+    },
+    {
+      "file_name": "global_icons/linux/arrow_left.svg",
+      "original_name": "arrow_left.svg",
+      "mime_type": "image/svg+xml",
+      "is_public": true,
+      "description": "Global icon (linux): arrow_left"
+    },
+    {
+      "file_name": "global_icons/web/arrow_right.svg",
+      "original_name": "arrow_right.svg",
+      "mime_type": "image/svg+xml",
+      "is_public": true,
+      "description": "Global icon (web): arrow_right"
+    },
+    {
+      "file_name": "global_icons/android/arrow_right.xml",
+      "original_name": "arrow_right.xml",
+      "mime_type": "application/xml",
+      "is_public": true,
+      "description": "Global icon (android): arrow_right"
+    },
+    {
+      "file_name": "global_icons/ios/arrow_right.svg",
+      "original_name": "arrow_right.svg",
+      "mime_type": "image/svg+xml",
+      "is_public": true,
+      "description": "Global icon (ios): arrow_right"
+    },
+    {
+      "file_name": "global_icons/macos/arrow_right.svg",
+      "original_name": "arrow_right.svg",
+      "mime_type": "image/svg+xml",
+      "is_public": true,
+      "description": "Global icon (macos): arrow_right"
+    },
+    {
+      "file_name": "global_icons/windows/arrow_right.png",
+      "original_name": "arrow_right.png",
+      "mime_type": "image/png",
+      "is_public": true,
+      "description": "Global icon (windows): arrow_right"
+    },
+    {
+      "file_name": "global_icons/linux/arrow_right.svg",
+      "original_name": "arrow_right.svg",
+      "mime_type": "image/svg+xml",
+      "is_public": true,
+      "description": "Global icon (linux): arrow_right"
+    },
+    {
+      "file_name": "global_icons/web/chevron_up.svg",
+      "original_name": "chevron_up.svg",
+      "mime_type": "image/svg+xml",
+      "is_public": true,
+      "description": "Global icon (web): chevron_up"
+    },
+    {
+      "file_name": "global_icons/android/chevron_up.xml",
+      "original_name": "chevron_up.xml",
+      "mime_type": "application/xml",
+      "is_public": true,
+      "description": "Global icon (android): chevron_up"
+    },
+    {
+      "file_name": "global_icons/ios/chevron_up.svg",
+      "original_name": "chevron_up.svg",
+      "mime_type": "image/svg+xml",
+      "is_public": true,
+      "description": "Global icon (ios): chevron_up"
+    },
+    {
+      "file_name": "global_icons/macos/chevron_up.svg",
+      "original_name": "chevron_up.svg",
+      "mime_type": "image/svg+xml",
+      "is_public": true,
+      "description": "Global icon (macos): chevron_up"
+    },
+    {
+      "file_name": "global_icons/windows/chevron_up.png",
+      "original_name": "chevron_up.png",
+      "mime_type": "image/png",
+      "is_public": true,
+      "description": "Global icon (windows): chevron_up"
+    },
+    {
+      "file_name": "global_icons/linux/chevron_up.svg",
+      "original_name": "chevron_up.svg",
+      "mime_type": "image/svg+xml",
+      "is_public": true,
+      "description": "Global icon (linux): chevron_up"
+    },
+    {
+      "file_name": "global_icons/web/chevron_down.svg",
+      "original_name": "chevron_down.svg",
+      "mime_type": "image/svg+xml",
+      "is_public": true,
+      "description": "Global icon (web): chevron_down"
+    },
+    {
+      "file_name": "global_icons/android/chevron_down.xml",
+      "original_name": "chevron_down.xml",
+      "mime_type": "application/xml",
+      "is_public": true,
+      "description": "Global icon (android): chevron_down"
+    },
+    {
+      "file_name": "global_icons/ios/chevron_down.svg",
+      "original_name": "chevron_down.svg",
+      "mime_type": "image/svg+xml",
+      "is_public": true,
+      "description": "Global icon (ios): chevron_down"
+    },
+    {
+      "file_name": "global_icons/macos/chevron_down.svg",
+      "original_name": "chevron_down.svg",
+      "mime_type": "image/svg+xml",
+      "is_public": true,
+      "description": "Global icon (macos): chevron_down"
+    },
+    {
+      "file_name": "global_icons/windows/chevron_down.png",
+      "original_name": "chevron_down.png",
+      "mime_type": "image/png",
+      "is_public": true,
+      "description": "Global icon (windows): chevron_down"
+    },
+    {
+      "file_name": "global_icons/linux/chevron_down.svg",
+      "original_name": "chevron_down.svg",
+      "mime_type": "image/svg+xml",
+      "is_public": true,
+      "description": "Global icon (linux): chevron_down"
+    },
+    {
+      "file_name": "global_icons/web/external_link.svg",
+      "original_name": "external_link.svg",
+      "mime_type": "image/svg+xml",
+      "is_public": true,
+      "description": "Global icon (web): external_link"
+    },
+    {
+      "file_name": "global_icons/android/external_link.xml",
+      "original_name": "external_link.xml",
+      "mime_type": "application/xml",
+      "is_public": true,
+      "description": "Global icon (android): external_link"
+    },
+    {
+      "file_name": "global_icons/ios/external_link.svg",
+      "original_name": "external_link.svg",
+      "mime_type": "image/svg+xml",
+      "is_public": true,
+      "description": "Global icon (ios): external_link"
+    },
+    {
+      "file_name": "global_icons/macos/external_link.svg",
+      "original_name": "external_link.svg",
+      "mime_type": "image/svg+xml",
+      "is_public": true,
+      "description": "Global icon (macos): external_link"
+    },
+    {
+      "file_name": "global_icons/windows/external_link.png",
+      "original_name": "external_link.png",
+      "mime_type": "image/png",
+      "is_public": true,
+      "description": "Global icon (windows): external_link"
+    },
+    {
+      "file_name": "global_icons/linux/external_link.svg",
+      "original_name": "external_link.svg",
+      "mime_type": "image/svg+xml",
+      "is_public": true,
+      "description": "Global icon (linux): external_link"
+    },
+    {
+      "file_name": "global_icons/web/attachment.svg",
+      "original_name": "attachment.svg",
+      "mime_type": "image/svg+xml",
+      "is_public": true,
+      "description": "Global icon (web): attachment"
+    },
+    {
+      "file_name": "global_icons/android/attachment.xml",
+      "original_name": "attachment.xml",
+      "mime_type": "application/xml",
+      "is_public": true,
+      "description": "Global icon (android): attachment"
+    },
+    {
+      "file_name": "global_icons/ios/attachment.svg",
+      "original_name": "attachment.svg",
+      "mime_type": "image/svg+xml",
+      "is_public": true,
+      "description": "Global icon (ios): attachment"
+    },
+    {
+      "file_name": "global_icons/macos/attachment.svg",
+      "original_name": "attachment.svg",
+      "mime_type": "image/svg+xml",
+      "is_public": true,
+      "description": "Global icon (macos): attachment"
+    },
+    {
+      "file_name": "global_icons/windows/attachment.png",
+      "original_name": "attachment.png",
+      "mime_type": "image/png",
+      "is_public": true,
+      "description": "Global icon (windows): attachment"
+    },
+    {
+      "file_name": "global_icons/linux/attachment.svg",
+      "original_name": "attachment.svg",
+      "mime_type": "image/svg+xml",
+      "is_public": true,
+      "description": "Global icon (linux): attachment"
+    },
+    {
+      "file_name": "global_icons/web/archive.svg",
+      "original_name": "archive.svg",
+      "mime_type": "image/svg+xml",
+      "is_public": true,
+      "description": "Global icon (web): archive"
+    },
+    {
+      "file_name": "global_icons/android/archive.xml",
+      "original_name": "archive.xml",
+      "mime_type": "application/xml",
+      "is_public": true,
+      "description": "Global icon (android): archive"
+    },
+    {
+      "file_name": "global_icons/ios/archive.svg",
+      "original_name": "archive.svg",
+      "mime_type": "image/svg+xml",
+      "is_public": true,
+      "description": "Global icon (ios): archive"
+    },
+    {
+      "file_name": "global_icons/macos/archive.svg",
+      "original_name": "archive.svg",
+      "mime_type": "image/svg+xml",
+      "is_public": true,
+      "description": "Global icon (macos): archive"
+    },
+    {
+      "file_name": "global_icons/windows/archive.png",
+      "original_name": "archive.png",
+      "mime_type": "image/png",
+      "is_public": true,
+      "description": "Global icon (windows): archive"
+    },
+    {
+      "file_name": "global_icons/linux/archive.svg",
+      "original_name": "archive.svg",
+      "mime_type": "image/svg+xml",
+      "is_public": true,
+      "description": "Global icon (linux): archive"
+    },
+    {
+      "file_name": "global_icons/web/trash.svg",
+      "original_name": "trash.svg",
+      "mime_type": "image/svg+xml",
+      "is_public": true,
+      "description": "Global icon (web): trash"
+    },
+    {
+      "file_name": "global_icons/android/trash.xml",
+      "original_name": "trash.xml",
+      "mime_type": "application/xml",
+      "is_public": true,
+      "description": "Global icon (android): trash"
+    },
+    {
+      "file_name": "global_icons/ios/trash.svg",
+      "original_name": "trash.svg",
+      "mime_type": "image/svg+xml",
+      "is_public": true,
+      "description": "Global icon (ios): trash"
+    },
+    {
+      "file_name": "global_icons/macos/trash.svg",
+      "original_name": "trash.svg",
+      "mime_type": "image/svg+xml",
+      "is_public": true,
+      "description": "Global icon (macos): trash"
+    },
+    {
+      "file_name": "global_icons/windows/trash.png",
+      "original_name": "trash.png",
+      "mime_type": "image/png",
+      "is_public": true,
+      "description": "Global icon (windows): trash"
+    },
+    {
+      "file_name": "global_icons/linux/trash.svg",
+      "original_name": "trash.svg",
+      "mime_type": "image/svg+xml",
+      "is_public": true,
+      "description": "Global icon (linux): trash"
+    },
+    {
+      "file_name": "global_icons/web/undo.svg",
+      "original_name": "undo.svg",
+      "mime_type": "image/svg+xml",
+      "is_public": true,
+      "description": "Global icon (web): undo"
+    },
+    {
+      "file_name": "global_icons/android/undo.xml",
+      "original_name": "undo.xml",
+      "mime_type": "application/xml",
+      "is_public": true,
+      "description": "Global icon (android): undo"
+    },
+    {
+      "file_name": "global_icons/ios/undo.svg",
+      "original_name": "undo.svg",
+      "mime_type": "image/svg+xml",
+      "is_public": true,
+      "description": "Global icon (ios): undo"
+    },
+    {
+      "file_name": "global_icons/macos/undo.svg",
+      "original_name": "undo.svg",
+      "mime_type": "image/svg+xml",
+      "is_public": true,
+      "description": "Global icon (macos): undo"
+    },
+    {
+      "file_name": "global_icons/windows/undo.png",
+      "original_name": "undo.png",
+      "mime_type": "image/png",
+      "is_public": true,
+      "description": "Global icon (windows): undo"
+    },
+    {
+      "file_name": "global_icons/linux/undo.svg",
+      "original_name": "undo.svg",
+      "mime_type": "image/svg+xml",
+      "is_public": true,
+      "description": "Global icon (linux): undo"
+    },
+    {
+      "file_name": "global_icons/web/redo.svg",
+      "original_name": "redo.svg",
+      "mime_type": "image/svg+xml",
+      "is_public": true,
+      "description": "Global icon (web): redo"
+    },
+    {
+      "file_name": "global_icons/android/redo.xml",
+      "original_name": "redo.xml",
+      "mime_type": "application/xml",
+      "is_public": true,
+      "description": "Global icon (android): redo"
+    },
+    {
+      "file_name": "global_icons/ios/redo.svg",
+      "original_name": "redo.svg",
+      "mime_type": "image/svg+xml",
+      "is_public": true,
+      "description": "Global icon (ios): redo"
+    },
+    {
+      "file_name": "global_icons/macos/redo.svg",
+      "original_name": "redo.svg",
+      "mime_type": "image/svg+xml",
+      "is_public": true,
+      "description": "Global icon (macos): redo"
+    },
+    {
+      "file_name": "global_icons/windows/redo.png",
+      "original_name": "redo.png",
+      "mime_type": "image/png",
+      "is_public": true,
+      "description": "Global icon (windows): redo"
+    },
+    {
+      "file_name": "global_icons/linux/redo.svg",
+      "original_name": "redo.svg",
+      "mime_type": "image/svg+xml",
+      "is_public": true,
+      "description": "Global icon (linux): redo"
+    },
+    {
+      "file_name": "global_icons/web/bold.svg",
+      "original_name": "bold.svg",
+      "mime_type": "image/svg+xml",
+      "is_public": true,
+      "description": "Global icon (web): bold"
+    },
+    {
+      "file_name": "global_icons/android/bold.xml",
+      "original_name": "bold.xml",
+      "mime_type": "application/xml",
+      "is_public": true,
+      "description": "Global icon (android): bold"
+    },
+    {
+      "file_name": "global_icons/ios/bold.svg",
+      "original_name": "bold.svg",
+      "mime_type": "image/svg+xml",
+      "is_public": true,
+      "description": "Global icon (ios): bold"
+    },
+    {
+      "file_name": "global_icons/macos/bold.svg",
+      "original_name": "bold.svg",
+      "mime_type": "image/svg+xml",
+      "is_public": true,
+      "description": "Global icon (macos): bold"
+    },
+    {
+      "file_name": "global_icons/windows/bold.png",
+      "original_name": "bold.png",
+      "mime_type": "image/png",
+      "is_public": true,
+      "description": "Global icon (windows): bold"
+    },
+    {
+      "file_name": "global_icons/linux/bold.svg",
+      "original_name": "bold.svg",
+      "mime_type": "image/svg+xml",
+      "is_public": true,
+      "description": "Global icon (linux): bold"
+    },
+    {
+      "file_name": "global_icons/web/italic.svg",
+      "original_name": "italic.svg",
+      "mime_type": "image/svg+xml",
+      "is_public": true,
+      "description": "Global icon (web): italic"
+    },
+    {
+      "file_name": "global_icons/android/italic.xml",
+      "original_name": "italic.xml",
+      "mime_type": "application/xml",
+      "is_public": true,
+      "description": "Global icon (android): italic"
+    },
+    {
+      "file_name": "global_icons/ios/italic.svg",
+      "original_name": "italic.svg",
+      "mime_type": "image/svg+xml",
+      "is_public": true,
+      "description": "Global icon (ios): italic"
+    },
+    {
+      "file_name": "global_icons/macos/italic.svg",
+      "original_name": "italic.svg",
+      "mime_type": "image/svg+xml",
+      "is_public": true,
+      "description": "Global icon (macos): italic"
+    },
+    {
+      "file_name": "global_icons/windows/italic.png",
+      "original_name": "italic.png",
+      "mime_type": "image/png",
+      "is_public": true,
+      "description": "Global icon (windows): italic"
+    },
+    {
+      "file_name": "global_icons/linux/italic.svg",
+      "original_name": "italic.svg",
+      "mime_type": "image/svg+xml",
+      "is_public": true,
+      "description": "Global icon (linux): italic"
+    },
+    {
+      "file_name": "global_icons/web/code.svg",
+      "original_name": "code.svg",
+      "mime_type": "image/svg+xml",
+      "is_public": true,
+      "description": "Global icon (web): code"
+    },
+    {
+      "file_name": "global_icons/android/code.xml",
+      "original_name": "code.xml",
+      "mime_type": "application/xml",
+      "is_public": true,
+      "description": "Global icon (android): code"
+    },
+    {
+      "file_name": "global_icons/ios/code.svg",
+      "original_name": "code.svg",
+      "mime_type": "image/svg+xml",
+      "is_public": true,
+      "description": "Global icon (ios): code"
+    },
+    {
+      "file_name": "global_icons/macos/code.svg",
+      "original_name": "code.svg",
+      "mime_type": "image/svg+xml",
+      "is_public": true,
+      "description": "Global icon (macos): code"
+    },
+    {
+      "file_name": "global_icons/windows/code.png",
+      "original_name": "code.png",
+      "mime_type": "image/png",
+      "is_public": true,
+      "description": "Global icon (windows): code"
+    },
+    {
+      "file_name": "global_icons/linux/code.svg",
+      "original_name": "code.svg",
+      "mime_type": "image/svg+xml",
+      "is_public": true,
+      "description": "Global icon (linux): code"
+    },
+    {
+      "file_name": "global_icons/web/globe.svg",
+      "original_name": "globe.svg",
+      "mime_type": "image/svg+xml",
+      "is_public": true,
+      "description": "Global icon (web): globe"
+    },
+    {
+      "file_name": "global_icons/android/globe.xml",
+      "original_name": "globe.xml",
+      "mime_type": "application/xml",
+      "is_public": true,
+      "description": "Global icon (android): globe"
+    },
+    {
+      "file_name": "global_icons/ios/globe.svg",
+      "original_name": "globe.svg",
+      "mime_type": "image/svg+xml",
+      "is_public": true,
+      "description": "Global icon (ios): globe"
+    },
+    {
+      "file_name": "global_icons/macos/globe.svg",
+      "original_name": "globe.svg",
+      "mime_type": "image/svg+xml",
+      "is_public": true,
+      "description": "Global icon (macos): globe"
+    },
+    {
+      "file_name": "global_icons/windows/globe.png",
+      "original_name": "globe.png",
+      "mime_type": "image/png",
+      "is_public": true,
+      "description": "Global icon (windows): globe"
+    },
+    {
+      "file_name": "global_icons/linux/globe.svg",
+      "original_name": "globe.svg",
+      "mime_type": "image/svg+xml",
+      "is_public": true,
+      "description": "Global icon (linux): globe"
+    },
+    {
+      "file_name": "global_icons/web/cloud.svg",
+      "original_name": "cloud.svg",
+      "mime_type": "image/svg+xml",
+      "is_public": true,
+      "description": "Global icon (web): cloud"
+    },
+    {
+      "file_name": "global_icons/android/cloud.xml",
+      "original_name": "cloud.xml",
+      "mime_type": "application/xml",
+      "is_public": true,
+      "description": "Global icon (android): cloud"
+    },
+    {
+      "file_name": "global_icons/ios/cloud.svg",
+      "original_name": "cloud.svg",
+      "mime_type": "image/svg+xml",
+      "is_public": true,
+      "description": "Global icon (ios): cloud"
+    },
+    {
+      "file_name": "global_icons/macos/cloud.svg",
+      "original_name": "cloud.svg",
+      "mime_type": "image/svg+xml",
+      "is_public": true,
+      "description": "Global icon (macos): cloud"
+    },
+    {
+      "file_name": "global_icons/windows/cloud.png",
+      "original_name": "cloud.png",
+      "mime_type": "image/png",
+      "is_public": true,
+      "description": "Global icon (windows): cloud"
+    },
+    {
+      "file_name": "global_icons/linux/cloud.svg",
+      "original_name": "cloud.svg",
+      "mime_type": "image/svg+xml",
+      "is_public": true,
+      "description": "Global icon (linux): cloud"
+    },
+    {
+      "file_name": "global_icons/web/database.svg",
+      "original_name": "database.svg",
+      "mime_type": "image/svg+xml",
+      "is_public": true,
+      "description": "Global icon (web): database"
+    },
+    {
+      "file_name": "global_icons/android/database.xml",
+      "original_name": "database.xml",
+      "mime_type": "application/xml",
+      "is_public": true,
+      "description": "Global icon (android): database"
+    },
+    {
+      "file_name": "global_icons/ios/database.svg",
+      "original_name": "database.svg",
+      "mime_type": "image/svg+xml",
+      "is_public": true,
+      "description": "Global icon (ios): database"
+    },
+    {
+      "file_name": "global_icons/macos/database.svg",
+      "original_name": "database.svg",
+      "mime_type": "image/svg+xml",
+      "is_public": true,
+      "description": "Global icon (macos): database"
+    },
+    {
+      "file_name": "global_icons/windows/database.png",
+      "original_name": "database.png",
+      "mime_type": "image/png",
+      "is_public": true,
+      "description": "Global icon (windows): database"
+    },
+    {
+      "file_name": "global_icons/linux/database.svg",
+      "original_name": "database.svg",
+      "mime_type": "image/svg+xml",
+      "is_public": true,
+      "description": "Global icon (linux): database"
+    },
+    {
+      "file_name": "global_icons/web/server.svg",
+      "original_name": "server.svg",
+      "mime_type": "image/svg+xml",
+      "is_public": true,
+      "description": "Global icon (web): server"
+    },
+    {
+      "file_name": "global_icons/android/server.xml",
+      "original_name": "server.xml",
+      "mime_type": "application/xml",
+      "is_public": true,
+      "description": "Global icon (android): server"
+    },
+    {
+      "file_name": "global_icons/ios/server.svg",
+      "original_name": "server.svg",
+      "mime_type": "image/svg+xml",
+      "is_public": true,
+      "description": "Global icon (ios): server"
+    },
+    {
+      "file_name": "global_icons/macos/server.svg",
+      "original_name": "server.svg",
+      "mime_type": "image/svg+xml",
+      "is_public": true,
+      "description": "Global icon (macos): server"
+    },
+    {
+      "file_name": "global_icons/windows/server.png",
+      "original_name": "server.png",
+      "mime_type": "image/png",
+      "is_public": true,
+      "description": "Global icon (windows): server"
+    },
+    {
+      "file_name": "global_icons/linux/server.svg",
+      "original_name": "server.svg",
+      "mime_type": "image/svg+xml",
+      "is_public": true,
+      "description": "Global icon (linux): server"
+    },
+    {
+      "file_name": "global_icons/web/shield.svg",
+      "original_name": "shield.svg",
+      "mime_type": "image/svg+xml",
+      "is_public": true,
+      "description": "Global icon (web): shield"
+    },
+    {
+      "file_name": "global_icons/android/shield.xml",
+      "original_name": "shield.xml",
+      "mime_type": "application/xml",
+      "is_public": true,
+      "description": "Global icon (android): shield"
+    },
+    {
+      "file_name": "global_icons/ios/shield.svg",
+      "original_name": "shield.svg",
+      "mime_type": "image/svg+xml",
+      "is_public": true,
+      "description": "Global icon (ios): shield"
+    },
+    {
+      "file_name": "global_icons/macos/shield.svg",
+      "original_name": "shield.svg",
+      "mime_type": "image/svg+xml",
+      "is_public": true,
+      "description": "Global icon (macos): shield"
+    },
+    {
+      "file_name": "global_icons/windows/shield.png",
+      "original_name": "shield.png",
+      "mime_type": "image/png",
+      "is_public": true,
+      "description": "Global icon (windows): shield"
+    },
+    {
+      "file_name": "global_icons/linux/shield.svg",
+      "original_name": "shield.svg",
+      "mime_type": "image/svg+xml",
+      "is_public": true,
+      "description": "Global icon (linux): shield"
+    },
+    {
+      "file_name": "global_icons/web/wrench.svg",
+      "original_name": "wrench.svg",
+      "mime_type": "image/svg+xml",
+      "is_public": true,
+      "description": "Global icon (web): wrench"
+    },
+    {
+      "file_name": "global_icons/android/wrench.xml",
+      "original_name": "wrench.xml",
+      "mime_type": "application/xml",
+      "is_public": true,
+      "description": "Global icon (android): wrench"
+    },
+    {
+      "file_name": "global_icons/ios/wrench.svg",
+      "original_name": "wrench.svg",
+      "mime_type": "image/svg+xml",
+      "is_public": true,
+      "description": "Global icon (ios): wrench"
+    },
+    {
+      "file_name": "global_icons/macos/wrench.svg",
+      "original_name": "wrench.svg",
+      "mime_type": "image/svg+xml",
+      "is_public": true,
+      "description": "Global icon (macos): wrench"
+    },
+    {
+      "file_name": "global_icons/windows/wrench.png",
+      "original_name": "wrench.png",
+      "mime_type": "image/png",
+      "is_public": true,
+      "description": "Global icon (windows): wrench"
+    },
+    {
+      "file_name": "global_icons/linux/wrench.svg",
+      "original_name": "wrench.svg",
+      "mime_type": "image/svg+xml",
+      "is_public": true,
+      "description": "Global icon (linux): wrench"
+    },
+    {
+      "file_name": "global_icons/web/tool.svg",
+      "original_name": "tool.svg",
+      "mime_type": "image/svg+xml",
+      "is_public": true,
+      "description": "Global icon (web): tool"
+    },
+    {
+      "file_name": "global_icons/android/tool.xml",
+      "original_name": "tool.xml",
+      "mime_type": "application/xml",
+      "is_public": true,
+      "description": "Global icon (android): tool"
+    },
+    {
+      "file_name": "global_icons/ios/tool.svg",
+      "original_name": "tool.svg",
+      "mime_type": "image/svg+xml",
+      "is_public": true,
+      "description": "Global icon (ios): tool"
+    },
+    {
+      "file_name": "global_icons/macos/tool.svg",
+      "original_name": "tool.svg",
+      "mime_type": "image/svg+xml",
+      "is_public": true,
+      "description": "Global icon (macos): tool"
+    },
+    {
+      "file_name": "global_icons/windows/tool.png",
+      "original_name": "tool.png",
+      "mime_type": "image/png",
+      "is_public": true,
+      "description": "Global icon (windows): tool"
+    },
+    {
+      "file_name": "global_icons/linux/tool.svg",
+      "original_name": "tool.svg",
+      "mime_type": "image/svg+xml",
+      "is_public": true,
+      "description": "Global icon (linux): tool"
+    },
+    {
+      "file_name": "global_icons/web/sparkles.svg",
+      "original_name": "sparkles.svg",
+      "mime_type": "image/svg+xml",
+      "is_public": true,
+      "description": "Global icon (web): sparkles"
+    },
+    {
+      "file_name": "global_icons/android/sparkles.xml",
+      "original_name": "sparkles.xml",
+      "mime_type": "application/xml",
+      "is_public": true,
+      "description": "Global icon (android): sparkles"
+    },
+    {
+      "file_name": "global_icons/ios/sparkles.svg",
+      "original_name": "sparkles.svg",
+      "mime_type": "image/svg+xml",
+      "is_public": true,
+      "description": "Global icon (ios): sparkles"
+    },
+    {
+      "file_name": "global_icons/macos/sparkles.svg",
+      "original_name": "sparkles.svg",
+      "mime_type": "image/svg+xml",
+      "is_public": true,
+      "description": "Global icon (macos): sparkles"
+    },
+    {
+      "file_name": "global_icons/windows/sparkles.png",
+      "original_name": "sparkles.png",
+      "mime_type": "image/png",
+      "is_public": true,
+      "description": "Global icon (windows): sparkles"
+    },
+    {
+      "file_name": "global_icons/linux/sparkles.svg",
+      "original_name": "sparkles.svg",
+      "mime_type": "image/svg+xml",
+      "is_public": true,
+      "description": "Global icon (linux): sparkles"
+    },
+    {
+      "file_name": "global_icons/web/robot.svg",
+      "original_name": "robot.svg",
+      "mime_type": "image/svg+xml",
+      "is_public": true,
+      "description": "Global icon (web): robot"
+    },
+    {
+      "file_name": "global_icons/android/robot.xml",
+      "original_name": "robot.xml",
+      "mime_type": "application/xml",
+      "is_public": true,
+      "description": "Global icon (android): robot"
+    },
+    {
+      "file_name": "global_icons/ios/robot.svg",
+      "original_name": "robot.svg",
+      "mime_type": "image/svg+xml",
+      "is_public": true,
+      "description": "Global icon (ios): robot"
+    },
+    {
+      "file_name": "global_icons/macos/robot.svg",
+      "original_name": "robot.svg",
+      "mime_type": "image/svg+xml",
+      "is_public": true,
+      "description": "Global icon (macos): robot"
+    },
+    {
+      "file_name": "global_icons/windows/robot.png",
+      "original_name": "robot.png",
+      "mime_type": "image/png",
+      "is_public": true,
+      "description": "Global icon (windows): robot"
+    },
+    {
+      "file_name": "global_icons/linux/robot.svg",
+      "original_name": "robot.svg",
+      "mime_type": "image/svg+xml",
+      "is_public": true,
+      "description": "Global icon (linux): robot"
+    },
+    {
+      "file_name": "global_icons/web/chat.svg",
+      "original_name": "chat.svg",
+      "mime_type": "image/svg+xml",
+      "is_public": true,
+      "description": "Global icon (web): chat"
+    },
+    {
+      "file_name": "global_icons/android/chat.xml",
+      "original_name": "chat.xml",
+      "mime_type": "application/xml",
+      "is_public": true,
+      "description": "Global icon (android): chat"
+    },
+    {
+      "file_name": "global_icons/ios/chat.svg",
+      "original_name": "chat.svg",
+      "mime_type": "image/svg+xml",
+      "is_public": true,
+      "description": "Global icon (ios): chat"
+    },
+    {
+      "file_name": "global_icons/macos/chat.svg",
+      "original_name": "chat.svg",
+      "mime_type": "image/svg+xml",
+      "is_public": true,
+      "description": "Global icon (macos): chat"
+    },
+    {
+      "file_name": "global_icons/windows/chat.png",
+      "original_name": "chat.png",
+      "mime_type": "image/png",
+      "is_public": true,
+      "description": "Global icon (windows): chat"
+    },
+    {
+      "file_name": "global_icons/linux/chat.svg",
+      "original_name": "chat.svg",
+      "mime_type": "image/svg+xml",
+      "is_public": true,
+      "description": "Global icon (linux): chat"
+    },
+    {
+      "file_name": "global_icons/web/message.svg",
+      "original_name": "message.svg",
+      "mime_type": "image/svg+xml",
+      "is_public": true,
+      "description": "Global icon (web): message"
+    },
+    {
+      "file_name": "global_icons/android/message.xml",
+      "original_name": "message.xml",
+      "mime_type": "application/xml",
+      "is_public": true,
+      "description": "Global icon (android): message"
+    },
+    {
+      "file_name": "global_icons/ios/message.svg",
+      "original_name": "message.svg",
+      "mime_type": "image/svg+xml",
+      "is_public": true,
+      "description": "Global icon (ios): message"
+    },
+    {
+      "file_name": "global_icons/macos/message.svg",
+      "original_name": "message.svg",
+      "mime_type": "image/svg+xml",
+      "is_public": true,
+      "description": "Global icon (macos): message"
+    },
+    {
+      "file_name": "global_icons/windows/message.png",
+      "original_name": "message.png",
+      "mime_type": "image/png",
+      "is_public": true,
+      "description": "Global icon (windows): message"
+    },
+    {
+      "file_name": "global_icons/linux/message.svg",
+      "original_name": "message.svg",
+      "mime_type": "image/svg+xml",
+      "is_public": true,
+      "description": "Global icon (linux): message"
+    },
+    {
+      "file_name": "global_icons/web/team.svg",
+      "original_name": "team.svg",
+      "mime_type": "image/svg+xml",
+      "is_public": true,
+      "description": "Global icon (web): team"
+    },
+    {
+      "file_name": "global_icons/android/team.xml",
+      "original_name": "team.xml",
+      "mime_type": "application/xml",
+      "is_public": true,
+      "description": "Global icon (android): team"
+    },
+    {
+      "file_name": "global_icons/ios/team.svg",
+      "original_name": "team.svg",
+      "mime_type": "image/svg+xml",
+      "is_public": true,
+      "description": "Global icon (ios): team"
+    },
+    {
+      "file_name": "global_icons/macos/team.svg",
+      "original_name": "team.svg",
+      "mime_type": "image/svg+xml",
+      "is_public": true,
+      "description": "Global icon (macos): team"
+    },
+    {
+      "file_name": "global_icons/windows/team.png",
+      "original_name": "team.png",
+      "mime_type": "image/png",
+      "is_public": true,
+      "description": "Global icon (windows): team"
+    },
+    {
+      "file_name": "global_icons/linux/team.svg",
+      "original_name": "team.svg",
+      "mime_type": "image/svg+xml",
+      "is_public": true,
+      "description": "Global icon (linux): team"
+    },
+    {
+      "file_name": "global_icons/web/building.svg",
+      "original_name": "building.svg",
+      "mime_type": "image/svg+xml",
+      "is_public": true,
+      "description": "Global icon (web): building"
+    },
+    {
+      "file_name": "global_icons/android/building.xml",
+      "original_name": "building.xml",
+      "mime_type": "application/xml",
+      "is_public": true,
+      "description": "Global icon (android): building"
+    },
+    {
+      "file_name": "global_icons/ios/building.svg",
+      "original_name": "building.svg",
+      "mime_type": "image/svg+xml",
+      "is_public": true,
+      "description": "Global icon (ios): building"
+    },
+    {
+      "file_name": "global_icons/macos/building.svg",
+      "original_name": "building.svg",
+      "mime_type": "image/svg+xml",
+      "is_public": true,
+      "description": "Global icon (macos): building"
+    },
+    {
+      "file_name": "global_icons/windows/building.png",
+      "original_name": "building.png",
+      "mime_type": "image/png",
+      "is_public": true,
+      "description": "Global icon (windows): building"
+    },
+    {
+      "file_name": "global_icons/linux/building.svg",
+      "original_name": "building.svg",
+      "mime_type": "image/svg+xml",
+      "is_public": true,
+      "description": "Global icon (linux): building"
+    },
+    {
+      "file_name": "global_icons/web/truck.svg",
+      "original_name": "truck.svg",
+      "mime_type": "image/svg+xml",
+      "is_public": true,
+      "description": "Global icon (web): truck"
+    },
+    {
+      "file_name": "global_icons/android/truck.xml",
+      "original_name": "truck.xml",
+      "mime_type": "application/xml",
+      "is_public": true,
+      "description": "Global icon (android): truck"
+    },
+    {
+      "file_name": "global_icons/ios/truck.svg",
+      "original_name": "truck.svg",
+      "mime_type": "image/svg+xml",
+      "is_public": true,
+      "description": "Global icon (ios): truck"
+    },
+    {
+      "file_name": "global_icons/macos/truck.svg",
+      "original_name": "truck.svg",
+      "mime_type": "image/svg+xml",
+      "is_public": true,
+      "description": "Global icon (macos): truck"
+    },
+    {
+      "file_name": "global_icons/windows/truck.png",
+      "original_name": "truck.png",
+      "mime_type": "image/png",
+      "is_public": true,
+      "description": "Global icon (windows): truck"
+    },
+    {
+      "file_name": "global_icons/linux/truck.svg",
+      "original_name": "truck.svg",
+      "mime_type": "image/svg+xml",
+      "is_public": true,
+      "description": "Global icon (linux): truck"
+    },
+    {
+      "file_name": "global_icons/web/plane.svg",
+      "original_name": "plane.svg",
+      "mime_type": "image/svg+xml",
+      "is_public": true,
+      "description": "Global icon (web): plane"
+    },
+    {
+      "file_name": "global_icons/android/plane.xml",
+      "original_name": "plane.xml",
+      "mime_type": "application/xml",
+      "is_public": true,
+      "description": "Global icon (android): plane"
+    },
+    {
+      "file_name": "global_icons/ios/plane.svg",
+      "original_name": "plane.svg",
+      "mime_type": "image/svg+xml",
+      "is_public": true,
+      "description": "Global icon (ios): plane"
+    },
+    {
+      "file_name": "global_icons/macos/plane.svg",
+      "original_name": "plane.svg",
+      "mime_type": "image/svg+xml",
+      "is_public": true,
+      "description": "Global icon (macos): plane"
+    },
+    {
+      "file_name": "global_icons/windows/plane.png",
+      "original_name": "plane.png",
+      "mime_type": "image/png",
+      "is_public": true,
+      "description": "Global icon (windows): plane"
+    },
+    {
+      "file_name": "global_icons/linux/plane.svg",
+      "original_name": "plane.svg",
+      "mime_type": "image/svg+xml",
+      "is_public": true,
+      "description": "Global icon (linux): plane"
+    },
+    {
+      "file_name": "global_icons/web/car.svg",
+      "original_name": "car.svg",
+      "mime_type": "image/svg+xml",
+      "is_public": true,
+      "description": "Global icon (web): car"
+    },
+    {
+      "file_name": "global_icons/android/car.xml",
+      "original_name": "car.xml",
+      "mime_type": "application/xml",
+      "is_public": true,
+      "description": "Global icon (android): car"
+    },
+    {
+      "file_name": "global_icons/ios/car.svg",
+      "original_name": "car.svg",
+      "mime_type": "image/svg+xml",
+      "is_public": true,
+      "description": "Global icon (ios): car"
+    },
+    {
+      "file_name": "global_icons/macos/car.svg",
+      "original_name": "car.svg",
+      "mime_type": "image/svg+xml",
+      "is_public": true,
+      "description": "Global icon (macos): car"
+    },
+    {
+      "file_name": "global_icons/windows/car.png",
+      "original_name": "car.png",
+      "mime_type": "image/png",
+      "is_public": true,
+      "description": "Global icon (windows): car"
+    },
+    {
+      "file_name": "global_icons/linux/car.svg",
+      "original_name": "car.svg",
+      "mime_type": "image/svg+xml",
+      "is_public": true,
+      "description": "Global icon (linux): car"
+    },
+    {
+      "file_name": "global_icons/web/coffee.svg",
+      "original_name": "coffee.svg",
+      "mime_type": "image/svg+xml",
+      "is_public": true,
+      "description": "Global icon (web): coffee"
+    },
+    {
+      "file_name": "global_icons/android/coffee.xml",
+      "original_name": "coffee.xml",
+      "mime_type": "application/xml",
+      "is_public": true,
+      "description": "Global icon (android): coffee"
+    },
+    {
+      "file_name": "global_icons/ios/coffee.svg",
+      "original_name": "coffee.svg",
+      "mime_type": "image/svg+xml",
+      "is_public": true,
+      "description": "Global icon (ios): coffee"
+    },
+    {
+      "file_name": "global_icons/macos/coffee.svg",
+      "original_name": "coffee.svg",
+      "mime_type": "image/svg+xml",
+      "is_public": true,
+      "description": "Global icon (macos): coffee"
+    },
+    {
+      "file_name": "global_icons/windows/coffee.png",
+      "original_name": "coffee.png",
+      "mime_type": "image/png",
+      "is_public": true,
+      "description": "Global icon (windows): coffee"
+    },
+    {
+      "file_name": "global_icons/linux/coffee.svg",
+      "original_name": "coffee.svg",
+      "mime_type": "image/svg+xml",
+      "is_public": true,
+      "description": "Global icon (linux): coffee"
+    },
+    {
+      "file_name": "global_icons/web/sun.svg",
+      "original_name": "sun.svg",
+      "mime_type": "image/svg+xml",
+      "is_public": true,
+      "description": "Global icon (web): sun"
+    },
+    {
+      "file_name": "global_icons/android/sun.xml",
+      "original_name": "sun.xml",
+      "mime_type": "application/xml",
+      "is_public": true,
+      "description": "Global icon (android): sun"
+    },
+    {
+      "file_name": "global_icons/ios/sun.svg",
+      "original_name": "sun.svg",
+      "mime_type": "image/svg+xml",
+      "is_public": true,
+      "description": "Global icon (ios): sun"
+    },
+    {
+      "file_name": "global_icons/macos/sun.svg",
+      "original_name": "sun.svg",
+      "mime_type": "image/svg+xml",
+      "is_public": true,
+      "description": "Global icon (macos): sun"
+    },
+    {
+      "file_name": "global_icons/windows/sun.png",
+      "original_name": "sun.png",
+      "mime_type": "image/png",
+      "is_public": true,
+      "description": "Global icon (windows): sun"
+    },
+    {
+      "file_name": "global_icons/linux/sun.svg",
+      "original_name": "sun.svg",
+      "mime_type": "image/svg+xml",
+      "is_public": true,
+      "description": "Global icon (linux): sun"
+    },
+    {
+      "file_name": "global_icons/web/moon.svg",
+      "original_name": "moon.svg",
+      "mime_type": "image/svg+xml",
+      "is_public": true,
+      "description": "Global icon (web): moon"
+    },
+    {
+      "file_name": "global_icons/android/moon.xml",
+      "original_name": "moon.xml",
+      "mime_type": "application/xml",
+      "is_public": true,
+      "description": "Global icon (android): moon"
+    },
+    {
+      "file_name": "global_icons/ios/moon.svg",
+      "original_name": "moon.svg",
+      "mime_type": "image/svg+xml",
+      "is_public": true,
+      "description": "Global icon (ios): moon"
+    },
+    {
+      "file_name": "global_icons/macos/moon.svg",
+      "original_name": "moon.svg",
+      "mime_type": "image/svg+xml",
+      "is_public": true,
+      "description": "Global icon (macos): moon"
+    },
+    {
+      "file_name": "global_icons/windows/moon.png",
+      "original_name": "moon.png",
+      "mime_type": "image/png",
+      "is_public": true,
+      "description": "Global icon (windows): moon"
+    },
+    {
+      "file_name": "global_icons/linux/moon.svg",
+      "original_name": "moon.svg",
+      "mime_type": "image/svg+xml",
+      "is_public": true,
+      "description": "Global icon (linux): moon"
+    },
+    {
+      "file_name": "global_icons/web/language.svg",
+      "original_name": "language.svg",
+      "mime_type": "image/svg+xml",
+      "is_public": true,
+      "description": "Global icon (web): language"
+    },
+    {
+      "file_name": "global_icons/android/language.xml",
+      "original_name": "language.xml",
+      "mime_type": "application/xml",
+      "is_public": true,
+      "description": "Global icon (android): language"
+    },
+    {
+      "file_name": "global_icons/ios/language.svg",
+      "original_name": "language.svg",
+      "mime_type": "image/svg+xml",
+      "is_public": true,
+      "description": "Global icon (ios): language"
+    },
+    {
+      "file_name": "global_icons/macos/language.svg",
+      "original_name": "language.svg",
+      "mime_type": "image/svg+xml",
+      "is_public": true,
+      "description": "Global icon (macos): language"
+    },
+    {
+      "file_name": "global_icons/windows/language.png",
+      "original_name": "language.png",
+      "mime_type": "image/png",
+      "is_public": true,
+      "description": "Global icon (windows): language"
+    },
+    {
+      "file_name": "global_icons/linux/language.svg",
+      "original_name": "language.svg",
+      "mime_type": "image/svg+xml",
+      "is_public": true,
+      "description": "Global icon (linux): language"
+    },
+    {
+      "file_name": "global_icons/web/log_in.svg",
+      "original_name": "log_in.svg",
+      "mime_type": "image/svg+xml",
+      "is_public": true,
+      "description": "Global icon (web): log_in"
+    },
+    {
+      "file_name": "global_icons/android/log_in.xml",
+      "original_name": "log_in.xml",
+      "mime_type": "application/xml",
+      "is_public": true,
+      "description": "Global icon (android): log_in"
+    },
+    {
+      "file_name": "global_icons/ios/log_in.svg",
+      "original_name": "log_in.svg",
+      "mime_type": "image/svg+xml",
+      "is_public": true,
+      "description": "Global icon (ios): log_in"
+    },
+    {
+      "file_name": "global_icons/macos/log_in.svg",
+      "original_name": "log_in.svg",
+      "mime_type": "image/svg+xml",
+      "is_public": true,
+      "description": "Global icon (macos): log_in"
+    },
+    {
+      "file_name": "global_icons/windows/log_in.png",
+      "original_name": "log_in.png",
+      "mime_type": "image/png",
+      "is_public": true,
+      "description": "Global icon (windows): log_in"
+    },
+    {
+      "file_name": "global_icons/linux/log_in.svg",
+      "original_name": "log_in.svg",
+      "mime_type": "image/svg+xml",
+      "is_public": true,
+      "description": "Global icon (linux): log_in"
+    },
+    {
+      "file_name": "global_icons/web/log_out.svg",
+      "original_name": "log_out.svg",
+      "mime_type": "image/svg+xml",
+      "is_public": true,
+      "description": "Global icon (web): log_out"
+    },
+    {
+      "file_name": "global_icons/android/log_out.xml",
+      "original_name": "log_out.xml",
+      "mime_type": "application/xml",
+      "is_public": true,
+      "description": "Global icon (android): log_out"
+    },
+    {
+      "file_name": "global_icons/ios/log_out.svg",
+      "original_name": "log_out.svg",
+      "mime_type": "image/svg+xml",
+      "is_public": true,
+      "description": "Global icon (ios): log_out"
+    },
+    {
+      "file_name": "global_icons/macos/log_out.svg",
+      "original_name": "log_out.svg",
+      "mime_type": "image/svg+xml",
+      "is_public": true,
+      "description": "Global icon (macos): log_out"
+    },
+    {
+      "file_name": "global_icons/windows/log_out.png",
+      "original_name": "log_out.png",
+      "mime_type": "image/png",
+      "is_public": true,
+      "description": "Global icon (windows): log_out"
+    },
+    {
+      "file_name": "global_icons/linux/log_out.svg",
+      "original_name": "log_out.svg",
+      "mime_type": "image/svg+xml",
+      "is_public": true,
+      "description": "Global icon (linux): log_out"
+    },
+    {
+      "file_name": "global_icons/web/profile.svg",
+      "original_name": "profile.svg",
+      "mime_type": "image/svg+xml",
+      "is_public": true,
+      "description": "Global icon (web): profile"
+    },
+    {
+      "file_name": "global_icons/android/profile.xml",
+      "original_name": "profile.xml",
+      "mime_type": "application/xml",
+      "is_public": true,
+      "description": "Global icon (android): profile"
+    },
+    {
+      "file_name": "global_icons/ios/profile.svg",
+      "original_name": "profile.svg",
+      "mime_type": "image/svg+xml",
+      "is_public": true,
+      "description": "Global icon (ios): profile"
+    },
+    {
+      "file_name": "global_icons/macos/profile.svg",
+      "original_name": "profile.svg",
+      "mime_type": "image/svg+xml",
+      "is_public": true,
+      "description": "Global icon (macos): profile"
+    },
+    {
+      "file_name": "global_icons/windows/profile.png",
+      "original_name": "profile.png",
+      "mime_type": "image/png",
+      "is_public": true,
+      "description": "Global icon (windows): profile"
+    },
+    {
+      "file_name": "global_icons/linux/profile.svg",
+      "original_name": "profile.svg",
+      "mime_type": "image/svg+xml",
+      "is_public": true,
+      "description": "Global icon (linux): profile"
+    },
+    {
+      "file_name": "global_icons/web/notification.svg",
+      "original_name": "notification.svg",
+      "mime_type": "image/svg+xml",
+      "is_public": true,
+      "description": "Global icon (web): notification"
+    },
+    {
+      "file_name": "global_icons/android/notification.xml",
+      "original_name": "notification.xml",
+      "mime_type": "application/xml",
+      "is_public": true,
+      "description": "Global icon (android): notification"
+    },
+    {
+      "file_name": "global_icons/ios/notification.svg",
+      "original_name": "notification.svg",
+      "mime_type": "image/svg+xml",
+      "is_public": true,
+      "description": "Global icon (ios): notification"
+    },
+    {
+      "file_name": "global_icons/macos/notification.svg",
+      "original_name": "notification.svg",
+      "mime_type": "image/svg+xml",
+      "is_public": true,
+      "description": "Global icon (macos): notification"
+    },
+    {
+      "file_name": "global_icons/windows/notification.png",
+      "original_name": "notification.png",
+      "mime_type": "image/png",
+      "is_public": true,
+      "description": "Global icon (windows): notification"
+    },
+    {
+      "file_name": "global_icons/linux/notification.svg",
+      "original_name": "notification.svg",
+      "mime_type": "image/svg+xml",
+      "is_public": true,
+      "description": "Global icon (linux): notification"
+    },
+    {
+      "file_name": "global_icons/web/dashboard.svg",
+      "original_name": "dashboard.svg",
+      "mime_type": "image/svg+xml",
+      "is_public": true,
+      "description": "Global icon (web): dashboard"
+    },
+    {
+      "file_name": "global_icons/android/dashboard.xml",
+      "original_name": "dashboard.xml",
+      "mime_type": "application/xml",
+      "is_public": true,
+      "description": "Global icon (android): dashboard"
+    },
+    {
+      "file_name": "global_icons/ios/dashboard.svg",
+      "original_name": "dashboard.svg",
+      "mime_type": "image/svg+xml",
+      "is_public": true,
+      "description": "Global icon (ios): dashboard"
+    },
+    {
+      "file_name": "global_icons/macos/dashboard.svg",
+      "original_name": "dashboard.svg",
+      "mime_type": "image/svg+xml",
+      "is_public": true,
+      "description": "Global icon (macos): dashboard"
+    },
+    {
+      "file_name": "global_icons/windows/dashboard.png",
+      "original_name": "dashboard.png",
+      "mime_type": "image/png",
+      "is_public": true,
+      "description": "Global icon (windows): dashboard"
+    },
+    {
+      "file_name": "global_icons/linux/dashboard.svg",
+      "original_name": "dashboard.svg",
+      "mime_type": "image/svg+xml",
+      "is_public": true,
+      "description": "Global icon (linux): dashboard"
+    },
+    {
+      "file_name": "global_icons/web/activity.svg",
+      "original_name": "activity.svg",
+      "mime_type": "image/svg+xml",
+      "is_public": true,
+      "description": "Global icon (web): activity"
+    },
+    {
+      "file_name": "global_icons/android/activity.xml",
+      "original_name": "activity.xml",
+      "mime_type": "application/xml",
+      "is_public": true,
+      "description": "Global icon (android): activity"
+    },
+    {
+      "file_name": "global_icons/ios/activity.svg",
+      "original_name": "activity.svg",
+      "mime_type": "image/svg+xml",
+      "is_public": true,
+      "description": "Global icon (ios): activity"
+    },
+    {
+      "file_name": "global_icons/macos/activity.svg",
+      "original_name": "activity.svg",
+      "mime_type": "image/svg+xml",
+      "is_public": true,
+      "description": "Global icon (macos): activity"
+    },
+    {
+      "file_name": "global_icons/windows/activity.png",
+      "original_name": "activity.png",
+      "mime_type": "image/png",
+      "is_public": true,
+      "description": "Global icon (windows): activity"
+    },
+    {
+      "file_name": "global_icons/linux/activity.svg",
+      "original_name": "activity.svg",
+      "mime_type": "image/svg+xml",
+      "is_public": true,
+      "description": "Global icon (linux): activity"
+    },
+    {
+      "file_name": "global_icons/web/layers.svg",
+      "original_name": "layers.svg",
+      "mime_type": "image/svg+xml",
+      "is_public": true,
+      "description": "Global icon (web): layers"
+    },
+    {
+      "file_name": "global_icons/android/layers.xml",
+      "original_name": "layers.xml",
+      "mime_type": "application/xml",
+      "is_public": true,
+      "description": "Global icon (android): layers"
+    },
+    {
+      "file_name": "global_icons/ios/layers.svg",
+      "original_name": "layers.svg",
+      "mime_type": "image/svg+xml",
+      "is_public": true,
+      "description": "Global icon (ios): layers"
+    },
+    {
+      "file_name": "global_icons/macos/layers.svg",
+      "original_name": "layers.svg",
+      "mime_type": "image/svg+xml",
+      "is_public": true,
+      "description": "Global icon (macos): layers"
+    },
+    {
+      "file_name": "global_icons/windows/layers.png",
+      "original_name": "layers.png",
+      "mime_type": "image/png",
+      "is_public": true,
+      "description": "Global icon (windows): layers"
+    },
+    {
+      "file_name": "global_icons/linux/layers.svg",
+      "original_name": "layers.svg",
+      "mime_type": "image/svg+xml",
+      "is_public": true,
+      "description": "Global icon (linux): layers"
+    },
+    {
+      "file_name": "global_icons/web/compass.svg",
+      "original_name": "compass.svg",
+      "mime_type": "image/svg+xml",
+      "is_public": true,
+      "description": "Global icon (web): compass"
+    },
+    {
+      "file_name": "global_icons/android/compass.xml",
+      "original_name": "compass.xml",
+      "mime_type": "application/xml",
+      "is_public": true,
+      "description": "Global icon (android): compass"
+    },
+    {
+      "file_name": "global_icons/ios/compass.svg",
+      "original_name": "compass.svg",
+      "mime_type": "image/svg+xml",
+      "is_public": true,
+      "description": "Global icon (ios): compass"
+    },
+    {
+      "file_name": "global_icons/macos/compass.svg",
+      "original_name": "compass.svg",
+      "mime_type": "image/svg+xml",
+      "is_public": true,
+      "description": "Global icon (macos): compass"
+    },
+    {
+      "file_name": "global_icons/windows/compass.png",
+      "original_name": "compass.png",
+      "mime_type": "image/png",
+      "is_public": true,
+      "description": "Global icon (windows): compass"
+    },
+    {
+      "file_name": "global_icons/linux/compass.svg",
+      "original_name": "compass.svg",
+      "mime_type": "image/svg+xml",
+      "is_public": true,
+      "description": "Global icon (linux): compass"
+    },
+    {
+      "file_name": "global_icons/web/target.svg",
+      "original_name": "target.svg",
+      "mime_type": "image/svg+xml",
+      "is_public": true,
+      "description": "Global icon (web): target"
+    },
+    {
+      "file_name": "global_icons/android/target.xml",
+      "original_name": "target.xml",
+      "mime_type": "application/xml",
+      "is_public": true,
+      "description": "Global icon (android): target"
+    },
+    {
+      "file_name": "global_icons/ios/target.svg",
+      "original_name": "target.svg",
+      "mime_type": "image/svg+xml",
+      "is_public": true,
+      "description": "Global icon (ios): target"
+    },
+    {
+      "file_name": "global_icons/macos/target.svg",
+      "original_name": "target.svg",
+      "mime_type": "image/svg+xml",
+      "is_public": true,
+      "description": "Global icon (macos): target"
+    },
+    {
+      "file_name": "global_icons/windows/target.png",
+      "original_name": "target.png",
+      "mime_type": "image/png",
+      "is_public": true,
+      "description": "Global icon (windows): target"
+    },
+    {
+      "file_name": "global_icons/linux/target.svg",
+      "original_name": "target.svg",
+      "mime_type": "image/svg+xml",
+      "is_public": true,
+      "description": "Global icon (linux): target"
+    },
+    {
+      "file_name": "global_icons/web/award.svg",
+      "original_name": "award.svg",
+      "mime_type": "image/svg+xml",
+      "is_public": true,
+      "description": "Global icon (web): award"
+    },
+    {
+      "file_name": "global_icons/android/award.xml",
+      "original_name": "award.xml",
+      "mime_type": "application/xml",
+      "is_public": true,
+      "description": "Global icon (android): award"
+    },
+    {
+      "file_name": "global_icons/ios/award.svg",
+      "original_name": "award.svg",
+      "mime_type": "image/svg+xml",
+      "is_public": true,
+      "description": "Global icon (ios): award"
+    },
+    {
+      "file_name": "global_icons/macos/award.svg",
+      "original_name": "award.svg",
+      "mime_type": "image/svg+xml",
+      "is_public": true,
+      "description": "Global icon (macos): award"
+    },
+    {
+      "file_name": "global_icons/windows/award.png",
+      "original_name": "award.png",
+      "mime_type": "image/png",
+      "is_public": true,
+      "description": "Global icon (windows): award"
+    },
+    {
+      "file_name": "global_icons/linux/award.svg",
+      "original_name": "award.svg",
+      "mime_type": "image/svg+xml",
+      "is_public": true,
+      "description": "Global icon (linux): award"
+    },
+    {
+      "file_name": "global_icons/web/gift.svg",
+      "original_name": "gift.svg",
+      "mime_type": "image/svg+xml",
+      "is_public": true,
+      "description": "Global icon (web): gift"
+    },
+    {
+      "file_name": "global_icons/android/gift.xml",
+      "original_name": "gift.xml",
+      "mime_type": "application/xml",
+      "is_public": true,
+      "description": "Global icon (android): gift"
+    },
+    {
+      "file_name": "global_icons/ios/gift.svg",
+      "original_name": "gift.svg",
+      "mime_type": "image/svg+xml",
+      "is_public": true,
+      "description": "Global icon (ios): gift"
+    },
+    {
+      "file_name": "global_icons/macos/gift.svg",
+      "original_name": "gift.svg",
+      "mime_type": "image/svg+xml",
+      "is_public": true,
+      "description": "Global icon (macos): gift"
+    },
+    {
+      "file_name": "global_icons/windows/gift.png",
+      "original_name": "gift.png",
+      "mime_type": "image/png",
+      "is_public": true,
+      "description": "Global icon (windows): gift"
+    },
+    {
+      "file_name": "global_icons/linux/gift.svg",
+      "original_name": "gift.svg",
+      "mime_type": "image/svg+xml",
+      "is_public": true,
+      "description": "Global icon (linux): gift"
+    },
+    {
+      "file_name": "global_icons/web/megaphone.svg",
+      "original_name": "megaphone.svg",
+      "mime_type": "image/svg+xml",
+      "is_public": true,
+      "description": "Global icon (web): megaphone"
+    },
+    {
+      "file_name": "global_icons/android/megaphone.xml",
+      "original_name": "megaphone.xml",
+      "mime_type": "application/xml",
+      "is_public": true,
+      "description": "Global icon (android): megaphone"
+    },
+    {
+      "file_name": "global_icons/ios/megaphone.svg",
+      "original_name": "megaphone.svg",
+      "mime_type": "image/svg+xml",
+      "is_public": true,
+      "description": "Global icon (ios): megaphone"
+    },
+    {
+      "file_name": "global_icons/macos/megaphone.svg",
+      "original_name": "megaphone.svg",
+      "mime_type": "image/svg+xml",
+      "is_public": true,
+      "description": "Global icon (macos): megaphone"
+    },
+    {
+      "file_name": "global_icons/windows/megaphone.png",
+      "original_name": "megaphone.png",
+      "mime_type": "image/png",
+      "is_public": true,
+      "description": "Global icon (windows): megaphone"
+    },
+    {
+      "file_name": "global_icons/linux/megaphone.svg",
+      "original_name": "megaphone.svg",
+      "mime_type": "image/svg+xml",
+      "is_public": true,
+      "description": "Global icon (linux): megaphone"
+    },
+    {
+      "file_name": "global_icons/web/puzzle.svg",
+      "original_name": "puzzle.svg",
+      "mime_type": "image/svg+xml",
+      "is_public": true,
+      "description": "Global icon (web): puzzle"
+    },
+    {
+      "file_name": "global_icons/android/puzzle.xml",
+      "original_name": "puzzle.xml",
+      "mime_type": "application/xml",
+      "is_public": true,
+      "description": "Global icon (android): puzzle"
+    },
+    {
+      "file_name": "global_icons/ios/puzzle.svg",
+      "original_name": "puzzle.svg",
+      "mime_type": "image/svg+xml",
+      "is_public": true,
+      "description": "Global icon (ios): puzzle"
+    },
+    {
+      "file_name": "global_icons/macos/puzzle.svg",
+      "original_name": "puzzle.svg",
+      "mime_type": "image/svg+xml",
+      "is_public": true,
+      "description": "Global icon (macos): puzzle"
+    },
+    {
+      "file_name": "global_icons/windows/puzzle.png",
+      "original_name": "puzzle.png",
+      "mime_type": "image/png",
+      "is_public": true,
+      "description": "Global icon (windows): puzzle"
+    },
+    {
+      "file_name": "global_icons/linux/puzzle.svg",
+      "original_name": "puzzle.svg",
+      "mime_type": "image/svg+xml",
+      "is_public": true,
+      "description": "Global icon (linux): puzzle"
+    },
+    {
+      "file_name": "global_icons/web/brush.svg",
+      "original_name": "brush.svg",
+      "mime_type": "image/svg+xml",
+      "is_public": true,
+      "description": "Global icon (web): brush"
+    },
+    {
+      "file_name": "global_icons/android/brush.xml",
+      "original_name": "brush.xml",
+      "mime_type": "application/xml",
+      "is_public": true,
+      "description": "Global icon (android): brush"
+    },
+    {
+      "file_name": "global_icons/ios/brush.svg",
+      "original_name": "brush.svg",
+      "mime_type": "image/svg+xml",
+      "is_public": true,
+      "description": "Global icon (ios): brush"
+    },
+    {
+      "file_name": "global_icons/macos/brush.svg",
+      "original_name": "brush.svg",
+      "mime_type": "image/svg+xml",
+      "is_public": true,
+      "description": "Global icon (macos): brush"
+    },
+    {
+      "file_name": "global_icons/windows/brush.png",
+      "original_name": "brush.png",
+      "mime_type": "image/png",
+      "is_public": true,
+      "description": "Global icon (windows): brush"
+    },
+    {
+      "file_name": "global_icons/linux/brush.svg",
+      "original_name": "brush.svg",
+      "mime_type": "image/svg+xml",
+      "is_public": true,
+      "description": "Global icon (linux): brush"
+    },
+    {
+      "file_name": "global_icons/web/crop.svg",
+      "original_name": "crop.svg",
+      "mime_type": "image/svg+xml",
+      "is_public": true,
+      "description": "Global icon (web): crop"
+    },
+    {
+      "file_name": "global_icons/android/crop.xml",
+      "original_name": "crop.xml",
+      "mime_type": "application/xml",
+      "is_public": true,
+      "description": "Global icon (android): crop"
+    },
+    {
+      "file_name": "global_icons/ios/crop.svg",
+      "original_name": "crop.svg",
+      "mime_type": "image/svg+xml",
+      "is_public": true,
+      "description": "Global icon (ios): crop"
+    },
+    {
+      "file_name": "global_icons/macos/crop.svg",
+      "original_name": "crop.svg",
+      "mime_type": "image/svg+xml",
+      "is_public": true,
+      "description": "Global icon (macos): crop"
+    },
+    {
+      "file_name": "global_icons/windows/crop.png",
+      "original_name": "crop.png",
+      "mime_type": "image/png",
+      "is_public": true,
+      "description": "Global icon (windows): crop"
+    },
+    {
+      "file_name": "global_icons/linux/crop.svg",
+      "original_name": "crop.svg",
+      "mime_type": "image/svg+xml",
+      "is_public": true,
+      "description": "Global icon (linux): crop"
+    },
+    {
+      "file_name": "global_icons/web/adjust.svg",
+      "original_name": "adjust.svg",
+      "mime_type": "image/svg+xml",
+      "is_public": true,
+      "description": "Global icon (web): adjust"
+    },
+    {
+      "file_name": "global_icons/android/adjust.xml",
+      "original_name": "adjust.xml",
+      "mime_type": "application/xml",
+      "is_public": true,
+      "description": "Global icon (android): adjust"
+    },
+    {
+      "file_name": "global_icons/ios/adjust.svg",
+      "original_name": "adjust.svg",
+      "mime_type": "image/svg+xml",
+      "is_public": true,
+      "description": "Global icon (ios): adjust"
+    },
+    {
+      "file_name": "global_icons/macos/adjust.svg",
+      "original_name": "adjust.svg",
+      "mime_type": "image/svg+xml",
+      "is_public": true,
+      "description": "Global icon (macos): adjust"
+    },
+    {
+      "file_name": "global_icons/windows/adjust.png",
+      "original_name": "adjust.png",
+      "mime_type": "image/png",
+      "is_public": true,
+      "description": "Global icon (windows): adjust"
+    },
+    {
+      "file_name": "global_icons/linux/adjust.svg",
+      "original_name": "adjust.svg",
+      "mime_type": "image/svg+xml",
+      "is_public": true,
+      "description": "Global icon (linux): adjust"
+    },
+    {
+      "file_name": "global_icons/web/zoom_in.svg",
+      "original_name": "zoom_in.svg",
+      "mime_type": "image/svg+xml",
+      "is_public": true,
+      "description": "Global icon (web): zoom_in"
+    },
+    {
+      "file_name": "global_icons/android/zoom_in.xml",
+      "original_name": "zoom_in.xml",
+      "mime_type": "application/xml",
+      "is_public": true,
+      "description": "Global icon (android): zoom_in"
+    },
+    {
+      "file_name": "global_icons/ios/zoom_in.svg",
+      "original_name": "zoom_in.svg",
+      "mime_type": "image/svg+xml",
+      "is_public": true,
+      "description": "Global icon (ios): zoom_in"
+    },
+    {
+      "file_name": "global_icons/macos/zoom_in.svg",
+      "original_name": "zoom_in.svg",
+      "mime_type": "image/svg+xml",
+      "is_public": true,
+      "description": "Global icon (macos): zoom_in"
+    },
+    {
+      "file_name": "global_icons/windows/zoom_in.png",
+      "original_name": "zoom_in.png",
+      "mime_type": "image/png",
+      "is_public": true,
+      "description": "Global icon (windows): zoom_in"
+    },
+    {
+      "file_name": "global_icons/linux/zoom_in.svg",
+      "original_name": "zoom_in.svg",
+      "mime_type": "image/svg+xml",
+      "is_public": true,
+      "description": "Global icon (linux): zoom_in"
+    },
+    {
+      "file_name": "global_icons/web/zoom_out.svg",
+      "original_name": "zoom_out.svg",
+      "mime_type": "image/svg+xml",
+      "is_public": true,
+      "description": "Global icon (web): zoom_out"
+    },
+    {
+      "file_name": "global_icons/android/zoom_out.xml",
+      "original_name": "zoom_out.xml",
+      "mime_type": "application/xml",
+      "is_public": true,
+      "description": "Global icon (android): zoom_out"
+    },
+    {
+      "file_name": "global_icons/ios/zoom_out.svg",
+      "original_name": "zoom_out.svg",
+      "mime_type": "image/svg+xml",
+      "is_public": true,
+      "description": "Global icon (ios): zoom_out"
+    },
+    {
+      "file_name": "global_icons/macos/zoom_out.svg",
+      "original_name": "zoom_out.svg",
+      "mime_type": "image/svg+xml",
+      "is_public": true,
+      "description": "Global icon (macos): zoom_out"
+    },
+    {
+      "file_name": "global_icons/windows/zoom_out.png",
+      "original_name": "zoom_out.png",
+      "mime_type": "image/png",
+      "is_public": true,
+      "description": "Global icon (windows): zoom_out"
+    },
+    {
+      "file_name": "global_icons/linux/zoom_out.svg",
+      "original_name": "zoom_out.svg",
+      "mime_type": "image/svg+xml",
+      "is_public": true,
+      "description": "Global icon (linux): zoom_out"
+    },
+    {
+      "file_name": "global_icons/web/inbox.svg",
+      "original_name": "inbox.svg",
+      "mime_type": "image/svg+xml",
+      "is_public": true,
+      "description": "Global icon (web): inbox"
+    },
+    {
+      "file_name": "global_icons/android/inbox.xml",
+      "original_name": "inbox.xml",
+      "mime_type": "application/xml",
+      "is_public": true,
+      "description": "Global icon (android): inbox"
+    },
+    {
+      "file_name": "global_icons/ios/inbox.svg",
+      "original_name": "inbox.svg",
+      "mime_type": "image/svg+xml",
+      "is_public": true,
+      "description": "Global icon (ios): inbox"
+    },
+    {
+      "file_name": "global_icons/macos/inbox.svg",
+      "original_name": "inbox.svg",
+      "mime_type": "image/svg+xml",
+      "is_public": true,
+      "description": "Global icon (macos): inbox"
+    },
+    {
+      "file_name": "global_icons/windows/inbox.png",
+      "original_name": "inbox.png",
+      "mime_type": "image/png",
+      "is_public": true,
+      "description": "Global icon (windows): inbox"
+    },
+    {
+      "file_name": "global_icons/linux/inbox.svg",
+      "original_name": "inbox.svg",
+      "mime_type": "image/svg+xml",
+      "is_public": true,
+      "description": "Global icon (linux): inbox"
+    },
+    {
+      "file_name": "global_icons/web/send.svg",
+      "original_name": "send.svg",
+      "mime_type": "image/svg+xml",
+      "is_public": true,
+      "description": "Global icon (web): send"
+    },
+    {
+      "file_name": "global_icons/android/send.xml",
+      "original_name": "send.xml",
+      "mime_type": "application/xml",
+      "is_public": true,
+      "description": "Global icon (android): send"
+    },
+    {
+      "file_name": "global_icons/ios/send.svg",
+      "original_name": "send.svg",
+      "mime_type": "image/svg+xml",
+      "is_public": true,
+      "description": "Global icon (ios): send"
+    },
+    {
+      "file_name": "global_icons/macos/send.svg",
+      "original_name": "send.svg",
+      "mime_type": "image/svg+xml",
+      "is_public": true,
+      "description": "Global icon (macos): send"
+    },
+    {
+      "file_name": "global_icons/windows/send.png",
+      "original_name": "send.png",
+      "mime_type": "image/png",
+      "is_public": true,
+      "description": "Global icon (windows): send"
+    },
+    {
+      "file_name": "global_icons/linux/send.svg",
+      "original_name": "send.svg",
+      "mime_type": "image/svg+xml",
+      "is_public": true,
+      "description": "Global icon (linux): send"
+    },
+    {
+      "file_name": "global_icons/web/reply.svg",
+      "original_name": "reply.svg",
+      "mime_type": "image/svg+xml",
+      "is_public": true,
+      "description": "Global icon (web): reply"
+    },
+    {
+      "file_name": "global_icons/android/reply.xml",
+      "original_name": "reply.xml",
+      "mime_type": "application/xml",
+      "is_public": true,
+      "description": "Global icon (android): reply"
+    },
+    {
+      "file_name": "global_icons/ios/reply.svg",
+      "original_name": "reply.svg",
+      "mime_type": "image/svg+xml",
+      "is_public": true,
+      "description": "Global icon (ios): reply"
+    },
+    {
+      "file_name": "global_icons/macos/reply.svg",
+      "original_name": "reply.svg",
+      "mime_type": "image/svg+xml",
+      "is_public": true,
+      "description": "Global icon (macos): reply"
+    },
+    {
+      "file_name": "global_icons/windows/reply.png",
+      "original_name": "reply.png",
+      "mime_type": "image/png",
+      "is_public": true,
+      "description": "Global icon (windows): reply"
+    },
+    {
+      "file_name": "global_icons/linux/reply.svg",
+      "original_name": "reply.svg",
+      "mime_type": "image/svg+xml",
+      "is_public": true,
+      "description": "Global icon (linux): reply"
+    },
+    {
+      "file_name": "global_icons/web/forward_mail.svg",
+      "original_name": "forward_mail.svg",
+      "mime_type": "image/svg+xml",
+      "is_public": true,
+      "description": "Global icon (web): forward_mail"
+    },
+    {
+      "file_name": "global_icons/android/forward_mail.xml",
+      "original_name": "forward_mail.xml",
+      "mime_type": "application/xml",
+      "is_public": true,
+      "description": "Global icon (android): forward_mail"
+    },
+    {
+      "file_name": "global_icons/ios/forward_mail.svg",
+      "original_name": "forward_mail.svg",
+      "mime_type": "image/svg+xml",
+      "is_public": true,
+      "description": "Global icon (ios): forward_mail"
+    },
+    {
+      "file_name": "global_icons/macos/forward_mail.svg",
+      "original_name": "forward_mail.svg",
+      "mime_type": "image/svg+xml",
+      "is_public": true,
+      "description": "Global icon (macos): forward_mail"
+    },
+    {
+      "file_name": "global_icons/windows/forward_mail.png",
+      "original_name": "forward_mail.png",
+      "mime_type": "image/png",
+      "is_public": true,
+      "description": "Global icon (windows): forward_mail"
+    },
+    {
+      "file_name": "global_icons/linux/forward_mail.svg",
+      "original_name": "forward_mail.svg",
+      "mime_type": "image/svg+xml",
+      "is_public": true,
+      "description": "Global icon (linux): forward_mail"
+    },
+    {
+      "file_name": "global_icons/web/folder_open.svg",
+      "original_name": "folder_open.svg",
+      "mime_type": "image/svg+xml",
+      "is_public": true,
+      "description": "Global icon (web): folder_open"
+    },
+    {
+      "file_name": "global_icons/android/folder_open.xml",
+      "original_name": "folder_open.xml",
+      "mime_type": "application/xml",
+      "is_public": true,
+      "description": "Global icon (android): folder_open"
+    },
+    {
+      "file_name": "global_icons/ios/folder_open.svg",
+      "original_name": "folder_open.svg",
+      "mime_type": "image/svg+xml",
+      "is_public": true,
+      "description": "Global icon (ios): folder_open"
+    },
+    {
+      "file_name": "global_icons/macos/folder_open.svg",
+      "original_name": "folder_open.svg",
+      "mime_type": "image/svg+xml",
+      "is_public": true,
+      "description": "Global icon (macos): folder_open"
+    },
+    {
+      "file_name": "global_icons/windows/folder_open.png",
+      "original_name": "folder_open.png",
+      "mime_type": "image/png",
+      "is_public": true,
+      "description": "Global icon (windows): folder_open"
+    },
+    {
+      "file_name": "global_icons/linux/folder_open.svg",
+      "original_name": "folder_open.svg",
+      "mime_type": "image/svg+xml",
+      "is_public": true,
+      "description": "Global icon (linux): folder_open"
+    },
+    {
+      "file_name": "global_icons/web/note.svg",
+      "original_name": "note.svg",
+      "mime_type": "image/svg+xml",
+      "is_public": true,
+      "description": "Global icon (web): note"
+    },
+    {
+      "file_name": "global_icons/android/note.xml",
+      "original_name": "note.xml",
+      "mime_type": "application/xml",
+      "is_public": true,
+      "description": "Global icon (android): note"
+    },
+    {
+      "file_name": "global_icons/ios/note.svg",
+      "original_name": "note.svg",
+      "mime_type": "image/svg+xml",
+      "is_public": true,
+      "description": "Global icon (ios): note"
+    },
+    {
+      "file_name": "global_icons/macos/note.svg",
+      "original_name": "note.svg",
+      "mime_type": "image/svg+xml",
+      "is_public": true,
+      "description": "Global icon (macos): note"
+    },
+    {
+      "file_name": "global_icons/windows/note.png",
+      "original_name": "note.png",
+      "mime_type": "image/png",
+      "is_public": true,
+      "description": "Global icon (windows): note"
+    },
+    {
+      "file_name": "global_icons/linux/note.svg",
+      "original_name": "note.svg",
+      "mime_type": "image/svg+xml",
+      "is_public": true,
+      "description": "Global icon (linux): note"
+    },
+    {
+      "file_name": "global_icons/web/pin.svg",
+      "original_name": "pin.svg",
+      "mime_type": "image/svg+xml",
+      "is_public": true,
+      "description": "Global icon (web): pin"
+    },
+    {
+      "file_name": "global_icons/android/pin.xml",
+      "original_name": "pin.xml",
+      "mime_type": "application/xml",
+      "is_public": true,
+      "description": "Global icon (android): pin"
+    },
+    {
+      "file_name": "global_icons/ios/pin.svg",
+      "original_name": "pin.svg",
+      "mime_type": "image/svg+xml",
+      "is_public": true,
+      "description": "Global icon (ios): pin"
+    },
+    {
+      "file_name": "global_icons/macos/pin.svg",
+      "original_name": "pin.svg",
+      "mime_type": "image/svg+xml",
+      "is_public": true,
+      "description": "Global icon (macos): pin"
+    },
+    {
+      "file_name": "global_icons/windows/pin.png",
+      "original_name": "pin.png",
+      "mime_type": "image/png",
+      "is_public": true,
+      "description": "Global icon (windows): pin"
+    },
+    {
+      "file_name": "global_icons/linux/pin.svg",
+      "original_name": "pin.svg",
+      "mime_type": "image/svg+xml",
+      "is_public": true,
+      "description": "Global icon (linux): pin"
+    },
+    {
+      "file_name": "global_icons/web/unpin.svg",
+      "original_name": "unpin.svg",
+      "mime_type": "image/svg+xml",
+      "is_public": true,
+      "description": "Global icon (web): unpin"
+    },
+    {
+      "file_name": "global_icons/android/unpin.xml",
+      "original_name": "unpin.xml",
+      "mime_type": "application/xml",
+      "is_public": true,
+      "description": "Global icon (android): unpin"
+    },
+    {
+      "file_name": "global_icons/ios/unpin.svg",
+      "original_name": "unpin.svg",
+      "mime_type": "image/svg+xml",
+      "is_public": true,
+      "description": "Global icon (ios): unpin"
+    },
+    {
+      "file_name": "global_icons/macos/unpin.svg",
+      "original_name": "unpin.svg",
+      "mime_type": "image/svg+xml",
+      "is_public": true,
+      "description": "Global icon (macos): unpin"
+    },
+    {
+      "file_name": "global_icons/windows/unpin.png",
+      "original_name": "unpin.png",
+      "mime_type": "image/png",
+      "is_public": true,
+      "description": "Global icon (windows): unpin"
+    },
+    {
+      "file_name": "global_icons/linux/unpin.svg",
+      "original_name": "unpin.svg",
+      "mime_type": "image/svg+xml",
+      "is_public": true,
+      "description": "Global icon (linux): unpin"
+    },
+    {
+      "file_name": "global_icons/web/history.svg",
+      "original_name": "history.svg",
+      "mime_type": "image/svg+xml",
+      "is_public": true,
+      "description": "Global icon (web): history"
+    },
+    {
+      "file_name": "global_icons/android/history.xml",
+      "original_name": "history.xml",
+      "mime_type": "application/xml",
+      "is_public": true,
+      "description": "Global icon (android): history"
+    },
+    {
+      "file_name": "global_icons/ios/history.svg",
+      "original_name": "history.svg",
+      "mime_type": "image/svg+xml",
+      "is_public": true,
+      "description": "Global icon (ios): history"
+    },
+    {
+      "file_name": "global_icons/macos/history.svg",
+      "original_name": "history.svg",
+      "mime_type": "image/svg+xml",
+      "is_public": true,
+      "description": "Global icon (macos): history"
+    },
+    {
+      "file_name": "global_icons/windows/history.png",
+      "original_name": "history.png",
+      "mime_type": "image/png",
+      "is_public": true,
+      "description": "Global icon (windows): history"
+    },
+    {
+      "file_name": "global_icons/linux/history.svg",
+      "original_name": "history.svg",
+      "mime_type": "image/svg+xml",
+      "is_public": true,
+      "description": "Global icon (linux): history"
+    },
+    {
+      "file_name": "global_icons/web/sync.svg",
+      "original_name": "sync.svg",
+      "mime_type": "image/svg+xml",
+      "is_public": true,
+      "description": "Global icon (web): sync"
+    },
+    {
+      "file_name": "global_icons/android/sync.xml",
+      "original_name": "sync.xml",
+      "mime_type": "application/xml",
+      "is_public": true,
+      "description": "Global icon (android): sync"
+    },
+    {
+      "file_name": "global_icons/ios/sync.svg",
+      "original_name": "sync.svg",
+      "mime_type": "image/svg+xml",
+      "is_public": true,
+      "description": "Global icon (ios): sync"
+    },
+    {
+      "file_name": "global_icons/macos/sync.svg",
+      "original_name": "sync.svg",
+      "mime_type": "image/svg+xml",
+      "is_public": true,
+      "description": "Global icon (macos): sync"
+    },
+    {
+      "file_name": "global_icons/windows/sync.png",
+      "original_name": "sync.png",
+      "mime_type": "image/png",
+      "is_public": true,
+      "description": "Global icon (windows): sync"
+    },
+    {
+      "file_name": "global_icons/linux/sync.svg",
+      "original_name": "sync.svg",
+      "mime_type": "image/svg+xml",
+      "is_public": true,
+      "description": "Global icon (linux): sync"
+    },
+    {
+      "file_name": "global_icons/web/import_icon.svg",
+      "original_name": "import_icon.svg",
+      "mime_type": "image/svg+xml",
+      "is_public": true,
+      "description": "Global icon (web): import_icon"
+    },
+    {
+      "file_name": "global_icons/android/import_icon.xml",
+      "original_name": "import_icon.xml",
+      "mime_type": "application/xml",
+      "is_public": true,
+      "description": "Global icon (android): import_icon"
+    },
+    {
+      "file_name": "global_icons/ios/import_icon.svg",
+      "original_name": "import_icon.svg",
+      "mime_type": "image/svg+xml",
+      "is_public": true,
+      "description": "Global icon (ios): import_icon"
+    },
+    {
+      "file_name": "global_icons/macos/import_icon.svg",
+      "original_name": "import_icon.svg",
+      "mime_type": "image/svg+xml",
+      "is_public": true,
+      "description": "Global icon (macos): import_icon"
+    },
+    {
+      "file_name": "global_icons/windows/import_icon.png",
+      "original_name": "import_icon.png",
+      "mime_type": "image/png",
+      "is_public": true,
+      "description": "Global icon (windows): import_icon"
+    },
+    {
+      "file_name": "global_icons/linux/import_icon.svg",
+      "original_name": "import_icon.svg",
+      "mime_type": "image/svg+xml",
+      "is_public": true,
+      "description": "Global icon (linux): import_icon"
+    },
+    {
+      "file_name": "global_icons/web/export_icon.svg",
+      "original_name": "export_icon.svg",
+      "mime_type": "image/svg+xml",
+      "is_public": true,
+      "description": "Global icon (web): export_icon"
+    },
+    {
+      "file_name": "global_icons/android/export_icon.xml",
+      "original_name": "export_icon.xml",
+      "mime_type": "application/xml",
+      "is_public": true,
+      "description": "Global icon (android): export_icon"
+    },
+    {
+      "file_name": "global_icons/ios/export_icon.svg",
+      "original_name": "export_icon.svg",
+      "mime_type": "image/svg+xml",
+      "is_public": true,
+      "description": "Global icon (ios): export_icon"
+    },
+    {
+      "file_name": "global_icons/macos/export_icon.svg",
+      "original_name": "export_icon.svg",
+      "mime_type": "image/svg+xml",
+      "is_public": true,
+      "description": "Global icon (macos): export_icon"
+    },
+    {
+      "file_name": "global_icons/windows/export_icon.png",
+      "original_name": "export_icon.png",
+      "mime_type": "image/png",
+      "is_public": true,
+      "description": "Global icon (windows): export_icon"
+    },
+    {
+      "file_name": "global_icons/linux/export_icon.svg",
+      "original_name": "export_icon.svg",
+      "mime_type": "image/svg+xml",
+      "is_public": true,
+      "description": "Global icon (linux): export_icon"
+    },
+    {
+      "file_name": "global_icons/web/template.svg",
+      "original_name": "template.svg",
+      "mime_type": "image/svg+xml",
+      "is_public": true,
+      "description": "Global icon (web): template"
+    },
+    {
+      "file_name": "global_icons/android/template.xml",
+      "original_name": "template.xml",
+      "mime_type": "application/xml",
+      "is_public": true,
+      "description": "Global icon (android): template"
+    },
+    {
+      "file_name": "global_icons/ios/template.svg",
+      "original_name": "template.svg",
+      "mime_type": "image/svg+xml",
+      "is_public": true,
+      "description": "Global icon (ios): template"
+    },
+    {
+      "file_name": "global_icons/macos/template.svg",
+      "original_name": "template.svg",
+      "mime_type": "image/svg+xml",
+      "is_public": true,
+      "description": "Global icon (macos): template"
+    },
+    {
+      "file_name": "global_icons/windows/template.png",
+      "original_name": "template.png",
+      "mime_type": "image/png",
+      "is_public": true,
+      "description": "Global icon (windows): template"
+    },
+    {
+      "file_name": "global_icons/linux/template.svg",
+      "original_name": "template.svg",
+      "mime_type": "image/svg+xml",
+      "is_public": true,
+      "description": "Global icon (linux): template"
+    },
+    {
+      "file_name": "global_icons/web/workflow.svg",
+      "original_name": "workflow.svg",
+      "mime_type": "image/svg+xml",
+      "is_public": true,
+      "description": "Global icon (web): workflow"
+    },
+    {
+      "file_name": "global_icons/android/workflow.xml",
+      "original_name": "workflow.xml",
+      "mime_type": "application/xml",
+      "is_public": true,
+      "description": "Global icon (android): workflow"
+    },
+    {
+      "file_name": "global_icons/ios/workflow.svg",
+      "original_name": "workflow.svg",
+      "mime_type": "image/svg+xml",
+      "is_public": true,
+      "description": "Global icon (ios): workflow"
+    },
+    {
+      "file_name": "global_icons/macos/workflow.svg",
+      "original_name": "workflow.svg",
+      "mime_type": "image/svg+xml",
+      "is_public": true,
+      "description": "Global icon (macos): workflow"
+    },
+    {
+      "file_name": "global_icons/windows/workflow.png",
+      "original_name": "workflow.png",
+      "mime_type": "image/png",
+      "is_public": true,
+      "description": "Global icon (windows): workflow"
+    },
+    {
+      "file_name": "global_icons/linux/workflow.svg",
+      "original_name": "workflow.svg",
+      "mime_type": "image/svg+xml",
+      "is_public": true,
+      "description": "Global icon (linux): workflow"
+    },
+    {
+      "file_name": "global_icons/web/api.svg",
+      "original_name": "api.svg",
+      "mime_type": "image/svg+xml",
+      "is_public": true,
+      "description": "Global icon (web): api"
+    },
+    {
+      "file_name": "global_icons/android/api.xml",
+      "original_name": "api.xml",
+      "mime_type": "application/xml",
+      "is_public": true,
+      "description": "Global icon (android): api"
+    },
+    {
+      "file_name": "global_icons/ios/api.svg",
+      "original_name": "api.svg",
+      "mime_type": "image/svg+xml",
+      "is_public": true,
+      "description": "Global icon (ios): api"
+    },
+    {
+      "file_name": "global_icons/macos/api.svg",
+      "original_name": "api.svg",
+      "mime_type": "image/svg+xml",
+      "is_public": true,
+      "description": "Global icon (macos): api"
+    },
+    {
+      "file_name": "global_icons/windows/api.png",
+      "original_name": "api.png",
+      "mime_type": "image/png",
+      "is_public": true,
+      "description": "Global icon (windows): api"
+    },
+    {
+      "file_name": "global_icons/linux/api.svg",
+      "original_name": "api.svg",
+      "mime_type": "image/svg+xml",
+      "is_public": true,
+      "description": "Global icon (linux): api"
+    },
+    {
+      "file_name": "global_icons/web/webhook.svg",
+      "original_name": "webhook.svg",
+      "mime_type": "image/svg+xml",
+      "is_public": true,
+      "description": "Global icon (web): webhook"
+    },
+    {
+      "file_name": "global_icons/android/webhook.xml",
+      "original_name": "webhook.xml",
+      "mime_type": "application/xml",
+      "is_public": true,
+      "description": "Global icon (android): webhook"
+    },
+    {
+      "file_name": "global_icons/ios/webhook.svg",
+      "original_name": "webhook.svg",
+      "mime_type": "image/svg+xml",
+      "is_public": true,
+      "description": "Global icon (ios): webhook"
+    },
+    {
+      "file_name": "global_icons/macos/webhook.svg",
+      "original_name": "webhook.svg",
+      "mime_type": "image/svg+xml",
+      "is_public": true,
+      "description": "Global icon (macos): webhook"
+    },
+    {
+      "file_name": "global_icons/windows/webhook.png",
+      "original_name": "webhook.png",
+      "mime_type": "image/png",
+      "is_public": true,
+      "description": "Global icon (windows): webhook"
+    },
+    {
+      "file_name": "global_icons/linux/webhook.svg",
+      "original_name": "webhook.svg",
+      "mime_type": "image/svg+xml",
+      "is_public": true,
+      "description": "Global icon (linux): webhook"
+    },
+    {
+      "file_name": "global_icons/web/terminal.svg",
+      "original_name": "terminal.svg",
+      "mime_type": "image/svg+xml",
+      "is_public": true,
+      "description": "Global icon (web): terminal"
+    },
+    {
+      "file_name": "global_icons/android/terminal.xml",
+      "original_name": "terminal.xml",
+      "mime_type": "application/xml",
+      "is_public": true,
+      "description": "Global icon (android): terminal"
+    },
+    {
+      "file_name": "global_icons/ios/terminal.svg",
+      "original_name": "terminal.svg",
+      "mime_type": "image/svg+xml",
+      "is_public": true,
+      "description": "Global icon (ios): terminal"
+    },
+    {
+      "file_name": "global_icons/macos/terminal.svg",
+      "original_name": "terminal.svg",
+      "mime_type": "image/svg+xml",
+      "is_public": true,
+      "description": "Global icon (macos): terminal"
+    },
+    {
+      "file_name": "global_icons/windows/terminal.png",
+      "original_name": "terminal.png",
+      "mime_type": "image/png",
+      "is_public": true,
+      "description": "Global icon (windows): terminal"
+    },
+    {
+      "file_name": "global_icons/linux/terminal.svg",
+      "original_name": "terminal.svg",
+      "mime_type": "image/svg+xml",
+      "is_public": true,
+      "description": "Global icon (linux): terminal"
     }
   ]
 }
