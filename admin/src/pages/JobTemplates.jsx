@@ -1,4 +1,4 @@
-import React, { useMemo, useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
     Card,
     Table,
@@ -18,7 +18,6 @@ import { ReloadOutlined, FileTextOutlined, PlusOutlined, EditOutlined, StopOutli
 import { api } from '../utils/api';
 import ErrorModal from '../components/ErrorModal';
 import { VCJsonEditor } from '../components/ViewComponents/inputs/VCJsonEditor';
-import { VCSearchFilterBar } from '../components/ViewComponents/displays/VCSearchFilterBar';
 
 const { Option } = Select;
 
@@ -40,15 +39,6 @@ const JobTemplates = () => {
     const [jsonDrawerVisible, setJsonDrawerVisible] = useState(false);
     const [jsonForm] = Form.useForm();
     const [jsonMeta, setJsonMeta] = useState(null); // { templateId, fieldKey, label, defaultValue }
-    const [searchText, setSearchText] = useState('');
-    const [filters, setFilters] = useState({
-        category: null,
-        handlerType: null,
-        status: null, // 'active' | 'inactive' | null
-        mode: null,
-        timeoutMin: null,
-        timeoutMax: null,
-    });
 
     const fetchTemplates = async () => {
         try {
@@ -67,53 +57,6 @@ const JobTemplates = () => {
     useEffect(() => {
         fetchTemplates();
     }, []);
-
-    const filteredTemplates = useMemo(() => {
-        const q = (searchText || '').trim().toLowerCase();
-        const hasQuery = !!q;
-
-        const matchesQuery = (t) => {
-            if (!hasQuery) return true;
-            const hay = [
-                t?.name,
-                t?.description,
-                t?.template_category,
-                t?.handler_type,
-                t?.handler_function_name,
-            ]
-                .filter(Boolean)
-                .join(' ')
-                .toLowerCase();
-            return hay.includes(q);
-        };
-
-        const matchesFilters = (t) => {
-            if (filters.category && t?.template_category !== filters.category) return false;
-            if (filters.handlerType && t?.handler_type !== filters.handlerType) return false;
-            if (filters.mode && t?.queue_concurrency_mode !== filters.mode) return false;
-            if (filters.status === 'active' && t?.is_active === false) return false;
-            if (filters.status === 'inactive' && t?.is_active !== false) return false;
-
-            const timeout = typeof t?.default_timeout_seconds === 'number' ? t.default_timeout_seconds : null;
-            if (typeof filters.timeoutMin === 'number' && timeout !== null && timeout < filters.timeoutMin) return false;
-            if (typeof filters.timeoutMax === 'number' && timeout !== null && timeout > filters.timeoutMax) return false;
-            return true;
-        };
-
-        return (Array.isArray(templates) ? templates : []).filter((t) => matchesQuery(t) && matchesFilters(t));
-    }, [templates, searchText, filters]);
-
-    const resetFilters = () => {
-        setSearchText('');
-        setFilters({
-            category: null,
-            handlerType: null,
-            status: null,
-            mode: null,
-            timeoutMin: null,
-            timeoutMax: null,
-        });
-    };
 
     const openAdd = () => {
         setEditingId(null);
@@ -347,23 +290,10 @@ const JobTemplates = () => {
                     </Space>
                 }
             >
-                <VCSearchFilterBar
-                    searchPlaceholder="Search name, description, handler function…"
-                    searchValue={searchText}
-                    onSearchValueChange={setSearchText}
-                    filters={filters}
-                    onFiltersChange={setFilters}
-                    filterOptions={{
-                        categories: TEMPLATE_CATEGORIES,
-                        handlerTypes: HANDLER_TYPES,
-                        modes: CONCURRENCY_MODES,
-                    }}
-                    onReset={resetFilters}
-                />
                 <Table
                     rowKey="template_id"
                     columns={columns}
-                    dataSource={filteredTemplates}
+                    dataSource={templates}
                     loading={loading}
                     pagination={{ pageSize: 20 }}
                     size="small"

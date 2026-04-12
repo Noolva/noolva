@@ -74,11 +74,6 @@ const DataModels = () => {
     const [selectedFieldRowKeys, setSelectedFieldRowKeys] = useState([]);
     const [importModalVisible, setImportModalVisible] = useState(false);
     const [fieldTypesRefVisible, setFieldTypesRefVisible] = useState(false);
-    const isFlattenedSelectedModel = useMemo(() => {
-        const name = (selectedModel?.model_name || '').toLowerCase();
-        const desc = ((selectedModel?.description || '') + '').toLowerCase();
-        return name.startsWith('flattened_') || desc.includes('generated_by_flattening_table_policy_id=');
-    }, [selectedModel]);
     const [fieldTypesRefFormat, setFieldTypesRefFormat] = useState('yaml');
 
     // Helper function to get asset URL
@@ -782,7 +777,7 @@ const DataModels = () => {
                         size="small"
                         icon={<EditOutlined />}
                         onClick={() => handleEditField(record)}
-                        disabled={record.is_primary_key || isFlattenedSelectedModel}
+                        disabled={record.is_primary_key}
                     >
                         Edit
                     </Button>
@@ -791,14 +786,14 @@ const DataModels = () => {
                         onConfirm={() => handleDeleteField(record.field_id, record.field_name)}
                         okText="Yes"
                         cancelText="No"
-                        disabled={record.is_primary_key || isFlattenedSelectedModel}
+                        disabled={record.is_primary_key}
                     >
                         <Button
                             type="link"
                             danger
                             size="small"
                             icon={<DeleteOutlined />}
-                            disabled={record.is_primary_key || isFlattenedSelectedModel}
+                            disabled={record.is_primary_key}
                         >
                             Delete
                         </Button>
@@ -1081,18 +1076,17 @@ const DataModels = () => {
                             type="primary"
                             icon={<PlusOutlined />}
                             onClick={openAddFieldDrawer}
-                            disabled={isFlattenedSelectedModel}
                         >
                             Add Field
                         </Button>
                         <Button
                             icon={<OrderedListOutlined />}
                             onClick={openOrderingDrawer}
-                            disabled={!fields.length || isFlattenedSelectedModel}
+                            disabled={!fields.length}
                         >
                             Ordering
                         </Button>
-                        <Button icon={<ImportOutlined />} onClick={() => setImportModalVisible(true)} disabled={isFlattenedSelectedModel}>
+                        <Button icon={<ImportOutlined />} onClick={() => setImportModalVisible(true)}>
                             Import
                         </Button>
                         <Dropdown
@@ -1132,14 +1126,6 @@ const DataModels = () => {
                             Field types reference
                         </Button>
                     </Space>
-                    {isFlattenedSelectedModel && (
-                        <Alert
-                            type="warning"
-                            showIcon
-                            style={{ marginTop: 12 }}
-                            message="This is a flattened system model. Fields are managed by Flattened Datas policies and are read-only here."
-                        />
-                    )}
                 </div>
 
                 <Modal
