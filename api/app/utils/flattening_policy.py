@@ -9,24 +9,26 @@ from typing import Any, Dict, List, Optional
 
 logger = logging.getLogger("noolva_api.flattening_policy")
 
-VALID_REFRESH = frozenset({"FULL", "INCREMENTAL"})
-VALID_DESTINATION = frozenset({"postgres", "s3", "iceberg"})
+VALID_REFRESH = frozenset({"FULL", "INCREMENTAL", "VERSIONED"})
 
 
 def validate_table_policy_row(row: Dict[str, Any], partial: bool = False) -> None:
-    # Snapshot mode is not used; treat as always false.
-    snap = False
-    dest = (row.get("destination") or "postgres").strip().lower()
-    if dest not in VALID_DESTINATION:
-        raise ValueError(f"destination must be one of {sorted(VALID_DESTINATION)}")
+    snap = row.get("is_snapshot")
+    if snap is None and not partial:
+        snap = True
     strat = row.get("refresh_strategy")
     if strat is not None and strat not in VALID_REFRESH:
         raise ValueError(f"refresh_strategy must be one of {sorted(VALID_REFRESH)} or null")
-    if not row.get("refresh_strategy"):
-        raise ValueError("refresh_strategy is required (FULL or INCREMENTAL)")
-    # FULL/INCREMENTAL require an interval for scheduled dispatch (scheduler uses due query).
-    if row.get("refresh_strategy") in ("FULL", "INCREMENTAL") and row.get("refresh_interval_minutes") in (None, ""):
-        raise ValueError(f"{row.get('refresh_strategy')} requires refresh_interval_minutes")
+    if snap is True:
+        if row.get("refresh_strategy") not in (None, ""):
+            raise ValueError("When is_snapshot is true, refresh_strategy must be null")
+        if row.get("refresh_interval_minutes") not in (None, ""):
+            raise ValueError("When is_snapshot is true, refresh_interval_minutes should be null")
+    else:
+        if not row.get("refresh_strategy"):
+            raise ValueError("Active policies (is_snapshot false) require refresh_strategy")
+        if row.get("refresh_interval_minutes") in (None, ""):
+            raise ValueError("Active policies require refresh_interval_minutes")
 
 
 def validate_relation_row(row: Dict[str, Any], partial: bool = False) -> None:
@@ -51,8 +53,7 @@ def validate_relation_row(row: Dict[str, Any], partial: bool = False) -> None:
 
 def sql_due_flattening_policies() -> str:
     return """
-SELECT id, table_name, destination, is_db_table, is_public_on_s3,
-       refresh_strategy, refresh_interval_minutes, batch_size
+SELECT id, table_name, refresh_strategy, refresh_interval_minutes, batch_size
 FROM public.flattening_table_policy
 WHERE COALESCE(is_active, true) = true
   AND is_snapshot = false
@@ -85,23 +86,14 @@ async def ensure_flattening_read_endpoints(policy_id: int, table_name: str, user
     """
     from classes.postgres_db import PostgresDB
 
-    # Prefer auto-generated flattened_* model for this policy if present.
     model = await PostgresDB.fetchrow(
         """
         SELECT model_id, model_name, table_name
         FROM public.data_models
         WHERE table_name = $1
-        ORDER BY
-          CASE
-            WHEN is_system_model = TRUE AND COALESCE(description,'') LIKE $2 THEN 0
-            WHEN model_name LIKE 'flattened_%' THEN 1
-            ELSE 9
-          END,
-          model_id DESC
         LIMIT 1
         """,
         table_name.strip(),
-        f"%generated_by_flattening_table_policy_id={int(policy_id)}%",
     )
     if not model:
         raise ValueError(

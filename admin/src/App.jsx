@@ -21,12 +21,8 @@ import Jobs from './pages/Jobs';
 import Schedulers from './pages/Schedulers';
 import FlattenedDatas from './pages/FlattenedDatas';
 import DataLifecyclePolicies from './pages/DataLifecyclePolicies';
-import DataLifecycleBatchLedger from './pages/DataLifecycleBatchLedger';
-import ClientInstances from './pages/ClientInstances';
-import InstanceMenus from './pages/InstanceMenus';
 import DataModels from './pages/DataModels';
 import IconExplorer from './pages/IconExplorer';
-import GlobalIcons from './pages/GlobalIcons';
 import Collections from './pages/Collections';
 import ApiEndpoints from './pages/ApiEndpoints';
 import IntegrationManager from './pages/IntegrationManager';
@@ -101,12 +97,9 @@ const AppContent = () => {
       case 'dev_console_schedulers': return <Schedulers />;
       case 'dev_console_flattened_datas': return <FlattenedDatas />;
       case 'dev_console_data_lifecycle': return <DataLifecyclePolicies />;
-      case 'dev_console_data_lifecycle_ledger': return <DataLifecycleBatchLedger />;
-      case 'dev_console_client_instances': return <ClientInstances />;
       case 'studio_data_models': return <DataModels />;
       case 'data_models': return <DataModels />;
       case 'studio_icons': return <IconExplorer />;
-      case 'studio_global_icons': return <GlobalIcons />;
       case 'studio_collections': return <Collections />;
       case 'studio_api_endpoints': return <ApiEndpoints />;
       case 'studio_integrations': return <IntegrationManager />;
@@ -125,12 +118,8 @@ const AppContent = () => {
           if (routePath === 'dev_console_schedulers') return <Schedulers />;
           if (routePath === 'dev_console_flattened_datas') return <FlattenedDatas />;
           if (routePath === 'dev_console_data_lifecycle') return <DataLifecyclePolicies />;
-          if (routePath === 'dev_console_data_lifecycle_ledger') return <DataLifecycleBatchLedger />;
-          if (routePath === 'dev_console_client_instances') return <ClientInstances />;
-          if (routePath === 'dev_console_instance_menus') return <InstanceMenus />;
           if (routePath === 'studio_data_models' || routePath === 'data_models') return <DataModels />;
           if (routePath === 'studio_icons') return <IconExplorer />;
-          if (routePath === 'studio_global_icons') return <GlobalIcons />;
           if (routePath === 'studio_collections') return <Collections />;
           if (routePath === 'studio_api_endpoints') return <ApiEndpoints />;
           if (routePath === 'studio_integrations') return <IntegrationManager />;
@@ -533,8 +522,6 @@ const AppContent = () => {
                 selectedApp={selectedApp}
                 selectedAppData={selectedAppData}
                 onSelect={handleSubmenuSelect}
-                activeTabKey={tabs.activeKey}
-                activeTabMeta={tabs.items.find(t => t.key === tabs.activeKey) || null}
                 autoHideSidebar={autoHideSidebar}
                 onAutoHideSidebarChange={updateAutoHideSidebar}
                 collapsed={selectedApp && autoHideSidebar ? !sidebarHoverExpanded : false}
