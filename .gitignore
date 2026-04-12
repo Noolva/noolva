@@ -68,6 +68,8 @@ web_modules/
 # dotenv environment variable files
 .env
 .env.*
+.env_local
+**/.env_local
 !.env.example
 
 # parcel-bundler cache (https://parceljs.org/)
@@ -180,10 +182,15 @@ htmlcov/
 ##############################
 # Backend runtime / secrets
 ##############################
-# Local env files (keep .env.example tracked)
+# Local env files (keep .env.example tracked); .env_local = api local overrides
 .env
 .env.*
+.env_local
+**/.env_local
 !.env.example
+
+# Full database dumps at repo root (canonical SQL is under db-structure/)
+/noolvandb_bkp*.sql
 
 # Local SQLite / dev DBs (if ever used)
 *.sqlite3
