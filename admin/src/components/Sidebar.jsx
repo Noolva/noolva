@@ -6,7 +6,7 @@ import { renderIcon } from '../utils/iconMapper.jsx';
 import { useTheme } from '../contexts/ThemeContext';
 import { resolveApiAssetUrl } from '../config/runtimeApi';
 
-const Sidebar = memo(({ selectedApp, selectedAppData, onSelect, onOpenInNewTab, autoHideSidebar = false, onAutoHideSidebarChange, collapsed = false }) => {
+const Sidebar = memo(({ selectedApp, selectedAppData, onSelect, onOpenInNewTab, autoHideSidebar = false, onAutoHideSidebarChange, collapsed = false, activeTabKey, activeTabMeta }) => {
     const { isDark, themeKey, themes } = useTheme();
     const [menusCache, setMenusCache] = useState({});
     const [loading, setLoading] = useState(false);
@@ -45,10 +45,15 @@ const Sidebar = memo(({ selectedApp, selectedAppData, onSelect, onOpenInNewTab, 
     }, [selectedApp, selectedAppData]);
 
     // Build two-level tree: parent_id null = root, else child of that parent
-    const { roots, mapById } = useMemo(() => {
+    const { roots, mapByKey } = useMemo(() => {
         const mapById = new Map();
+        const mapByKey = new Map();
         (menus || []).forEach(m => {
-            mapById.set(m.menu_id, { ...m, children: [] });
+            const node = { ...m, children: [] };
+            mapById.set(m.menu_id, node);
+            if (m.menu_id !== undefined && m.menu_id !== null) mapByKey.set(String(m.menu_id), node);
+            if (m.menu_uuid) mapByKey.set(String(m.menu_uuid), node);
+            if (m.route_path) mapByKey.set(String(m.route_path), node);
         });
         const roots = [];
         (menus || []).forEach(m => {
@@ -63,7 +68,7 @@ const Sidebar = memo(({ selectedApp, selectedAppData, onSelect, onOpenInNewTab, 
         });
         roots.sort((a, b) => (a.order_no ?? 0) - (b.order_no ?? 0));
         roots.forEach(r => r.children?.sort((a, b) => (a.order_no ?? 0) - (b.order_no ?? 0)));
-        return { roots, mapById };
+        return { roots, mapByKey };
     }, [menus]);
 
     // Filter by search (menu_title)
@@ -131,6 +136,34 @@ const Sidebar = memo(({ selectedApp, selectedAppData, onSelect, onOpenInNewTab, 
     };
 
     const menuItems = useMemo(() => buildMenuItems(filteredRoots), [filteredRoots, onSelect, selectedApp]);
+
+    // Keep sidebar selection in sync with active tab (works across app studio/dev console)
+    const selectedMenuKey = useMemo(() => {
+        if (!activeTabKey && !activeTabMeta) return null;
+        const md = activeTabMeta?.menuData;
+        const keyFromMenu = md?.menu_id ?? md?.menu_uuid ?? md?.route_path ?? null;
+        return keyFromMenu !== null && keyFromMenu !== undefined ? String(keyFromMenu) : (activeTabKey ? String(activeTabKey) : null);
+    }, [activeTabKey, activeTabMeta]);
+
+    const openKeysFromSelection = useMemo(() => {
+        if (!selectedMenuKey) return [];
+        const node = mapByKey.get(String(selectedMenuKey));
+        if (!node) return [];
+        const keys = [];
+        let cur = node;
+        // Walk parents using parent_id until root
+        while (cur?.parent_id) {
+            keys.unshift(String(cur.parent_id));
+            cur = mapByKey.get(String(cur.parent_id)) || null;
+        }
+        return keys;
+    }, [selectedMenuKey, mapByKey]);
+
+    const [openKeys, setOpenKeys] = useState([]);
+    useEffect(() => {
+        // When the active tab changes, open the relevant parent menus
+        setOpenKeys(openKeysFromSelection);
+    }, [openKeysFromSelection]);
 
     const showLoading = loading && menus.length === 0;
     const appIconRaw = selectedAppData?.app_image_url;
@@ -222,6 +255,9 @@ const Sidebar = memo(({ selectedApp, selectedAppData, onSelect, onOpenInNewTab, 
                         style={{ height: '100%', borderRight: 0, background: 'transparent' }}
                         items={menuItems}
                         inlineIndent={collapsed ? 0 : 16}
+                        selectedKeys={selectedMenuKey ? [String(selectedMenuKey)] : []}
+                        openKeys={collapsed ? [] : openKeys}
+                        onOpenChange={(keys) => setOpenKeys(keys)}
                     />
                 </div>
             )}
