@@ -1,0 +1,195 @@
+You are a system architect and security engineer. Design a secure distribution model for a self-hosted Python API with the following constraints and requirements.
+
+### 🎯 Goal
+
+Build a distributable Python API system where:
+
+* Core logic is protected
+* Users can run custom Python scripts
+* Authentication happens only once at startup
+* System is resistant to bypass and tampering
+
+---
+
+## 🧱 System Overview
+
+The system consists of:
+
+1. **Core Engine (Protected)**
+
+   * Compiled binary (`core_engine.bin`) using Nuitka
+   * Contains:
+
+     * Authentication logic
+     * License validation
+     * Internal API logic
+   * Must NOT expose secrets or allow easy bypass
+
+2. **Runtime Environment**
+
+   * Python `venv` is required
+   * Used for dependency management and executing user scripts
+
+3. **User Script Layer**
+
+   * Folder: `/custom_python_scripts/`
+   * Contains user-defined Python job scripts
+   * These scripts must run, but should NOT compromise core security
+
+---
+
+## 🔐 Authentication Flow (One-Time at Startup)
+
+1. On startup, the binary reads:
+
+   * `TENANT_ID`
+   * `TENANT_SECRET` from environment variables
+
+2. The binary sends a request to an Auth Server:
+
+   ```
+   POST /auth/validate
+   {
+     tenant_id,
+     tenant_secret,
+     domain,
+     machine_id (optional)
+   }
+   ```
+
+3. Auth Server validates and returns a **signed token (JWT or HMAC)**
+
+4. Token payload includes:
+
+   * tenant_id
+   * domain
+   * expiry (exp)
+   * optional: features, machine_id
+
+---
+
+## 🛡️ Token Validation (Inside Binary)
+
+The binary must:
+
+* Verify token signature (no plain trust)
+* Check expiry (mandatory)
+* Validate domain binding
+* Optionally validate machine binding
+
+If any check fails → exit immediately
+
+---
+
+## 🔑 Runtime Key Derivation (Critical Security Layer)
+
+Instead of just checking auth and running:
+
+* Derive a `runtime_key` from the token payload
+
+Example:
+
+```
+runtime_key = SHA256(tenant_id + exp + domain)
+```
+
+This key must:
+
+* Be generated only after successful validation
+* Be stored internally (not exposed directly)
+* Be required across system execution
+
+---
+
+## ⚙️ Runtime Dependency Model
+
+The system must depend on `runtime_key` for:
+
+* Internal API execution
+* Data processing or encryption
+* Feature enablement
+* Plugin execution
+
+If runtime_key is missing or invalid → system should fail or behave incorrectly
+
+---
+
+## 🧩 Plugin Execution Model (Custom Scripts)
+
+User scripts in `/custom_python_scripts/` must:
+
+* Be executed via subprocess:
+
+  ```
+  venv/bin/python script.py
+  ```
+
+* Receive runtime key via environment:
+
+  ```
+  CORE_RUNTIME_KEY=<derived_key>
+  ```
+
+* Validate presence of key before execution:
+
+  ```
+  if not CORE_RUNTIME_KEY:
+      exit("Unauthorized")
+  ```
+
+---
+
+## 🔥 Security Constraints
+
+* No secrets stored in binary
+* No plain "valid = true" checks
+* No trust on client-side logic
+* All trust based on signed token
+* Runtime key must influence execution (not optional)
+
+---
+
+## ⚠️ Threat Model
+
+System should mitigate:
+
+* Fake auth responses → using signature validation
+* Token reuse → using expiry
+* Domain misuse → binding to domain
+* Partial bypass → using runtime key dependency
+
+System cannot fully prevent:
+
+* Binary patching
+* Fully offline cracking
+
+But must:
+
+* Increase attack complexity significantly
+
+---
+
+## ⚙️ Build & Distribution
+
+* Use Nuitka to compile core engine:
+
+  * `--standalone`, `--onefile`
+* Distribute:
+
+  ```
+  core_engine.bin
+  venv/
+  custom_python_scripts/
+  config.yaml
+  ```
+
+---
+
+## 🧠 Design Philosophy
+
+* Do not try to hide code completely
+* Make system unusable without valid auth
+* Make bypass require deep modification
+* Keep system simple but layered
+
+---

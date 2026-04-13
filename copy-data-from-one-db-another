@@ -1,0 +1,25 @@
+# Client instances + menus: SOURCE → TARGET
+# Full notes + troubleshooting: db-structure/operator_copy_client_instances_and_menus.sql
+
+# Dump (use pg_dump version ≤ TARGET server major version, e.g. PG16 client for PG16 server)
+pg_dump "postgresql://USER:PASS@SOURCE:5432/SOURCE_DB" --data-only --format=custom \
+  -t public.instances \
+  -t public.instance_offline_settings \
+  -t public.client_offline_dataset \
+  -t public.client_offline_write_endpoint \
+  -t public.instance_menus \
+  -t public.instance_menu_client_config \
+  -f client_instances_and_menus.dump
+
+# Restore A — only if TARGET user is SUPERUSER (e.g. postgres). App users cannot use --disable-triggers.
+# pg_restore --data-only --disable-triggers --no-owner --no-acl \
+#   -d "postgresql://USER:PASS@TARGET:5432/TARGET_DB" \
+#   client_instances_and_menus.dump
+
+# Restore B — non-superuser: SQL + remove PG17-only SET if server errors on transaction_timeout
+pg_restore -f client_instances_and_menus.sql client_instances_and_menus.dump
+sed -i '' '/transaction_timeout/d' client_instances_and_menus.sql
+psql "postgresql://USER:PASS@TARGET:5432/TARGET_DB" -v ON_ERROR_STOP=1 -f client_instances_and_menus.sql
+
+# If COPY fails on flattening_policy_id: add matching rows to flattening_table_policy on TARGET,
+# or edit SQL / DB to set flattening_policy_id NULL for those datasets.
