@@ -350,7 +350,7 @@ const FlattenedDatas = () => {
                 const c = relCountByTable[tn] || 0;
                 return (
                     <Button type="link" onClick={() => openRelationDrawer(tn)}>
-                        {c} policy{c === 1 ? '' : 'ies'}
+                        {c} polic{c === 1 ? 'y' : 'ies'}
                     </Button>
                 );
             },

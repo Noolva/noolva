@@ -75,6 +75,23 @@ async def fetch_pending_iceberg_purge_row(policy_id: int) -> Optional[Dict[str, 
     )
 
 
+async def count_batch_ledger_rows(policy_id: Optional[int]) -> int:
+    if policy_id is not None:
+        row = await PostgresDB.fetchrow(
+            """
+            SELECT COUNT(*)::int AS c
+            FROM public.data_lifecycle_batch_ledger
+            WHERE policy_id = $1
+            """,
+            int(policy_id),
+        )
+    else:
+        row = await PostgresDB.fetchrow(
+            "SELECT COUNT(*)::int AS c FROM public.data_lifecycle_batch_ledger",
+        )
+    return int(row["c"] or 0) if row else 0
+
+
 async def list_batch_ledger_rows(
     policy_id: Optional[int],
     limit: int = 100,

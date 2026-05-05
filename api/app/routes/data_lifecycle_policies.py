@@ -1,16 +1,20 @@
 """
 Developer Console — data_lifecycle_policy CRUD.
 """
+import re
 from typing import Any, Dict, List, Optional
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Query
 from pydantic import BaseModel
 from middlewares.auth import verify_jwt_token
 from utils.db import get_db
 from classes.postgres_db import PostgresDB
 from utils.data_lifecycle_policy import validate_lifecycle_row
+from utils.data_lifecycle_ledger import count_batch_ledger_rows, list_batch_ledger_rows
 
 router = APIRouter(prefix="/dev-console/data-lifecycle-policies", tags=["Developer Console - Data Lifecycle"])
+
+_SAFE_TABLE = re.compile(r"^[A-Za-z_][A-Za-z0-9_]*$")
 
 
 class DataLifecycleCreate(BaseModel):
@@ -129,6 +133,77 @@ async def _fetch_lifecycle_policy(policy_id: int) -> Dict:
     if not row:
         raise HTTPException(status_code=404, detail="Not found")
     return dict(row)
+
+
+@router.get("/batch-ledger")
+async def get_batch_ledger(
+    policy_id: Optional[int] = Query(None, description="Filter by data_lifecycle_policy.id"),
+    limit: int = Query(100, ge=1, le=500),
+    offset: int = Query(0, ge=0),
+    user: Dict = Depends(verify_jwt_token(["saas_admin", "saas_employee", "tenant_admin"])),
+    db=Depends(get_db),
+):
+    """Paged rows from data_lifecycle_batch_ledger (must be registered before /{policy_id})."""
+    if not user:
+        raise HTTPException(status_code=401, detail="Authentication required")
+    rows = await list_batch_ledger_rows(policy_id, limit, offset)
+    total = await count_batch_ledger_rows(policy_id)
+    return {"items": [dict(r) for r in rows] if rows else [], "total": total}
+
+
+@router.get("/table-hints")
+async def get_table_hints(
+    table_name: str = Query(..., description="Physical table in public schema"),
+    user: Dict = Depends(verify_jwt_token(["saas_admin", "saas_employee", "tenant_admin"])),
+    db=Depends(get_db),
+):
+    """Column list for building lifecycle policies (time / PK hints)."""
+    if not user:
+        raise HTTPException(status_code=401, detail="Authentication required")
+    tn = (table_name or "").strip()
+    if not tn or not _SAFE_TABLE.fullmatch(tn):
+        raise HTTPException(status_code=400, detail="Invalid table_name")
+    cols = await PostgresDB.fetch(
+        """
+        SELECT column_name, data_type, udt_name
+        FROM information_schema.columns
+        WHERE table_schema = 'public' AND table_name = $1
+        ORDER BY ordinal_position
+        """,
+        tn,
+    )
+    names = [c["column_name"] for c in (cols or []) if c.get("column_name")]
+    time_guess = next(
+        (n for n in names if re.search(r"(^|_)(idate|created_at|updated_at|last_updated|timestamp)", n, re.I)),
+        None,
+    )
+    return {
+        "table_name": tn,
+        "columns": [dict(c) for c in cols] if cols else [],
+        "suggested_time_column": time_guess,
+        "suggested_pk": "id" if "id" in names else (names[0] if names else None),
+    }
+
+
+@router.get("/source-table-options")
+async def get_source_table_options(
+    user: Dict = Depends(verify_jwt_token(["saas_admin", "saas_employee", "tenant_admin"])),
+    db=Depends(get_db),
+):
+    """Flattening read-model targets that are valid COOL-tier lifecycle sources."""
+    if not user:
+        raise HTTPException(status_code=401, detail="Authentication required")
+    rows = await PostgresDB.fetch(
+        """
+        SELECT id, table_name, target_table_name, destination, is_active
+        FROM public.flattening_table_policy
+        WHERE COALESCE(is_active, true) = true
+          AND target_table_name IS NOT NULL
+          AND length(trim(target_table_name::text)) > 0
+        ORDER BY target_table_name, table_name
+        """
+    )
+    return {"items": [dict(r) for r in rows] if rows else []}
 
 
 @router.get("/{policy_id}")

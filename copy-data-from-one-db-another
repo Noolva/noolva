@@ -11,6 +11,13 @@ pg_dump "postgresql://USER:PASS@SOURCE:5432/SOURCE_DB" --data-only --format=cust
   -t public.instance_menu_client_config \
   -f client_instances_and_menus.dump
 
+
+pg_dump "postgresql://USER:PASS@SOURCE:5432/SOURCE_DB" \
+  --data-only \
+  --table=public.instances \
+  --table=public.instance_menus \
+  -f output.sql
+
 # Restore A — only if TARGET user is SUPERUSER (e.g. postgres). App users cannot use --disable-triggers.
 # pg_restore --data-only --disable-triggers --no-owner --no-acl \
 #   -d "postgresql://USER:PASS@TARGET:5432/TARGET_DB" \
