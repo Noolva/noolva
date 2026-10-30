@@ -63,6 +63,20 @@ class PostgresDB:
                 raise ERPError(e, ErrorType.DATABASE_QUERY_EXECUTION_FAILED, {"query": query, "args": args})
 
     @classmethod
+    async def fetchval(cls, query: str, *args) -> Any:
+        """
+        Executes a SELECT query and returns a single scalar value (or None).
+        """
+        if not cls._pool:
+            raise ERPError(None, ErrorType.DATABASE_CONNECTION_FAILED, {"message": "Pool not initialized"})
+
+        async with cls._pool.acquire() as conn:
+            try:
+                return await conn.fetchval(query, *args)
+            except Exception as e:
+                raise ERPError(e, ErrorType.DATABASE_QUERY_EXECUTION_FAILED, {"query": query, "args": args})
+
+    @classmethod
     async def execute(cls, query: str, *args) -> str:
         """
         Executes INSERT/UPDATE/DELETE queries.

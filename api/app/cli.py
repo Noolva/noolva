@@ -20,18 +20,19 @@ import json
 import mimetypes
 from pathlib import Path
 
-# Setup CLI logger
-LOG_DIR = os.getenv("LOG_DIR", "logs")
-os.makedirs(LOG_DIR, exist_ok=True)
-LOG_FILE = os.path.join(LOG_DIR, "noolva.log")
+# Setup CLI logger using the shared rotating-file handler.
+# See api/app/utils/log_path.py for env contract (LOG_PATH, LOG_DIR,
+# LOG_ROTATE_TIME_UTC, LOG_ROTATE_BACKUP_COUNT).
+from utils.log_path import build_rotating_handler, resolve_log_file
+LOG_FILE = resolve_log_file()
 
-# Configure CLI logging to same file
 cli_logger = logging.getLogger("noolva_cli")
 if not cli_logger.handlers:
-    from logging.handlers import RotatingFileHandler
-    handler = RotatingFileHandler(LOG_FILE, maxBytes=10*1024*1024, backupCount=5)
-    handler.setFormatter(logging.Formatter('%(asctime)s - %(levelname)s - CLI - %(message)s'))
-    cli_logger.addHandler(handler)
+    cli_logger.addHandler(
+        build_rotating_handler(
+            logging.Formatter('%(asctime)s - %(levelname)s - CLI - %(message)s')
+        )
+    )
     cli_logger.setLevel(logging.INFO)
 
 cli = typer.Typer()

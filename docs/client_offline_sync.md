@@ -73,6 +73,15 @@ Response:
 - `presigned_url` — when private (short-lived; download server-side or immediately from the client)
 - `meta` — `s3_key`, watermarks
 
+**Missing export.** If the flattened object is not in the bucket yet (new bucket, first run, deleted
+export), the API **builds it on demand** from the source table, uploads it, and bumps
+`flattening_table_policy.last_refreshed` so the next manifest advertises a new watermark. Tables with
+an `instance_id` column are exported for that instance only; `instance_menus` rows embed their
+`instance_menu_client_config_items`.
+
+`GET .../offline/snapshot-url?dataset_key=...&force=true` re-exports even when the object exists
+(use after editing instance menus when you do not want to wait for a refresh).
+
 ---
 
 ## Keeping the cache up to date (sync when the source changes)

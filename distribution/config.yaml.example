@@ -1,0 +1,20 @@
+# Sample config.yaml for the deployed Noolva API binary.
+# Place next to noolva.bin as "config.yaml" if your custom_python_scripts/
+# need configuration data. The core API reads .env (see .env.example);
+# this file is a convention slot for user-script configuration.
+
+app:
+  name: Noolva API
+  version: "1.0.0"
+
+# Block the running API uses to discover/execute user scripts via subprocess.
+# (See README under "Custom Python scripts".)
+custom_scripts:
+  enabled: true
+  python: "venv/bin/python"          # interpreter used to launch user scripts
+  scripts_dir: "custom_python_scripts"
+  # Per-script overrides (optional):
+  # jobs:
+  #   - name: nightly_report
+  #     entrypoint: "custom_python_scripts/nightly_report.py"
+  #     timeout_seconds: 600

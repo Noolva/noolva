@@ -10,27 +10,28 @@ from errors.base_error import ERPError
 from fastapi.responses import JSONResponse, PlainTextResponse
 import os
 import logging
-from logging.handlers import RotatingFileHandler
 from utils.google_oauth import setup_google_oauth
+from utils.log_path import build_rotating_handler, resolve_log_file
 from middlewares.logging_middleware import LoggingMiddleware
 from fastapi.staticfiles import StaticFiles
 from pathlib import Path
 
 BRAND_NAME = 'Noolva API'
 
-# Setup single log file for all logs
-LOG_DIR = os.getenv("LOG_DIR", "logs")
-os.makedirs(LOG_DIR, exist_ok=True)
-LOG_FILE = os.path.join(LOG_DIR, "noolva.log")
+# Single log file shared by API + CLI. Path is governed by LOG_PATH /
+# LOG_DIR (see utils/log_path.py) and rotated daily at LOG_ROTATE_TIME_UTC
+# (default 18:30 UTC = 00:00 IST).
+LOG_FILE = resolve_log_file()
 
-# Configure logging
 logging.basicConfig(
     level=logging.INFO,
     format='%(asctime)s - %(levelname)s - %(message)s',
     handlers=[
-        RotatingFileHandler(LOG_FILE, maxBytes=10*1024*1024, backupCount=5),
-        logging.StreamHandler()
-    ]
+        build_rotating_handler(
+            logging.Formatter('%(asctime)s - %(levelname)s - %(message)s')
+        ),
+        logging.StreamHandler(),
+    ],
 )
 
 # Get logger for this module

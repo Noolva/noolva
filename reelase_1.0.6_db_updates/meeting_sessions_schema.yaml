@@ -1,0 +1,289 @@
+# ============================================================================
+# Noolva Console Schema Definition: meeting_sessions & meeting_session_items
+# Release: 1.0.6
+# ============================================================================
+
+# ============================================================================
+# Model Name: meeting_sessions
+# Display Name: Meeting Sessions
+# Table Name: meeting_sessions
+# Description: One record per meeting, stand-up, discussion, call, review, or work session.
+# ============================================================================
+meeting_sessions:
+  - field_name: session_id
+    display_name: ID
+    is_required: false
+    is_unique: false
+    is_primary_key: true
+    default_value: null
+    encryption_method: none
+    order_no: 1
+    field_config_json: {}
+    type_name: Auto Number
+    type_code: auto_number
+
+  - field_name: title
+    display_name: Session Title
+    is_required: true
+    is_unique: false
+    is_primary_key: false
+    default_value: null
+    encryption_method: none
+    order_no: 2
+    field_config_json:
+      max_length: 255
+    type_name: Text
+    type_code: text
+
+  - field_name: session_type
+    display_name: Session Type
+    is_required: true
+    is_unique: false
+    is_primary_key: false
+    default_value: stand_up
+    encryption_method: none
+    order_no: 3
+    field_config_json:
+      options:
+        - label: Stand-up
+          value: stand_up
+        - label: Discussion
+          value: discussion
+        - label: Call
+          value: call
+        - label: Review
+          value: review
+        - label: Work Session
+          value: work_session
+      options_mode: custom_collection
+    type_name: Single Choice
+    type_code: single_choice
+
+  - field_name: session_date
+    display_name: Session Date Time
+    is_required: true
+    is_unique: false
+    is_primary_key: false
+    default_value: null
+    encryption_method: none
+    order_no: 4
+    field_config_json: {}
+    type_name: DateTime
+    type_code: datetime
+
+  - field_name: participants
+    display_name: Participants
+    is_required: false
+    is_unique: false
+    is_primary_key: false
+    default_value: null
+    encryption_method: none
+    order_no: 5
+    field_config_json:
+      target_field: person_id
+      target_model: persons
+      relation_type: one_to_many
+    type_name: Relative Field
+    type_code: relation
+
+  - field_name: summary
+    display_name: Summary & Notes
+    is_required: false
+    is_unique: false
+    is_primary_key: false
+    default_value: null
+    encryption_method: none
+    order_no: 6
+    field_config_json: {}
+    type_name: Rich Text
+    type_code: rich_text
+
+  - field_name: decisions
+    display_name: Key Decisions
+    is_required: false
+    is_unique: false
+    is_primary_key: false
+    default_value: null
+    encryption_method: none
+    order_no: 7
+    field_config_json: {}
+    type_name: Rich Text
+    type_code: rich_text
+
+  - field_name: status
+    display_name: Status
+    is_required: true
+    is_unique: false
+    is_primary_key: false
+    default_value: planned
+    encryption_method: none
+    order_no: 8
+    field_config_json:
+      options:
+        - label: Planned
+          value: planned
+        - label: In Progress
+          value: in_progress
+        - label: Completed
+          value: completed
+        - label: Cancelled
+          value: cancelled
+      options_mode: custom_collection
+    type_name: Single Choice
+    type_code: single_choice
+
+  - field_name: deleted_at
+    display_name: Deleted At
+    is_required: false
+    is_unique: false
+    is_primary_key: false
+    default_value: null
+    encryption_method: none
+    order_no: 9
+    field_config_json: {}
+    type_name: DateTime
+    type_code: datetime
+
+# ============================================================================
+# Model Name: meeting_session_items
+# Display Name: Meeting Session Items
+# Table Name: meeting_session_items
+# Description: One record per ticket or task discussed during a meeting session.
+# ============================================================================
+meeting_session_items:
+  - field_name: session_item_id
+    display_name: ID
+    type_code: auto_number
+    type_name: Auto Number
+    is_required: false
+    is_unique: false
+    is_primary_key: true
+    order_no: 1
+    field_config_json: {}
+
+  - field_name: session_id
+    display_name: Meeting Session
+    type_code: relation
+    type_name: Relative Field
+    is_required: true
+    is_unique: false
+    is_primary_key: false
+    order_no: 2
+    field_config_json:
+      target_model: meeting_sessions
+      target_field: session_id
+      relation_type: many_to_one
+      target_model_id: 82
+
+  - field_name: task_id
+    display_name: Linked Task / Ticket
+    type_code: relation
+    type_name: Relative Field
+    is_required: true
+    is_unique: false
+    is_primary_key: false
+    order_no: 3
+    field_config_json:
+      target_model: my_tasks
+      target_field: task_id
+      relation_type: many_to_one
+      target_model_id: 45
+
+  - field_name: discussion_note
+    display_name: Discussion Note
+    type_code: rich_text
+    type_name: Rich Text
+    is_required: false
+    is_unique: false
+    is_primary_key: false
+    order_no: 4
+    field_config_json: {}
+
+  - field_name: response
+    display_name: Response / Technical Update
+    type_code: rich_text
+    type_name: Rich Text
+    is_required: false
+    is_unique: false
+    is_primary_key: false
+    order_no: 5
+    field_config_json: {}
+
+  - field_name: decision
+    display_name: Item Decision
+    type_code: rich_text
+    type_name: Rich Text
+    is_required: false
+    is_unique: false
+    is_primary_key: false
+    order_no: 6
+    field_config_json: {}
+
+  - field_name: next_action
+    display_name: Next Action
+    type_code: rich_text
+    type_name: Rich Text
+    is_required: false
+    is_unique: false
+    is_primary_key: false
+    order_no: 7
+    field_config_json: {}
+
+  - field_name: action_owner
+    display_name: Action Owner
+    type_code: relation
+    type_name: Relative Field
+    is_required: false
+    is_unique: false
+    is_primary_key: false
+    order_no: 8
+    field_config_json:
+      target_model: persons
+      target_field: person_id
+      relation_type: many_to_one
+      target_model_id: 49
+
+  - field_name: action_due_date
+    display_name: Action Due Date
+    type_code: date
+    type_name: Date
+    is_required: false
+    is_unique: false
+    is_primary_key: false
+    order_no: 9
+    field_config_json: {}
+
+  - field_name: item_status
+    display_name: Item Status
+    type_code: single_choice
+    type_name: Single Choice
+    is_required: true
+    is_unique: false
+    is_primary_key: false
+    default_value: discussed
+    order_no: 10
+    field_config_json:
+      options_mode: custom_collection
+      options:
+        - label: Discussed
+          value: discussed
+        - label: Action Required
+          value: action_required
+        - label: Resolved
+          value: resolved
+        - label: Deferred
+          value: deferred
+
+  - field_name: comment_id
+    display_name: Synced Task Comment
+    type_code: relation
+    type_name: Relative Field
+    is_required: false
+    is_unique: false
+    is_primary_key: false
+    order_no: 11
+    field_config_json:
+      target_model: task_comments
+      target_field: comment_id
+      relation_type: many_to_one
+      target_model_id: 61

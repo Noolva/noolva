@@ -78,6 +78,68 @@ async def _resolve_fk_target(source_table: str, fk_column: str) -> Tuple[Optiona
     return row.get("ref_table"), row.get("ref_column")
 
 
+async def resolve_relation_target(source_table: str, fk_column: str) -> Tuple[Optional[str], Optional[str]]:
+    """
+    Resolve (ref_table, ref_column) for an m2o relation column:
+    1) real Postgres FK if present,
+    2) else data_model_fields relation config (target_model -> data_models.table_name, target_field).
+    """
+    ref_table, ref_column = await _resolve_fk_target(source_table, fk_column)
+    if ref_table:
+        return ref_table, ref_column
+
+    row = await PostgresDB.fetchrow(
+        """
+        SELECT dm.table_name AS ref_table,
+               NULLIF(TRIM(COALESCE(dmf.field_config_json->>'target_field', '')), '') AS target_field
+        FROM public.data_model_fields dmf
+        JOIN public.field_types ft ON ft.field_type_id = dmf.field_type_id
+        JOIN public.data_models dm ON dm.model_id = dmf.model_id
+        WHERE LOWER(ft.type_code) = 'relation'
+          AND dmf.field_name = $2
+          AND dmf.model_id = (
+            SELECT model_id FROM public.data_models
+            WHERE table_name = $1 AND COALESCE(is_active, true) = true
+            ORDER BY model_id DESC LIMIT 1
+          )
+          AND COALESCE(dm.is_active, true) = true
+        ORDER BY dmf.field_id DESC
+        LIMIT 1
+        """,
+        source_table,
+        fk_column,
+    )
+    if not row or not row.get("ref_table"):
+        return None, None
+    ref_table = row["ref_table"]
+    target_field = row.get("target_field")
+    if not target_field:
+        pk_row = await PostgresDB.fetchrow(
+            """
+            SELECT kcu.column_name
+            FROM information_schema.table_constraints tc
+            JOIN information_schema.key_column_usage kcu
+              ON tc.constraint_name = kcu.constraint_name
+             AND tc.table_schema = kcu.table_schema
+            WHERE tc.table_schema = 'public'
+              AND tc.table_name = $1
+              AND tc.constraint_type = 'PRIMARY KEY'
+            ORDER BY kcu.ordinal_position
+            LIMIT 1
+            """,
+            ref_table,
+        )
+        target_field = (pk_row["column_name"] if pk_row else None) or "id"
+    return ref_table, target_field
+
+
+# Public aliases for handlers (engine) reuse
+is_safe_identifier = _is_safe_identifier
+aliasize = _aliasize
+get_primary_key_column = _get_primary_key_column
+get_table_columns = _get_table_columns
+
+
 async def _field_type_id_for_actual_db_type(actual_db_type: str) -> Optional[int]:
     row = await PostgresDB.fetchrow(
         """
@@ -172,8 +234,14 @@ async def ensure_flattened_table_and_model(
             fk_col = rel_name
             if not _is_safe_identifier(fk_col):
                 continue
-            ref_table, _ref_col = await _resolve_fk_target(st, fk_col)
+            ref_table, ref_col = await resolve_relation_target(st, fk_col)
             if not ref_table or not _is_safe_identifier(ref_table):
+                continue
+            ref_col = (ref_col or "").strip()
+            if not ref_col or not _is_safe_identifier(ref_col):
+                ref_cols = await _get_table_columns(ref_table)
+                ref_col = ref_cols[0] if ref_cols else None
+            if not ref_col:
                 continue
             ref_cols = await _get_table_columns(ref_table)
             for f in include_fields:

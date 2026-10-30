@@ -176,6 +176,65 @@ def _coerce_value_for_db(type_code: Optional[str], actual_db_type: Optional[str]
     return value
 
 
+def _is_json_field_type(type_code: Optional[str], actual_db_type: Optional[str]) -> bool:
+    tc = (type_code or "").strip().lower()
+    db = (actual_db_type or "").strip().lower()
+    return tc == "json" or db in ("json", "jsonb")
+
+
+def _encrypt_field_for_db(
+    method: str,
+    value: Any,
+    is_json: bool,
+) -> Optional[str]:
+    """
+    Encrypt a value for storage. For json/jsonb columns:
+    - dict values are encrypted per key -> stored as the JSON string
+      '{"key": "<ciphertext>", ...}' (asyncpg requires str for json/jsonb binding)
+    - non-dict values are encrypted as a whole and stored as a JSON string scalar
+    Every plaintext is json.dumps-ed before encryption so decryption can restore the
+    original JSON type.
+    """
+    if value is None:
+        return None
+    if is_json:
+        if isinstance(value, dict):
+            out: Dict[str, Any] = {}
+            for k, v in value.items():
+                if v is None:
+                    out[str(k)] = None
+                    continue
+                plaintext = v if isinstance(v, str) else json.dumps(v)
+                enc = field_encryption.encrypt_field_value(method, plaintext)
+                out[str(k)] = enc if enc is not None else v
+            return json.dumps(out)
+        plaintext = value if isinstance(value, str) else json.dumps(value)
+        encrypted = field_encryption.encrypt_field_value(method, plaintext)
+        return json.dumps(encrypted) if encrypted is not None else None
+    return field_encryption.encrypt_field_value(method, str(value))
+
+
+def _decrypt_json_field_map(value: Dict[str, Any], method: str) -> Dict[str, Any]:
+    """
+    Decrypt a {"key": "<ciphertext>"} map (per-value encryption) back to plaintext.
+    Legacy plaintext values (decryption fails) pass through unchanged.
+    """
+    out: Dict[str, Any] = {}
+    for sk, sv in value.items():
+        if isinstance(sv, str) and sv:
+            dec = field_encryption.decrypt_field_value(method, sv)
+            if dec is not None and dec != sv:
+                try:
+                    out[sk] = json.loads(dec)
+                except (json.JSONDecodeError, TypeError):
+                    out[sk] = dec
+            else:
+                out[sk] = sv
+        else:
+            out[sk] = sv
+    return out
+
+
 def _coerce_filter_value(
     field_name: str,
     raw_value: Any,
@@ -1983,14 +2042,17 @@ def _apply_field_masking(
     readable_fields: set,
     encryption_by_field: Dict[str, str],
     file_image_encryption_fields: Optional[set] = None,
+    json_fields: Optional[set] = None,
 ) -> List[Dict[str, Any]]:
     """
     Ensures every requested field exists in each row; unauthorized fields become "AuthFailed".
     Decrypts values for readable encrypted fields when possible (same key as credentials).
     For file/image fields with encryption, the DB stores the path only; file content is encrypted in S3.
     So we do not decrypt the path (leave as-is) when field is in file_image_encryption_fields.
+    For json/jsonb columns, decrypted plaintext is parsed back to a JSON object for the client.
     """
     file_image_encryption_fields = file_image_encryption_fields or set()
+    json_fields = json_fields or set()
     out: List[Dict[str, Any]] = []
     for r in rows or []:
         item: Dict[str, Any] = {}
@@ -2005,8 +2067,35 @@ def _apply_field_masking(
                 item[f] = val
                 continue
             method = encryption_by_field.get(f) or "none"
-            decrypted = field_encryption.decrypt_field_value(method, str(val) if val is not None else None)
-            item[f] = decrypted if decrypted is not None else val
+            if val is None:
+                item[f] = None
+                continue
+            # Only strings can be ciphertext; jsonb rows may still hold legacy plaintext objects.
+            if isinstance(val, str) and method in ("xor_cipher", "aes"):
+                decrypted = field_encryption.decrypt_field_value(method, val)
+                if decrypted is not None and decrypted != val:
+                    if f in json_fields:
+                        try:
+                            item[f] = json.loads(decrypted)
+                        except (json.JSONDecodeError, TypeError):
+                            item[f] = decrypted
+                    else:
+                        item[f] = decrypted
+                elif f in json_fields:
+                    try:
+                        parsed = json.loads(val)
+                    except (json.JSONDecodeError, TypeError):
+                        parsed = None
+                    if isinstance(parsed, dict):
+                        item[f] = _decrypt_json_field_map(parsed, method)
+                    else:
+                        item[f] = val
+                else:
+                    item[f] = val
+            elif isinstance(val, dict) and method in ("xor_cipher", "aes") and f in json_fields:
+                item[f] = _decrypt_json_field_map(val, method)
+            else:
+                item[f] = val
         out.append(item)
     return out
 
@@ -2095,7 +2184,7 @@ async def _auto_list_records_impl(
         if (f.get("type_code") or "").strip().lower() in ("file", "image")
         and (f.get("encryption_method") or "").strip().lower() in ("xor_cipher", "aes")
     }
-    masked = _apply_field_masking(raw_rows, requested_fields, readable_fields, encryption_by_field, file_image_encryption_fields)
+    masked = _apply_field_masking(raw_rows, requested_fields, readable_fields, encryption_by_field, file_image_encryption_fields, json_fields={f["field_name"] for f in fields_meta or [] if _is_json_field_type(f.get("type_code"), f.get("actual_db_type"))})
     return {"model_name": model_name, "records": masked, "limit": limit, "offset": offset}
 
 
@@ -2231,7 +2320,7 @@ async def auto_get_one_record(
         if (f.get("type_code") or "").strip().lower() in ("file", "image")
         and (f.get("encryption_method") or "").strip().lower() in ("xor_cipher", "aes")
     }
-    masked = _apply_field_masking([row], requested_fields, readable_fields, encryption_by_field, file_image_encryption_fields)
+    masked = _apply_field_masking([row], requested_fields, readable_fields, encryption_by_field, file_image_encryption_fields, json_fields={f["field_name"] for f in fields_meta or [] if _is_json_field_type(f.get("type_code"), f.get("actual_db_type"))})
     return {"model_name": model_name, "record": masked[0] if masked else {}}
 
 
@@ -2374,7 +2463,8 @@ async def auto_create_record(
         method = (encryption_by_field.get(k) or "none").strip().lower()
         if method in ("none", "") or v is None:
             continue
-        encrypted = field_encryption.encrypt_field_value(method, str(v))
+        tc, db_type = field_type_map.get(k, (None, None))
+        encrypted = _encrypt_field_for_db(method, v, _is_json_field_type(tc, db_type))
         if encrypted is not None:
             data[k] = encrypted
 
@@ -2390,7 +2480,7 @@ async def auto_create_record(
     fields_param = ",".join(all_fields)
     requested_fields = [x.strip() for x in fields_param.split(",") if x.strip()]
     readable_fields = set(requested_fields) if masks is None else {f for f in requested_fields if (masks.get(f, 0) & ACTION_READ) != 0}
-    masked = _apply_field_masking([inserted or {}], requested_fields, readable_fields, encryption_by_field, file_image_encryption_fields)
+    masked = _apply_field_masking([inserted or {}], requested_fields, readable_fields, encryption_by_field, file_image_encryption_fields, json_fields={f["field_name"] for f in fields_meta or [] if _is_json_field_type(f.get("type_code"), f.get("actual_db_type"))})
     return {"model_name": model_name, "record": masked[0] if masked else {}}
 
 
@@ -2472,7 +2562,8 @@ async def auto_update_record(
         method = (encryption_by_field.get(k) or "none").strip().lower()
         if method in ("none", "") or v is None:
             continue
-        encrypted = field_encryption.encrypt_field_value(method, str(v))
+        tc, db_type = field_type_map.get(k, (None, None))
+        encrypted = _encrypt_field_for_db(method, v, _is_json_field_type(tc, db_type))
         if encrypted is not None:
             updates[k] = encrypted
 
@@ -2544,7 +2635,7 @@ async def auto_update_record(
         role_ids = await _get_user_role_ids(user["user_id"], user.get("company_id"))
         masks = await _get_field_permission_masks(model_id, role_ids)
         readable_fields = {f for f in requested_fields if (masks.get(f, 0) & ACTION_READ) != 0}
-    masked = _apply_field_masking([updated], requested_fields, readable_fields, encryption_by_field, file_image_encryption_fields)
+    masked = _apply_field_masking([updated], requested_fields, readable_fields, encryption_by_field, file_image_encryption_fields, json_fields={f["field_name"] for f in fields_meta or [] if _is_json_field_type(f.get("type_code"), f.get("actual_db_type"))})
     return {"model_name": model_name, "record": masked[0] if masked else {}}
 
 

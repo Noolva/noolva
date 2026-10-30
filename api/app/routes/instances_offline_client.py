@@ -115,6 +115,7 @@ async def get_schema_pack(
 async def get_snapshot_url(
     instance_ref: str,
     dataset_key: str = Query(..., description="Dataset key (source_kind flattened_s3)"),
+    force: bool = Query(False, description="Re-export the flattened JSON to S3 even if it exists"),
     authorization: Optional[str] = Header(None),
 ):
     user = await _require_user(authorization)
@@ -133,6 +134,7 @@ async def get_snapshot_url(
         int(inst["instance_id"]),
         dataset_key,
         _company_id_for_s3(user),
+        force=force,
     )
     if err:
         raise HTTPException(status_code=400, detail=err)

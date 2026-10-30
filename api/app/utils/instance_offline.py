@@ -6,7 +6,12 @@ from __future__ import annotations
 
 import json
 import logging
+import re
+from datetime import date, datetime
+from decimal import Decimal
+from io import BytesIO
 from typing import Any, Dict, List, Optional, Tuple
+from uuid import UUID
 
 from classes.postgres_db import PostgresDB
 
@@ -14,6 +19,8 @@ logger = logging.getLogger("noolva_api.instance_offline")
 
 VALID_SOURCE_KINDS = frozenset({"hot_auto_crud_get", "flattened_api_get", "flattened_s3"})
 WRITE_METHODS = frozenset({"POST", "PUT", "PATCH", "DELETE"})
+
+_IDENTIFIER_RE = re.compile(r"^[A-Za-z_][A-Za-z0-9_]*$")
 
 
 def _safe_json(obj: Any) -> Dict[str, Any]:
@@ -467,8 +474,149 @@ async def build_schema_pack_for_instance(instance_id: int) -> Dict[str, Any]:
     return {"models": tables}
 
 
+def _json_safe(value: Any) -> Any:
+    """Make a DB row JSON-serializable (dates, UUIDs, Decimal, nested containers)."""
+    if value is None or isinstance(value, (str, int, float, bool)):
+        return value
+    if isinstance(value, (datetime, date)):
+        return value.isoformat()
+    if isinstance(value, Decimal):
+        return float(value)
+    if isinstance(value, UUID):
+        return str(value)
+    if isinstance(value, (bytes, bytearray, memoryview)):
+        return bytes(value).decode("utf-8", errors="replace")
+    if isinstance(value, dict):
+        return {str(k): _json_safe(v) for k, v in value.items()}
+    if isinstance(value, (list, tuple, set)):
+        return [_json_safe(v) for v in value]
+    return str(value)
+
+
+async def _table_columns(table_name: str) -> List[str]:
+    rows = await PostgresDB.fetch(
+        """
+        SELECT column_name
+        FROM information_schema.columns
+        WHERE table_schema = 'public' AND table_name = $1
+        """,
+        table_name,
+    )
+    return [r["column_name"] for r in rows or []]
+
+
+async def build_flattened_export_rows(table_name: str, instance_id: Optional[int]) -> List[Dict[str, Any]]:
+    """Rows for one `flattening_table_policy` snapshot.
+
+    Tables carrying `instance_id` are scoped to the requesting instance; everything else is
+    exported whole (global reference tables such as `collections`, `data_models`, ...).
+    `instance_menus` also embeds its per-stack rows under `instance_menu_client_config_items`,
+    which is the shape every client parser expects.
+    """
+    tn = (table_name or "").strip()
+    if not _IDENTIFIER_RE.match(tn):
+        raise ValueError(f"unsupported flattening table name: {table_name!r}")
+    cols = await _table_columns(tn)
+    if not cols:
+        raise ValueError(f"table public.{tn} does not exist")
+
+    query = f"SELECT * FROM public.{tn}"
+    args: List[Any] = []
+    if "instance_id" in cols and instance_id is not None:
+        query += " WHERE instance_id = $1"
+        args.append(int(instance_id))
+
+    pk_cols = [
+        r["attname"]
+        for r in await PostgresDB.fetch(
+            """
+            SELECT a.attname
+            FROM pg_index i
+            JOIN pg_attribute a ON a.attrelid = i.indrelid AND a.attnum = ANY (i.indkey)
+            WHERE i.indrelid = to_regclass('public.' || $1) AND i.indisprimary
+            ORDER BY array_position(i.indkey, a.attnum)
+            """,
+            tn,
+        )
+        or []
+    ]
+    order_cols = [c for c in pk_cols if _IDENTIFIER_RE.match(c) and c in cols]
+    if order_cols:
+        query += " ORDER BY " + ", ".join(f'"{c}"' for c in order_cols)
+
+    rows = [_json_safe(dict(r)) for r in await PostgresDB.fetch(query, *args)]
+
+    if tn == "instance_menus":
+        ids = [r["id"] for r in rows if isinstance(r.get("id"), int)]
+        by_menu: Dict[int, List[Dict[str, Any]]] = {i: [] for i in ids}
+        if ids:
+            cfgs = await PostgresDB.fetch(
+                """
+                SELECT id, instance_menu_id, client_type, render_mode, is_enabled, created_by, idate, last_updated
+                FROM public.instance_menu_client_config
+                WHERE instance_menu_id = ANY($1::int[])
+                ORDER BY client_type
+                """,
+                ids,
+            )
+            for c in cfgs or []:
+                mid = c.get("instance_menu_id")
+                if mid in by_menu:
+                    by_menu[mid].append(_json_safe(dict(c)))
+        for r in rows:
+            r["instance_menu_client_config_items"] = by_menu.get(r.get("id"), [])
+
+    return rows
+
+
+async def ensure_flattened_snapshot(
+    *,
+    table_name: str,
+    logical_key: str,
+    instance_id: int,
+    policy_id: int,
+    s3_service: Any,
+    is_public: bool = False,
+    force: bool = False,
+) -> bool:
+    """Create the flattened S3 JSON when it is missing (e.g. after an S3 bucket change).
+
+    Returns True when the object was (re)generated. On success the policy watermark
+    (`last_refreshed`) is bumped so clients see a new `s3_snapshot.watermark` and re-import.
+    """
+    if not force and s3_service.object_exists(logical_key):
+        return False
+
+    rows = await build_flattened_export_rows(table_name, instance_id)
+    payload = json.dumps(rows).encode("utf-8")
+    result = s3_service.upload_fileobj(
+        BytesIO(payload),
+        logical_key,
+        is_public=is_public,
+        content_type="application/json",
+    )
+    if not result.get("success"):
+        raise RuntimeError(result.get("message") or "S3 upload failed")
+
+    await PostgresDB.execute(
+        """
+        UPDATE public.flattening_table_policy
+        SET last_refreshed = CURRENT_TIMESTAMP, last_updated = CURRENT_TIMESTAMP
+        WHERE id = $1
+        """,
+        int(policy_id),
+    )
+    logger.info(
+        "ensure_flattened_snapshot: wrote %s (%d rows, instance_id=%s) to S3",
+        logical_key,
+        len(rows),
+        instance_id,
+    )
+    return True
+
+
 async def snapshot_url_for_dataset(
-    instance_id: int, dataset_key: str, user_company_id: Optional[int]
+    instance_id: int, dataset_key: str, user_company_id: Optional[int], force: bool = False
 ) -> Tuple[Optional[str], Optional[str], Optional[Dict[str, Any]], str]:
     """
     Returns (public_url, presigned_url_or_none, meta_dict, error_message).
@@ -517,6 +665,42 @@ async def snapshot_url_for_dataset(
             else None,
         },
     }
+
+    # The object may be absent (fresh bucket, deleted export, first run). Build it now so the
+    # client gets a downloadable URL instead of a 404 from S3.
+    try:
+        generated = await ensure_flattened_snapshot(
+            table_name=tn,
+            logical_key=logical_key,
+            instance_id=instance_id,
+            policy_id=int(row["flattening_policy_id"]),
+            s3_service=s3,
+            is_public=is_pub,
+            force=force,
+        )
+    except Exception as ex:
+        logger.exception(
+            "snapshot_url_for_dataset: could not generate flattened snapshot for dataset %s instance_id=%s",
+            dataset_key,
+            instance_id,
+        )
+        return None, None, meta, f"flattened snapshot for {tn} is missing in S3 and could not be generated: {ex}"
+
+    if generated:
+        refreshed = await PostgresDB.fetchrow(
+            "SELECT last_refreshed, last_processed_value FROM public.flattening_table_policy WHERE id = $1",
+            int(row["flattening_policy_id"]),
+        )
+        if refreshed:
+            meta["watermark"] = {
+                "last_refreshed": refreshed["last_refreshed"].isoformat()
+                if refreshed.get("last_refreshed")
+                else None,
+                "last_processed_value": refreshed["last_processed_value"].isoformat()
+                if refreshed.get("last_processed_value")
+                else None,
+            }
+
     if is_pub:
         if s3.cdn_url:
             pub = urljoin(s3.cdn_url.rstrip("/") + "/", full_s3_key)

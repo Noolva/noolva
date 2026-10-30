@@ -16,8 +16,18 @@ import {
     Tag,
     Typography,
     Checkbox,
+    List,
+    Descriptions,
+    Tooltip,
 } from 'antd';
-import { PlusOutlined, EditOutlined, ReloadOutlined } from '@ant-design/icons';
+import {
+    PlusOutlined,
+    EditOutlined,
+    ReloadOutlined,
+    ThunderboltOutlined,
+    DeleteOutlined,
+    ApartmentOutlined,
+} from '@ant-design/icons';
 import { api } from '../utils/api';
 import ErrorModal from '../components/ErrorModal';
 
@@ -39,6 +49,7 @@ const FlattenedDatas = () => {
     const [relationPolicies, setRelationPolicies] = useState([]); // cached for counts
     const [dataModels, setDataModels] = useState([]);
     const [loading, setLoading] = useState(false);
+    const [executingId, setExecutingId] = useState(null);
     const [errorModal, setErrorModal] = useState(null);
     const [tableDrawerOpen, setTableDrawerOpen] = useState(false);
     const [relationListDrawerOpen, setRelationListDrawerOpen] = useState(false);
@@ -52,6 +63,25 @@ const FlattenedDatas = () => {
     const [form] = Form.useForm();
     const [relForm] = Form.useForm();
     const isDbTableMode = Form.useWatch('is_db_table', form);
+    const watchTable = Form.useWatch('table_name', form);
+    const watchDest = Form.useWatch('destination', form);
+    const watchStrat = Form.useWatch('refresh_strategy', form);
+    const watchInterval = Form.useWatch('refresh_interval_minutes', form);
+
+    const flatPreview = useMemo(() => {
+        const dest = watchDest || 'postgres';
+        const t = watchTable || 'the table';
+        if (dest === 's3') {
+            return `Export ${t} as JSON to S3 under the flattened/ folder. (S3 flattening export is client-offline based in 1.0.6.)`;
+        }
+        if (dest === 'iceberg') {
+            return `Export ${t} to Iceberg/Parquet (planned).`;
+        }
+        const flat = watchTable ? `flat_${watchTable}` : 'flat_<table>';
+        const every = watchInterval ? `Every ${watchInterval} minutes` : 'On the refresh schedule';
+        const strat = watchStrat ? ` (${watchStrat})` : '';
+        return `${every}${strat}, rebuild ${flat} from ${t}: copy all columns, add denormalized related fields (e.g. business_id__name, priority__name), and embed child rows as JSON arrays (e.g. task_comments_items, task_attachments_items). Apps read the flat copy via GET-only APIs. The source table is never modified.`;
+    }, [watchTable, watchDest, watchStrat, watchInterval]);
 
     const tableNameOptions = useMemo(() => {
         const isDb = !!isDbTableMode;
@@ -231,6 +261,27 @@ const FlattenedDatas = () => {
         }
     };
 
+    const executeNow = async (record) => {
+        setExecutingId(record.id);
+        try {
+            const res = await api.executeFlatteningTablePolicy(record.id);
+            if ((record.destination || 'postgres') === 's3') {
+                message.success('Snapshot regenerated — offline clients re-sync on next launch');
+            } else if (res?.skipped) {
+                message.info(`Skipped: ${res.reason || 'not runnable'}`);
+            } else {
+                const n = res?.rows_upserted;
+                message.success(n != null ? `Refresh done — ${n} rows upserted` : 'Refresh done');
+            }
+            loadTables();
+        } catch (e) {
+            message.error(e.response?.data?.detail || e.message);
+            if (e.errorData) setErrorModal(e);
+        } finally {
+            setExecutingId(null);
+        }
+    };
+
     const openAddRelation = () => {
         setEditingRelation(null);
         relForm.resetFields();
@@ -337,51 +388,118 @@ const FlattenedDatas = () => {
         }
     };
 
-    const tableCols = [
-        { title: 'ID', dataIndex: 'id', width: 70 },
-        { title: 'Table', dataIndex: 'table_name' },
-        { title: 'Destination', dataIndex: 'destination', render: (v) => v || 'postgres' },
-        { title: 'Mode', dataIndex: 'is_db_table', render: (v) => (v ? 'DB Table' : 'Model') },
-        {
-            title: 'Relation policies',
-            key: 'rels',
-            render: (_, r) => {
-                const tn = r?.table_name;
-                const c = relCountByTable[tn] || 0;
-                return (
-                    <Button type="link" onClick={() => openRelationDrawer(tn)}>
-                        {c} polic{c === 1 ? 'y' : 'ies'}
-                    </Button>
-                );
-            },
-        },
-        {
-            title: 'Strategy',
-            dataIndex: 'refresh_strategy',
-            render: (t) => t || <Tag color="default">legacy</Tag>,
-        },
-        { title: 'Interval (min)', dataIndex: 'refresh_interval_minutes' },
-        { title: 'Active', dataIndex: 'is_active', render: (v) => (v ? 'Yes' : 'No') },
-        {
-            title: 'Actions',
-            key: 'a',
-            render: (_, r) => (
-                <Space>
-                    <Button type="link" icon={<EditOutlined />} onClick={() => openEditTable(r)}>
-                        Edit
-                    </Button>
-                    <Button type="link" onClick={() => openRelationDrawer(r.table_name)}>
-                        Relations
-                    </Button>
-                    <Popconfirm title="Delete policy and managed read endpoints?" onConfirm={() => deleteTable(r)}>
-                        <Button type="link" danger>
-                            Delete
+    const DEST_COLOR = { postgres: 'blue', s3: 'geekblue', iceberg: 'purple' };
+
+    const formatRefreshTime = (v) => {
+        if (!v) return '—';
+        const d = new Date(v);
+        if (Number.isNaN(d.getTime())) return String(v);
+        return d.toLocaleString(undefined, {
+            day: '2-digit',
+            month: 'short',
+            year: 'numeric',
+            hour: '2-digit',
+            minute: '2-digit',
+        });
+    };
+
+    const renderPolicyCard = (r) => {
+        const dest = r.destination || 'postgres';
+        const relCount = relCountByTable[r?.table_name] || 0;
+        return (
+            <List.Item key={r.id}>
+                <Card
+                    size="small"
+                    style={{ width: '100%' }}
+                    title={
+                        <Space wrap size={6}>
+                            <Text strong code style={{ fontSize: 14 }}>
+                                {r.table_name}
+                            </Text>
+                            <Tag color={DEST_COLOR[dest] || 'default'} style={{ marginInlineEnd: 0 }}>
+                                {dest}
+                            </Tag>
+                            <Tag style={{ marginInlineEnd: 0 }}>{r.is_db_table ? 'DB Table' : 'Model'}</Tag>
+                            <Tag color={r.is_active ? 'success' : 'default'} style={{ marginInlineEnd: 0 }}>
+                                {r.is_active ? 'Active' : 'Inactive'}
+                            </Tag>
+                        </Space>
+                    }
+                    extra={
+                        <Tooltip title="Policy ID">
+                            <Text type="secondary" style={{ fontSize: 12 }}>
+                                #{r.id}
+                            </Text>
+                        </Tooltip>
+                    }
+                >
+                    <Descriptions
+                        size="small"
+                        column={{ xs: 1, sm: 2, md: 4 }}
+                        colon={false}
+                        labelStyle={{ fontSize: 11, color: 'var(--ant-color-text-tertiary)', padding: '0 8px 0 0' }}
+                        contentStyle={{ fontSize: 12, fontWeight: 500 }}
+                    >
+                        <Descriptions.Item label="Flat rows" span={1}>
+                            {r.target_row_count == null ? (
+                                <Tag color="warning" style={{ marginInlineEnd: 0 }}>
+                                    not built yet
+                                </Tag>
+                            ) : (
+                                <Text strong>{r.target_row_count}</Text>
+                            )}
+                        </Descriptions.Item>
+                        <Descriptions.Item label="Strategy" span={1}>
+                            {r.refresh_strategy || <Tag style={{ marginInlineEnd: 0 }}>legacy</Tag>}
+                        </Descriptions.Item>
+                        <Descriptions.Item label="Interval" span={1}>
+                            {r.refresh_interval_minutes ? `${r.refresh_interval_minutes} min` : 'on schedule'}
+                        </Descriptions.Item>
+                        <Descriptions.Item label="Last refresh" span={1}>
+                            <Text style={{ fontSize: 12 }}>{formatRefreshTime(r.last_refreshed)}</Text>
+                        </Descriptions.Item>
+                    </Descriptions>
+                    <div
+                        style={{
+                            marginTop: 12,
+                            paddingTop: 8,
+                            borderTop: '1px solid var(--ant-color-split)',
+                            display: 'flex',
+                            flexWrap: 'wrap',
+                            gap: 4,
+                            alignItems: 'center',
+                        }}
+                    >
+                        <Button
+                            size="small"
+                            type="link"
+                            icon={<ApartmentOutlined />}
+                            onClick={() => openRelationDrawer(r.table_name)}
+                        >
+                            {relCount} relation{relCount === 1 ? '' : 's'}
                         </Button>
-                    </Popconfirm>
-                </Space>
-            ),
-        },
-    ];
+                        <Button size="small" type="link" icon={<EditOutlined />} onClick={() => openEditTable(r)}>
+                            Edit
+                        </Button>
+                        <Button
+                            size="small"
+                            type="link"
+                            icon={<ThunderboltOutlined />}
+                            loading={executingId === r.id}
+                            onClick={() => executeNow(r)}
+                        >
+                            {dest === 's3' ? 'Regenerate' : 'Run now'}
+                        </Button>
+                        <Popconfirm title="Delete policy and managed read endpoints?" onConfirm={() => deleteTable(r)}>
+                            <Button size="small" type="link" danger icon={<DeleteOutlined />}>
+                                Delete
+                            </Button>
+                        </Popconfirm>
+                    </div>
+                </Card>
+            </List.Item>
+        );
+    };
 
     const relCols = [
         { title: 'ID', dataIndex: 'id', width: 70 },
@@ -412,21 +530,38 @@ const FlattenedDatas = () => {
             <Card
                 title="Flattened Datas"
                 extra={
-                    <Button icon={<ReloadOutlined />} onClick={() => { loadTables(); loadRelations(); }}>
-                        Refresh
-                    </Button>
+                    <Space>
+                        <Button icon={<ReloadOutlined />} onClick={() => { loadTables(); loadRelations(); }}>
+                            Refresh
+                        </Button>
+                        <Button type="primary" icon={<PlusOutlined />} onClick={openAddTable}>
+                            Add policy
+                        </Button>
+                    </Space>
                 }
             >
                 <Alert
                     type="info"
                     showIcon
                     style={{ marginBottom: 16 }}
-                    message="WARM tier: register the flattened physical table as a Data Model first. Saving a table policy creates GET-only Auto CRUD routes for that model."
+                    message="How this works (WARM tier — flattened read models)"
+                    description={
+                        <>
+                            Pick a Data Model (or enable <b>Db Tables</b> for any physical table) and this page builds a
+                            wide, read-only copy <code>flat_&lt;table&gt;</code>. Related fields are flattened into extra
+                            columns and child rows (comments, attachments, history) are embedded as JSON. A background
+                            refresh job keeps the copy fresh; apps read it through GET-only APIs. The source table is
+                            never modified — this is the first step before Data Life Cycles archive/purge.
+                        </>
+                    }
                 />
-                <Button type="primary" icon={<PlusOutlined />} style={{ marginBottom: 12 }} onClick={openAddTable}>
-                    Add table policy
-                </Button>
-                <Table rowKey="id" loading={loading} columns={tableCols} dataSource={tablePolicies} pagination={{ pageSize: 20 }} />
+                <List
+                    loading={loading}
+                    dataSource={tablePolicies}
+                    grid={{ gutter: 12, column: 1 }}
+                    locale={{ emptyText: 'No table policies yet — Add policy to start flattening.' }}
+                    renderItem={renderPolicyCard}
+                />
             </Card>
 
             {/* Drawer 1: Table policy add/edit */}
@@ -467,7 +602,7 @@ const FlattenedDatas = () => {
                         name="destination"
                         label="Destination"
                         rules={[{ required: true }]}
-                        extra="postgres creates a target table flat_<table_name>. s3 writes JSON into S3. iceberg is planned as enhancement."
+                        extra="postgres: the refresh job creates and fills flat_<table_name> automatically (no manual table needed). s3/iceberg are not built by the 1.0.6 flattening engine."
                     >
                         <Select options={DESTINATION_OPTIONS} />
                     </Form.Item>
@@ -520,6 +655,14 @@ const FlattenedDatas = () => {
                     <Form.Item name="is_active" label="Active" valuePropName="checked">
                         <Switch />
                     </Form.Item>
+
+                    <Alert
+                        type="success"
+                        showIcon
+                        style={{ marginTop: 8 }}
+                        message="What this policy will do (plain English)"
+                        description={flatPreview}
+                    />
                 </Form>
             </Drawer>
 

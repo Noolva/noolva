@@ -32,6 +32,7 @@ def _register_builtins():
     from . import refresh_flattening_table as _rft  # noqa: F401
     from . import sync_lifecycle_table as _slt  # noqa: F401
     from . import purge_soft_deleted as _psd  # noqa: F401
+    from . import purge_lifecycle_after_archive as _plaa  # noqa: F401
     # Handlers self-register on import
 
 
@@ -47,3 +48,4 @@ def ensure_handlers_loaded():
     from . import refresh_flattening_table  # noqa: F401
     from . import sync_lifecycle_table  # noqa: F401
     from . import purge_soft_deleted  # noqa: F401
+    from . import purge_lifecycle_after_archive  # noqa: F401

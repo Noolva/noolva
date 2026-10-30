@@ -1,0 +1,305 @@
+# ============================================================================
+# Noolva Console Schema Definition: note_categories & notes
+# Release: 1.0.6
+# ============================================================================
+
+# ============================================================================
+# Model Name: note_categories
+# Display Name: Note Categories
+# Table Name: note_categories
+# Description: Hierarchical categories with parent_id for notes & documentation.
+# ============================================================================
+note_categories:
+  - field_name: category_id
+    display_name: ID
+    type_code: auto_number
+    type_name: Auto Number
+    is_required: false
+    is_unique: false
+    is_primary_key: true
+    order_no: 1
+    field_config_json: {}
+
+- field_name: name
+  display_name: Category Name
+  type_code: text
+  type_name: Text
+  is_required: true
+  is_unique: false
+  is_primary_key: false
+  default_value: null
+  encryption_method: none
+  order_no: 2
+  field_config_json:
+    max_length: 120
+
+- field_name: slug
+  display_name: Slug
+  type_code: text
+  type_name: Text
+  is_required: true
+  is_unique: false
+  is_primary_key: false
+  default_value: null
+  encryption_method: none
+  order_no: 3
+  field_config_json:
+    max_length: 120
+
+- field_name: domain
+  display_name: Domain / Workspace
+  type_code: text
+  type_name: Text
+  is_required: false
+  is_unique: false
+  is_primary_key: false
+  default_value: General
+  encryption_method: none
+  order_no: 4
+  field_config_json:
+    max_length: 100
+
+- field_name: parent_id
+  display_name: Parent Category
+  type_code: relation
+  type_name: Relative Field
+  is_required: false
+  is_unique: false
+  is_primary_key: false
+  default_value: null
+  encryption_method: none
+  order_no: 5
+  field_config_json:
+    target_model: note_categories
+    target_field: category_id
+    relation_type: many_to_one
+
+- field_name: icon_key
+  display_name: Icon
+  type_code: text
+  type_name: Text
+  is_required: false
+  is_unique: false
+  is_primary_key: false
+  default_value: folder
+  encryption_method: none
+  order_no: 6
+  field_config_json:
+    max_length: 50
+
+- field_name: sort_order
+  display_name: Sort Order
+  type_code: number
+  type_name: Number
+  is_required: false
+  is_unique: false
+  is_primary_key: false
+  default_value: 0
+  encryption_method: none
+  order_no: 7
+  field_config_json: {}
+
+- field_name: description
+  display_name: Description
+  type_code: text
+  type_name: Text
+  is_required: false
+  is_unique: false
+  is_primary_key: false
+  default_value: null
+  encryption_method: none
+  order_no: 8
+  field_config_json: {}
+
+- field_name: deleted_at
+  display_name: Deleted At
+  type_code: datetime
+  type_name: DateTime
+  is_required: false
+  is_unique: false
+  is_primary_key: false
+  default_value: null
+  encryption_method: none
+  order_no: 9
+  field_config_json: {}
+
+# ============================================================================
+# Model Name: notes
+# Display Name: Notes
+# Table Name: notes
+# Description: Structured interactive documentation notes with extended Markdown DSL.
+# ============================================================================
+notes:
+- field_name: note_id
+  display_name: ID
+  type_code: auto_number
+  type_name: Auto Number
+  is_required: false
+  is_unique: false
+  is_primary_key: true
+  order_no: 1
+  field_config_json: {}
+
+- field_name: title
+  display_name: Note Title
+  type_code: text
+  type_name: Text
+  is_required: true
+  is_unique: false
+  is_primary_key: false
+  default_value: null
+  encryption_method: none
+  order_no: 2
+  field_config_json:
+    max_length: 255
+
+- field_name: slug
+  display_name: Slug
+  type_code: text
+  type_name: Text
+  is_required: true
+  is_unique: false
+  is_primary_key: false
+  default_value: null
+  encryption_method: none
+  order_no: 3
+  field_config_json:
+    max_length: 255
+
+- field_name: category_id
+  display_name: Category
+  type_code: relation
+  type_name: Relative Field
+  is_required: false
+  is_unique: false
+  is_primary_key: false
+  default_value: null
+  encryption_method: none
+  order_no: 4
+  field_config_json:
+    target_model: note_categories
+    target_field: category_id
+    relation_type: many_to_one
+
+- field_name: domain
+  display_name: Domain / Area
+  type_code: text
+  type_name: Text
+  is_required: false
+  is_unique: false
+  is_primary_key: false
+  default_value: General
+  encryption_method: none
+  order_no: 5
+  field_config_json:
+    max_length: 100
+
+- field_name: summary
+  display_name: Summary / Abstract
+  type_code: text
+  type_name: Text
+  is_required: false
+  is_unique: false
+  is_primary_key: false
+  default_value: null
+  encryption_method: none
+  order_no: 6
+  field_config_json: {}
+
+- field_name: raw_markdown
+  display_name: Markdown Content (Extended DSL)
+  type_code: rich_text
+  type_name: Rich Text
+  is_required: true
+  is_unique: false
+  is_primary_key: false
+  default_value: null
+  encryption_method: none
+  order_no: 7
+  field_config_json: {}
+
+- field_name: parsed_blocks
+  display_name: Parsed Block JSON
+  type_code: rich_text
+  type_name: Rich Text
+  is_required: false
+  is_unique: false
+  is_primary_key: false
+  default_value: null
+  encryption_method: none
+  order_no: 8
+  field_config_json: {}
+
+- field_name: variables
+  display_name: Variables Config
+  type_code: rich_text
+  type_name: Rich Text
+  is_required: false
+  is_unique: false
+  is_primary_key: false
+  default_value: null
+  encryption_method: none
+  order_no: 9
+  field_config_json: {}
+
+- field_name: tags
+  display_name: Tags
+  type_code: text
+  type_name: Text
+  is_required: false
+  is_unique: false
+  is_primary_key: false
+  default_value: null
+  encryption_method: none
+  order_no: 10
+  field_config_json: {}
+
+- field_name: status
+  display_name: Status
+  type_code: single_choice
+  type_name: Single Choice
+  is_required: true
+  is_unique: false
+  is_primary_key: false
+  default_value: published
+  encryption_method: none
+  order_no: 11
+  field_config_json:
+    options_mode: custom_collection
+    options:
+      - label: Published
+        value: published
+      - label: Draft
+        value: draft
+      - label: Archived
+        value: archived
+
+- field_name: is_pinned
+  display_name: Pinned
+  type_code: single_choice
+  type_name: Single Choice
+  is_required: false
+  is_unique: false
+  is_primary_key: false
+  default_value: "false"
+  encryption_method: none
+  order_no: 12
+  field_config_json:
+    options_mode: custom_collection
+    options:
+      - label: "Yes"
+        value: "true"
+      - label: "No"
+        value: "false"
+
+- field_name: deleted_at
+  display_name: Deleted At
+  type_code: datetime
+  type_name: DateTime
+  is_required: false
+  is_unique: false
+  is_primary_key: false
+  default_value: null
+  encryption_method: none
+  order_no: 13
+  field_config_json: {}

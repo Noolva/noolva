@@ -14,3 +14,8 @@ release/x.y.z   → stabilization & release
 | security | `[NS0055] security: harden token validation`     |
 | build    | `[NBUI0077] build: optimize docker image`        |
 | revert   | `[NRV0101] revert: rollback release 1.0.1`       |
+
+# Release 1.0.6 rules
+
+- Any DB change for release 1.0.6 MUST be documented in `reelase_1.0.6_db_updates/` (numbered files: `01_...`, `02_...`, `.sql`/`.txt`) BEFORE applying to production. The DB in hand is the dev DB — apply to dev freely, but production applies only from the documented SQL.
+- Any `noolva-api` change requires: upload the changed files to the server + restart the API service, AND a numbered entry (01, 02, …) in `release_1.0.6_notes/` describing the change, files touched, and the restart time.

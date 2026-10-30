@@ -206,6 +206,11 @@ admin/dist/
 admin/.vite/
 
 ##############################
+# Distribution build artifacts
+##############################
+distribution/output/
+
+##############################
 # OS / Editor
 ##############################
 .DS_Store

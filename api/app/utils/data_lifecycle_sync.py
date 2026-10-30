@@ -74,10 +74,15 @@ def _enum_tail(v: Any) -> str:
     return s.rsplit(".", 1)[-1]
 
 
-def build_eligibility_sql(policy: Dict[str, Any]) -> Tuple[str, List[Any]]:
+def build_eligibility_sql(policy: Dict[str, Any], *, include_incremental_watermark: bool = True) -> Tuple[str, List[Any]]:
     """
     Build WHERE fragment (without leading AND) and asyncpg args for time/filter transfer modes.
     filter_condition is trusted admin SQL (fragment only).
+
+    include_incremental_watermark: when True (archive/export), INCREMENTAL policies only
+    consider rows newer than last_processed_value (minus optional lookback). Purge passes
+    False — archive-join is the safety proof there, and the watermark would wrongly
+    exclude already-archived older rows.
     """
     mode = _enum_tail(policy.get("transfer_mode")) or "time_based"
     sync_strat = _enum_tail(policy.get("sync_strategy")) or "FULL"
@@ -87,7 +92,7 @@ def build_eligibility_sql(policy: Dict[str, Any]) -> Tuple[str, List[Any]]:
     if mode in ("time_based", "time_and_condition"):
         tc = validate_sql_identifier(policy.get("time_column") or "idate", "time_column")
         qtc = quote_ident(tc)
-        if sync_strat == "INCREMENTAL":
+        if include_incremental_watermark and sync_strat == "INCREMENTAL":
             lpv = policy.get("last_processed_value")
             if lpv is not None and str(lpv).strip():
                 try:
@@ -97,7 +102,15 @@ def build_eligibility_sql(policy: Dict[str, Any]) -> Tuple[str, List[Any]]:
                         args.append(datetime.fromisoformat(str(lpv).replace("Z", "+00:00")))
                 except Exception:
                     args.append(lpv)
-                parts.append(f"{qtc} > ${len(args)}::timestamptz")
+                try:
+                    lookback = max(0, int(policy.get("incremental_lookback_minutes") or 0))
+                except (TypeError, ValueError):
+                    lookback = 0
+                if lookback > 0:
+                    # Overlap window re-checks recent rows (safe: archive dedupes by PK)
+                    parts.append(f"{qtc} > (${len(args)}::timestamptz - make_interval(mins => {lookback}))")
+                else:
+                    parts.append(f"{qtc} > ${len(args)}::timestamptz")
         parts.append(f"{qtc} IS NOT NULL AND {qtc} <= now()")
 
     if mode in ("condition_based", "time_and_condition"):
@@ -224,6 +237,31 @@ async def flattening_separate_child_tables(root_table: str) -> List[str]:
     return [r["target_table"] for r in rows if r.get("target_table")]
 
 
+async def flattening_o2m_child_fk_pairs(root_table: str) -> List[Tuple[str, str]]:
+    """(child_table, fk_column) pairs declared via o2m relation policies (json|separate)."""
+    rows = await PostgresDB.fetch(
+        """
+        SELECT relation_name
+        FROM public.flattening_relation_policy
+        WHERE table_name = $1
+          AND relation_type = 'o2m'
+          AND strategy IN ('json', 'separate')
+        ORDER BY id
+        """,
+        validate_sql_identifier(root_table, "lifecycle_root"),
+    )
+    pairs: List[Tuple[str, str]] = []
+    for r in rows or []:
+        name = (r.get("relation_name") or "").strip()
+        if "." not in name:
+            continue
+        child, fk = name.split(".", 1)
+        child, fk = child.strip(), fk.strip()
+        if _SAFE_IDENT.match(child) and _SAFE_IDENT.match(fk):
+            pairs.append((child, fk))
+    return pairs
+
+
 async def resolve_child_fk_column_to_parent(child_table: str, parent_table: str, root_pk_column: str) -> Optional[str]:
     """
     Find the child table column that is a single-column FK to parent_table.
@@ -339,7 +377,9 @@ async def purge_tier1_flat_and_root(
     qflat = quote_ident(flat_physical)
     qarch = quote_ident(archive_physical)
     qroot = quote_ident(validate_sql_identifier(root_table, "root_table"))
-    where_sql, args = build_eligibility_sql(policy)
+    # Purge ignores the INCREMENTAL watermark on purpose: presence in the archive
+    # (join below) is the proof; the watermark would exclude older archived rows.
+    where_sql, args = build_eligibility_sql(policy, include_incremental_watermark=False)
     batch = max(1, int(policy.get("sync_batch_size") or 1000))
     lim_idx = len(args) + 1
     args_pick = list(args) + [batch]
@@ -361,10 +401,37 @@ async def purge_tier1_flat_and_root(
     children = separate_children if separate_children is not None else await flattening_separate_child_tables(root_table)
 
     child_deleted = 0
+    processed_children: set = set()
+
+    # Hot child tables declared via o2m relation policies (json|separate) — fk column is explicit,
+    # works without a Postgres FK (e.g. task_comments.task, task_attachments.task).
+    for child, fk_col_name in await flattening_o2m_child_fk_pairs(root_table):
+        if child in (flat_physical, root_table) or child in processed_children:
+            continue
+        processed_children.add(child)
+        try:
+            fk_q = quote_ident(fk_col_name)
+            qc = quote_ident(validate_sql_identifier(child, "child_table"))
+            tag = await PostgresDB.execute(
+                f"""
+                DELETE FROM public.{qc} c
+                WHERE c.{fk_q}::text = ANY($1::text[])
+                """,
+                str_vals,
+            )
+            if tag and str(tag).startswith("DELETE "):
+                try:
+                    child_deleted += int(str(tag).split()[-1])
+                except (TypeError, ValueError):
+                    pass
+        except Exception:
+            logger.exception("purge_tier1: failed deleting o2m child table %s", child)
+
     for child in children:
-        if child == flat_physical or child == root_table:
+        if child == flat_physical or child == root_table or child in processed_children:
             logger.warning("purge_tier1: skip child same as flat or root: %s", child)
             continue
+        processed_children.add(child)
         try:
             fk_col_name = await resolve_child_fk_column_to_parent(child, root_table, pk_col)
             if not fk_col_name:

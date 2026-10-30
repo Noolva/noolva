@@ -1,0 +1,246 @@
+# ============================================================================
+# Noolva Console Schema Definition: commitments
+# Model Name: commitments
+# Display Name: Commitments
+# Table Name: commitments
+# Description: Recurring financial obligations (bills, fund reserves, subscriptions, EMIs)
+# ============================================================================
+
+- field_name: commitment_id
+  display_name: Commitment ID
+  type_code: auto_number
+  is_required: false
+  is_unique: false
+  is_primary_key: true
+  order_no: 1
+  field_config_json: {}
+
+- field_name: title
+  display_name: Commitment Title
+  type_code: text
+  is_required: true
+  is_unique: false
+  is_primary_key: false
+  order_no: 2
+  field_config_json:
+    max_length: 200
+
+- field_name: commitment_type
+  display_name: Commitment Type
+  type_code: single_choice
+  is_required: true
+  is_unique: false
+  is_primary_key: false
+  default_value: bill_expense
+  order_no: 3
+  field_config_json:
+    options_mode: custom_collection
+    options:
+      - label: "Bill / Direct Expense"
+        value: bill_expense
+      - label: "Savings Fund Allocation"
+        value: fund_reserve
+      - label: "Subscription / Service"
+        value: subscription
+      - label: "Loan EMI / Repayment"
+        value: loan_emi
+      - label: "Other Obligation"
+        value: other
+
+- field_name: expense_account_id
+  display_name: Expense Account
+  type_code: relation
+  is_required: false
+  is_unique: false
+  is_primary_key: false
+  order_no: 4
+  field_config_json:
+    target_model: accounts
+    target_field: account_id
+    relation_type: many_to_one
+    target_model_id: 76
+
+- field_name: fund_id
+  display_name: Linked Savings Fund
+  type_code: relation
+  is_required: false
+  is_unique: false
+  is_primary_key: false
+  order_no: 5
+  field_config_json:
+    target_model: funds
+    target_field: fund_id
+    relation_type: many_to_one
+    target_model_id: 77
+
+- field_name: payment_account_id
+  display_name: Preferred Payment Account
+  type_code: relation
+  is_required: false
+  is_unique: false
+  is_primary_key: false
+  order_no: 6
+  field_config_json:
+    target_model: accounts
+    target_field: account_id
+    relation_type: many_to_one
+    target_model_id: 76
+
+- field_name: beneficiary_business_id
+  display_name: Payee / Beneficiary Store
+  type_code: relation
+  is_required: false
+  is_unique: false
+  is_primary_key: false
+  order_no: 7
+  field_config_json:
+    target_model: businesses
+    target_field: business_id
+    relation_type: many_to_one
+    target_model_id: 51
+
+- field_name: frequency
+  display_name: Recurrence Frequency
+  type_code: single_choice
+  is_required: true
+  is_unique: false
+  is_primary_key: false
+  default_value: monthly
+  order_no: 8
+  field_config_json:
+    options_mode: custom_collection
+    options:
+      - label: "Monthly"
+        value: monthly
+      - label: "Weekly"
+        value: weekly
+      - label: "Bi-Weekly"
+        value: biweekly
+      - label: "Quarterly"
+        value: quarterly
+      - label: "Yearly"
+        value: yearly
+
+- field_name: due_day
+  display_name: Due Day of Month
+  type_code: number
+  is_required: true
+  is_unique: false
+  is_primary_key: false
+  default_value: "1"
+  order_no: 9
+  field_config_json:
+    min_value: 1
+    max_value: 31
+
+- field_name: expected_amount
+  display_name: Expected Amount
+  type_code: currency
+  is_required: true
+  is_unique: false
+  is_primary_key: false
+  order_no: 10
+  field_config_json:
+    currency_symbol: "₹"
+    allowed_decimal_places: 2
+    min_value: 0
+
+- field_name: is_variable
+  display_name: Is Amount Variable?
+  type_code: boolean
+  is_required: false
+  is_unique: false
+  is_primary_key: false
+  default_value: "false"
+  order_no: 11
+  field_config_json: {}
+
+- field_name: priority
+  display_name: Priority
+  type_code: single_choice
+  is_required: false
+  is_unique: false
+  is_primary_key: false
+  default_value: high
+  order_no: 12
+  field_config_json:
+    options_mode: custom_collection
+    options:
+      - label: "Critical"
+        value: critical
+      - label: "High"
+        value: high
+      - label: "Medium"
+        value: medium
+      - label: "Low"
+        value: low
+
+- field_name: auto_pay
+  display_name: Auto-Debit / Auto-Pay
+  type_code: boolean
+  is_required: false
+  is_unique: false
+  is_primary_key: false
+  default_value: "false"
+  order_no: 13
+  field_config_json: {}
+
+- field_name: last_fulfilled_date
+  display_name: Last Fulfilled Date
+  type_code: date
+  is_required: false
+  is_unique: false
+  is_primary_key: false
+  order_no: 14
+  field_config_json: {}
+
+- field_name: last_fulfilled_amount
+  display_name: Last Fulfilled Amount
+  type_code: currency
+  is_required: false
+  is_unique: false
+  is_primary_key: false
+  order_no: 15
+  field_config_json:
+    currency_symbol: "₹"
+    allowed_decimal_places: 2
+    min_value: 0
+
+- field_name: notes
+  display_name: Notes & Reminders
+  type_code: paragraph
+  is_required: false
+  is_unique: false
+  is_primary_key: false
+  order_no: 16
+  field_config_json:
+    max_line_counts: 4
+
+- field_name: effective_from
+  display_name: Effective From Date
+  type_code: date
+  is_required: false
+  is_unique: false
+  is_primary_key: false
+  default_value: CURRENT_DATE
+  order_no: 17
+  field_config_json: {}
+
+- field_name: is_active
+  display_name: Active
+  type_code: boolean
+  is_required: true
+  is_unique: false
+  is_primary_key: false
+  default_value: "true"
+  order_no: 18
+  field_config_json: {}
+
+- field_name: deleted_at
+  display_name: Deleted At
+  type_code: datetime
+  is_required: false
+  is_unique: false
+  is_primary_key: false
+  order_no: 19
+  field_config_json: {}

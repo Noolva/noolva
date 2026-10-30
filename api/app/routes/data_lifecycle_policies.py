@@ -16,6 +16,36 @@ router = APIRouter(prefix="/dev-console/data-lifecycle-policies", tags=["Develop
 
 _SAFE_TABLE = re.compile(r"^[A-Za-z_][A-Za-z0-9_]*$")
 
+_POLICY_COLS = """
+        p.id, p.policy_label, p.table_name, p.pk_column, p.transfer_mode::text AS transfer_mode,
+        p.time_column, p.filter_condition, p.destination_type::text AS destination_type,
+        p.destination_table, p.is_public_on_s3, p.movement_type::text AS movement_type,
+        p.sync_strategy::text AS sync_strategy, p.sync_batch_size, p.sync_interval_minutes,
+        p.last_synced_at, p.last_processed_value, p.is_active, p.created_at, p.last_updated,
+        p.archive_source_table, p.purge_enabled, p.purge_after_interval_minutes,
+        p.last_archive_completed_at, p.last_purge_completed_at, p.lifecycle_root_table,
+        p.incremental_lookback_minutes
+"""
+
+_LEDGER_STATUS_COLS = """
+        (SELECT COALESCE(SUM(bl.rows_affected), 0)::int
+           FROM public.data_lifecycle_batch_ledger bl
+          WHERE bl.policy_id = p.id AND bl.operation = 'archive' AND bl.status = 'completed'
+        ) AS archive_rows_total,
+        (SELECT MAX(bl.completed_at)
+           FROM public.data_lifecycle_batch_ledger bl
+          WHERE bl.policy_id = p.id AND bl.operation = 'archive' AND bl.status = 'completed'
+        ) AS last_archive_batch_at,
+        (SELECT COALESCE(SUM(bl.rows_affected), 0)::int
+           FROM public.data_lifecycle_batch_ledger bl
+          WHERE bl.policy_id = p.id AND bl.operation = 'purge_hot' AND bl.status = 'completed'
+        ) AS purge_rows_total,
+        (SELECT MAX(bl.completed_at)
+           FROM public.data_lifecycle_batch_ledger bl
+          WHERE bl.policy_id = p.id AND bl.operation = 'purge_hot' AND bl.status = 'completed'
+        ) AS last_purge_batch_at
+"""
+
 
 class DataLifecycleCreate(BaseModel):
     policy_label: Optional[str] = None
@@ -32,6 +62,11 @@ class DataLifecycleCreate(BaseModel):
     sync_batch_size: int = 1000
     sync_interval_minutes: Optional[int] = None
     is_active: bool = True
+    archive_source_table: Optional[str] = None
+    purge_enabled: bool = False
+    purge_after_interval_minutes: Optional[int] = None
+    lifecycle_root_table: Optional[str] = None
+    incremental_lookback_minutes: Optional[int] = None
 
 
 class DataLifecycleUpdate(BaseModel):
@@ -51,6 +86,11 @@ class DataLifecycleUpdate(BaseModel):
     last_synced_at: Optional[str] = None
     last_processed_value: Optional[str] = None
     is_active: Optional[bool] = None
+    archive_source_table: Optional[str] = None
+    purge_enabled: Optional[bool] = None
+    purge_after_interval_minutes: Optional[int] = None
+    lifecycle_root_table: Optional[str] = None
+    incremental_lookback_minutes: Optional[int] = None
 
 
 @router.get("/")
@@ -61,14 +101,11 @@ async def list_policies(
     if not user:
         raise HTTPException(status_code=401, detail="Authentication required")
     rows = await PostgresDB.fetch(
-        """
-        SELECT id, policy_label, table_name, pk_column, transfer_mode::text AS transfer_mode,
-               time_column, filter_condition, destination_type::text AS destination_type,
-               destination_table, is_public_on_s3, movement_type::text AS movement_type,
-               sync_strategy::text AS sync_strategy, sync_batch_size, sync_interval_minutes,
-               last_synced_at, last_processed_value, is_active, created_at, last_updated
-        FROM public.data_lifecycle_policy
-        ORDER BY table_name, id
+        f"""
+        SELECT {_POLICY_COLS.strip()},
+               {_LEDGER_STATUS_COLS.strip()}
+        FROM public.data_lifecycle_policy p
+        ORDER BY p.table_name, p.id
         """
     )
     return {"items": rows}
@@ -92,11 +129,15 @@ async def create_policy(
         INSERT INTO public.data_lifecycle_policy (
             policy_label, table_name, pk_column, transfer_mode, time_column, filter_condition,
             destination_type, destination_table, is_public_on_s3, movement_type, sync_strategy,
-            sync_batch_size, sync_interval_minutes, is_active
+            sync_batch_size, sync_interval_minutes, is_active,
+            archive_source_table, purge_enabled, purge_after_interval_minutes, lifecycle_root_table,
+            incremental_lookback_minutes
         ) VALUES (
             $1, $2, $3, $4::transfer_mode_enum, $5, $6,
             $7::destination_type_enum, $8, $9, $10::movement_type_enum, $11::sync_strategy_enum,
-            $12, $13, $14
+            $12, $13, $14,
+            $15, $16, $17, $18,
+            $19
         )
         RETURNING id
         """,
@@ -114,19 +155,21 @@ async def create_policy(
         payload.get("sync_batch_size") or 1000,
         payload.get("sync_interval_minutes"),
         payload.get("is_active", True),
+        (payload.get("archive_source_table") or "").strip() or None,
+        bool(payload.get("purge_enabled") or False),
+        payload.get("purge_after_interval_minutes"),
+        (payload.get("lifecycle_root_table") or "").strip() or None,
+        payload.get("incremental_lookback_minutes"),
     )
     return await _fetch_lifecycle_policy(int(row["id"]))
 
 
 async def _fetch_lifecycle_policy(policy_id: int) -> Dict:
     row = await PostgresDB.fetchrow(
-        """
-        SELECT id, policy_label, table_name, pk_column, transfer_mode::text AS transfer_mode,
-               time_column, filter_condition, destination_type::text AS destination_type,
-               destination_table, is_public_on_s3, movement_type::text AS movement_type,
-               sync_strategy::text AS sync_strategy, sync_batch_size, sync_interval_minutes,
-               last_synced_at, last_processed_value, is_active, created_at, last_updated
-        FROM public.data_lifecycle_policy WHERE id = $1
+        f"""
+        SELECT {_POLICY_COLS.strip()}
+        FROM public.data_lifecycle_policy p
+        WHERE p.id = $1
         """,
         policy_id,
     )
@@ -301,6 +344,16 @@ async def update_policy(
         add_field("sync_batch_size", updates["sync_batch_size"])
     if "sync_interval_minutes" in updates:
         add_field("sync_interval_minutes", updates["sync_interval_minutes"])
+    if "archive_source_table" in updates:
+        add_field("archive_source_table", (updates["archive_source_table"] or "").strip() or None)
+    if "purge_enabled" in updates:
+        add_field("purge_enabled", bool(updates["purge_enabled"]))
+    if "purge_after_interval_minutes" in updates:
+        add_field("purge_after_interval_minutes", updates["purge_after_interval_minutes"])
+    if "lifecycle_root_table" in updates:
+        add_field("lifecycle_root_table", (updates["lifecycle_root_table"] or "").strip() or None)
+    if "incremental_lookback_minutes" in updates:
+        add_field("incremental_lookback_minutes", updates["incremental_lookback_minutes"])
     if "last_synced_at" in updates:
         add_field("last_synced_at", updates["last_synced_at"])
     if "last_processed_value" in updates:

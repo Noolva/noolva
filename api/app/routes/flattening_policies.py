@@ -205,6 +205,18 @@ async def list_table_policies(
         ORDER BY table_name
         """
     )
+    # Pipeline status: live row count of the flat table (postgres destination only)
+    from utils.flattening_materializer import is_safe_identifier
+
+    for r in rows or []:
+        r["target_row_count"] = None
+        tt = (r.get("target_table_name") or "").strip()
+        if (r.get("destination") or "postgres") != "postgres" or not tt or not is_safe_identifier(tt):
+            continue
+        try:
+            r["target_row_count"] = await PostgresDB.fetchval(f'SELECT count(*) FROM public."{tt}"')
+        except Exception:
+            r["target_row_count"] = None
     return {"items": rows}
 
 
@@ -376,6 +388,84 @@ async def delete_table_policy(
     await delete_flattening_read_endpoints(policy_id)
     await PostgresDB.execute("DELETE FROM public.flattening_table_policy WHERE id = $1", policy_id)
     return {"ok": True}
+
+
+@router.post("/table-policies/{policy_id}/execute-now")
+async def execute_table_policy_now(
+    policy_id: int,
+    user: Dict = Depends(verify_jwt_token(["saas_admin", "saas_employee", "tenant_admin"])),
+    db=Depends(get_db),
+):
+    """Run one policy immediately (admin "Run now" / "Regenerate snapshot").
+
+    postgres → same rebuild the scheduler handler runs (synchronous).
+    s3 → force re-export the flattened JSON to S3 via ensure_flattened_snapshot
+         and bump the policy watermark so offline clients (mac/ios/android/web)
+         re-download on their next sync.
+    """
+    if not user:
+        raise HTTPException(status_code=401, detail="Authentication required")
+    row = await PostgresDB.fetchrow(
+        "SELECT id, table_name, destination, is_public_on_s3 FROM public.flattening_table_policy WHERE id = $1",
+        int(policy_id),
+    )
+    if not row:
+        raise HTTPException(status_code=404, detail="Policy not found")
+    dest = (row.get("destination") or "postgres").strip().lower()
+    tn = (row.get("table_name") or "").strip()
+
+    if dest == "postgres":
+        from jobs.handlers.refresh_flattening_table import refresh_flattening_table
+
+        try:
+            result = await refresh_flattening_table({"policy_id": int(policy_id)})
+        except ValueError as e:
+            raise HTTPException(status_code=400, detail=str(e))
+        return {"destination": dest, **(result or {})}
+
+    if dest == "s3":
+        from routes.upload import _get_company_id_for_s3, _get_default_s3_service
+        from utils.instance_offline import ensure_flattened_snapshot
+
+        datasets = await PostgresDB.fetch(
+            """
+            SELECT id, instance_id, dataset_key
+            FROM public.client_offline_dataset
+            WHERE flattening_policy_id = $1 AND is_active = TRUE
+            ORDER BY dataset_key
+            """,
+            int(policy_id),
+        )
+        if not datasets:
+            raise HTTPException(
+                status_code=400,
+                detail="No active client_offline_dataset row points at this policy — nothing to regenerate",
+            )
+        s3 = await _get_default_s3_service(_get_company_id_for_s3(user))
+        is_pub = bool(row.get("is_public_on_s3"))
+        prefix = "public" if is_pub else "private"
+        logical_key = f"{prefix}/flattened/{tn}.json"
+        regenerated: List[Dict[str, Any]] = []
+        for ds in datasets:
+            written = await ensure_flattened_snapshot(
+                table_name=tn,
+                logical_key=logical_key,
+                instance_id=int(ds["instance_id"]),
+                policy_id=int(policy_id),
+                s3_service=s3,
+                is_public=is_pub,
+                force=True,
+            )
+            regenerated.append(
+                {
+                    "dataset_key": ds["dataset_key"],
+                    "instance_id": int(ds["instance_id"]),
+                    "written": bool(written),
+                }
+            )
+        return {"destination": dest, "s3_key": logical_key, "regenerated": regenerated}
+
+    raise HTTPException(status_code=501, detail=f"destination {dest!r} has no execute-now support")
 
 
 @router.get("/relation-policies")

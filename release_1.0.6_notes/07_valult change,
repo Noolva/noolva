@@ -1,0 +1,69 @@
+# 07 — Vault page (pkmanager) + API json-field encryption fix
+
+Date: 2026-10-12
+Type: noolva-api change (1 file) + pkmanager react-admin change (2 files) + 1 DB seed
+
+## What changed (noolva-api)
+`api/app/routes/data_models.py` — auto-crud encryption for json/jsonb columns:
+- **Write fix (bug 10042):** create/update used to bind a bare base64 AES
+  ciphertext string into `json`/`jsonb` columns, so any encrypted JSON field
+  (e.g. `password_vault.additional_secrets`) failed with
+  `invalid input syntax for type json`. New `_encrypt_field_for_db()` for
+  dict values encrypts **per value** and stores the whole object as a JSON
+  string (`json.dumps({"key": "<ciphertext>", ...})` — keys stay plain,
+  values are AES-GCM ciphertext; asyncpg requires a str for json/jsonb
+  binding). Non-dict json values keep the whole-value JSON-string-scalar
+  scheme; non-json fields unchanged.
+- **Read fix (bug 2):** `_apply_field_masking()` used to call
+  `str(val)` before decrypting, so a legacy plaintext JSON object came back
+  as a Python repr (`{'account_code': 'HSDEV'}` — single quotes, not valid
+  JSON). Now only strings are decrypted, failures fall back to the raw
+  value, and decrypted plaintext for json fields is parsed back to an
+  object for the client. New `_decrypt_json_field_map()` decrypts the
+  per-value map (legacy whole-blob ciphertext, stringified maps, and
+  plaintext maps all supported).
+- New helpers `_is_json_field_type()`, `_encrypt_field_for_db()`,
+  `_decrypt_json_field_map()`; all 4 masking call sites pass `json_fields`.
+
+## What changed (pkmanager react-admin)
+- `src/pages/VaultPage.jsx`:
+  - Save crash fix: `business_id`/`person` coerced with `Number()` (asyncpg
+    rejected strings).
+  - Table UI replaced with card list (2px borders via
+    `var(--ant-color-border, #d9d9d9)`), expanded search (URL, handler,
+    notes, recovery, secrets JSON, category labels), Category filter,
+    "X of Y entries" counter, acct-code tag from `additional_secrets`,
+    native Auto login button (bridge-only, hidden on plain web).
+  - **Additional secrets editor** replaced the raw JSON textarea with a
+    key = value row list (`+ Add secret`, per-row delete). Values are
+    masked (`password` input) with a per-row eye toggle.
+  - **Card view** of extra secrets: each item masked by default
+    (`••••••••••`) with per-item eye (show/hide) + copy buttons; nothing
+    shown in plain until revealed.
+  - New `Office` category (value `Office`, verbatim from model config).
+- `src/main.jsx`: `cssVar: true` — all `var(--ant-*)` CSS variables
+  (borders/colors) were dead until now; repo-wide visual fix.
+
+## DB
+- Seeded `password_vault` API batch: 21 rows (business_id=1 Helixsense,
+  handler `helix_erpv3_api_app`, passwords NULL — entered manually via the
+  Vault UI; API AES-encrypts on write). Applied to dev 2026-10-12.
+- Web batch (20 rows, `vault_helixsense_web_inserts.sql`,
+  `additional_secrets={"account_code": …}`, handler `helix_webv3_app`):
+  validated via transaction + ROLLBACK, run separately with passwords NULL.
+
+## Deploy
+1. Copy updated `data_models.py` to the server (`/opt/karan-dev/noolva-api/app/routes/`)
+   and **restart `karan-dev-api.service`** (not in the running build until restarted).
+   Deploy is done manually by the user (no SSH/rsync from the agent).
+2. Rebuild/deploy pkmanager react-admin bundle.
+3. Run the web vault seed if not yet applied; passwords are set later by
+   the user through the Vault UI (never stored in SQL).
+
+## Verify
+- Vault → edit an entry with `additional_secrets` → Save succeeds; card
+  shows the acct tag; no `invalid input syntax for type json` in API logs.
+- Read of legacy plaintext rows returns a JSON object (no
+  `{'key': 'val'}` repr strings).
+- Password round-trip: enter plaintext once → GET returns plaintext →
+  re-save works (stored value stays ciphertext in DB).
