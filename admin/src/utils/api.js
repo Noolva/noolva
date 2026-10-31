@@ -650,6 +650,10 @@ export const api = {
         const response = await axiosInstance.delete(`/dev-console/flattening-policies/table-policies/${id}`);
         return response.data;
     },
+    executeFlatteningTablePolicy: async (id) => {
+        const response = await axiosInstance.post(`/dev-console/flattening-policies/table-policies/${id}/execute-now`);
+        return response.data;
+    },
     getFlatteningRelationPolicies: async (tableName = null) => {
         const params = tableName ? { table_name: tableName } : {};
         const response = await axiosInstance.get("/dev-console/flattening-policies/relation-policies", { params });
